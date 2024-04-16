@@ -1,0 +1,47 @@
+<script type="module" src="../scripts/mobile/mobileUser-edit.js"></script>
+<div class="modal fade" id="edit-mobileUser" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Edit Mobile User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row was-validated" id="userFrom-Edit" action=""  method="post">
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end" for="userName">Username :</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control form-control-sm username" readonly autocomplete="off" disabled>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end">Password :</label>
+                        <div class="col-sm-8">
+                            <input type="password" class="form-control form-control-sm password" name="password2" required autocomplete="off"
+                            id="user-password2">
+                            <div class="invalid-feedback" id="password-feedback2">
+                                * Please enter 4-10 digits.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end" style="white-space:nowrap;">Confirm Password :</label>
+                        <div class="col-sm-8">
+                            <input type="password" class="form-control form-control-sm checkPassword" name="confirmPassword2" required autocomplete="off"
+                            id="user-checkPassword2">
+                            <div class="invalid-feedback" id="confirmPassword-feedback2">
+                                * Confirm Password is mandatory.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div style="text-align: center;padding-bottom: 1rem;padding-left: 2.5rem;">
+                            <button class="btn btn-secondary btn-sm custom-btn-gray cancel-update-mobileUser" data-bs-dismiss="modal" style="margin-right: 3rem;">Cancel</button>
+                            <button type="button" class="btn btn-primary btn-sm custom-btn-green update-mobileUser" style="margin-left: 3rem;">Confirm</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

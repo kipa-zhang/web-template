@@ -1,0 +1,61 @@
+<link rel="stylesheet" href="../css/userZone/userZone-create.css">
+<script type="module" src="../scripts/userZone/userZone-create.js"></script>
+
+<div class="offcanvas offcanvas-end edit-userZone" data-bs-backdrop="false" tabindex="-1" id="create-userZone">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Create User Zone</h5>
+        <!-- <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button> -->
+    </div>
+    <div class="offcanvas-body">
+        <div class="mb-3 row">
+            <label for="inputPassword" class="col-sm-5 col-form-label  text-end">User Zone Name: </label>
+            <div class="col-sm-6 p-0">
+                <input type="text" class="form-control form-control-sm userZoneName py-0" placeholder="User Zone Name">
+            </div>
+        </div>
+        <div class="mb-3 row">
+            <label for="inputPassword" class="col-sm-5 col-form-label  text-end">User Name: </label>
+            <div class="col-sm-6 p-0">
+                <select class="custom-select select-ca-user">
+
+                </select>
+            </div>
+        </div>
+        <div class="color-picker">
+            <label>Zone Color:</label><br>
+            <table aria-hidden="true">
+                <tr>
+                    <td>
+                        <div class="color-picker-item active" data-color="#F3141D" style="background-color: #F3141D;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#210DFE" style="background-color: #210DFE;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#267F00" style="background-color: #267F00;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#F7A61D" style="background-color: #F7A61D;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#7B0880" style="background-color: #7B0880;"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="color-picker">
+            <label>Choose Color:</label><br>
+            <input type="color" class="line-color"/>
+        </div>
+        
+        <hr>
+        <div class="row mt-5" style="text-align: center;">
+            <div class="col-sm-6" style="text-align: right;">
+                <div class="btn btn-secondary btn-sm custom-btn cancel-create-userZone" data-bs-dismiss="offcanvas">Cancel</div>
+            </div>
+            <div class="col-sm-6" style="text-align: left;">
+                <div class="btn btn-primary btn-sm custom-btn create-userZone">Confirm</div>
+            </div>
+        </div>
+    </div>
+</div>

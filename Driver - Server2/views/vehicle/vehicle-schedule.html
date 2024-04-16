@@ -1,0 +1,329 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehicle Schedule</title>
+
+<script type="text/javascript" src="../axios/axios.min.js"></script>
+<script type="text/javascript" src="../moment/moment.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.form.min.js"></script>
+<script type="text/javascript" src="../socket.io/socket.io.min.js"></script>
+<script type="text/javascript" src="../numeral/numeral.min.js"></script>
+
+<script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+<link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+
+<link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="../bootstrap-table/bootstrap-table.min.css">
+<script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="../bootstrap-table/bootstrap-table.min.js"></script>
+
+<script type="text/javascript" src="../DataTables-1.10.21/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="../DataTables-1.10.21/css/jquery.dataTables.min.css" media="all">
+
+<link rel="stylesheet" href="../transfer/transfer.css">
+<script type="text/javascript" src="../transfer/transfer.js"></script>
+
+<link rel="stylesheet" href="../css/common-style.css">
+<link rel="stylesheet" href="../css/common-bootstrap.css">
+<link rel="stylesheet" href="../css/common-datatables.css">
+
+<script type="text/javascript" src="../lodash/lodash.min.js"></script>
+
+<script type="text/javascript" src="../scripts/vehicle/vehicle-schedule.js"></script>
+
+<style>
+	.calender-container {
+		padding: 1em;
+	}
+	.container-fluid {
+		background-color: white;
+		min-height: 100px;
+		border-radius: 2em;
+		padding: 2em 1em;
+		box-shadow: 0 0 10px #d1d1d1;
+	}
+	/* .laydate-month-list>li {
+		margin: 0;
+	}
+	.layui-laydate-content {
+		height: 140px
+	}
+	.layui-laydate-content>table {
+		display: none;
+	} */
+	.arrow-img {
+		width: 20px;
+		cursor: pointer;
+	}
+	.selectedMonth2 {
+		font-weight: 600;
+		font-size: large;
+		cursor: pointer;
+		width: 10em;
+		text-align: center;
+	}
+	#selectedMonth2 {
+		cursor: pointer;
+		color: black;
+		font-size: 1.8em;
+		line-height: 1.8em;
+	}
+
+	.calender-container label {
+		font-size: 16px;
+		line-height: 16px;
+		color: rgb(154 154 154);
+	}
+	
+	.calender-container table tr td {
+		width: 12%;
+		border: solid 1px rgb(220 219 219);
+		padding: 6px;
+	}
+	.calender-container table tr td.preMonth {
+		background-color: rgb(242, 242, 242);
+	}
+	.calender-container table tr td:nth-child(0) {
+		width: 16%
+	}
+	
+	.calender-container .weekday {
+		width: 25px; 
+		height: 25px; 
+		border-radius: 13px; 
+		text-align: center;
+	}
+	.calender-container table tbody tr:first-child td:first-child {
+		/* background-color: #1B9063; */
+		/* border-top-left-radius: 15px; */
+		/* border: solid 1px rgb(212, 212, 212); */
+	}
+	.calender-container .weekday.active {
+		width: 25px; 
+		height: 25px; 
+		border-radius: 13px; 
+		background-color: #1B9063; 
+		color: white; 
+		text-align: center;
+	}
+	.week-title td {
+		text-align: center;
+		font-size: 1.3em;
+		color: black;
+		font-weight: 600;
+		line-height: 1.5em;
+	}
+	.week.active {
+		color: #1B9063 !important;
+		font-weight: 600;
+	}
+	.date-img {
+		width: 20px;
+		margin-top: -2px;
+	}
+	.date-label {
+		font-size: 15px !important;
+		color: gray;
+	}
+	.div-table {
+		display: table; 
+		height: 100%;
+	}
+	.div-table-cell {
+		display: table-cell; 
+		text-align: center; 
+		vertical-align: middle;
+	}
+	.activity {
+		width: 17em;
+		height: 2.7em;
+		border-color: #1C9063 !important;
+		border-width: 2px !important;
+		background-color: white !important;
+		box-shadow: 0 0 2px #8ce3c1;
+
+		cursor: pointer;
+	}
+	.activity.active {
+		box-shadow: 0 0 10px #6eebb9;
+		border-color: #28a374;
+	}
+	.activity-container {
+		width: 19em;
+		box-shadow: 0 0 4px #a2bdb3;
+		border: solid 1px #a2bdb3;
+		border-radius: 8px;
+		text-align: left;
+		background-color: white;
+
+		position: absolute; 
+		/* right: 24%; */
+		margin-top: 5px;
+		display: none;
+		z-index: 10;
+	}
+	.activity-container ul li:hover {
+		background-color: #f1f1f1;
+		border-radius: 5px;
+		font-weight: bold;
+		cursor: pointer;
+	}
+	.activity-cell {
+		width: 1em;
+		height: 1em;
+		border-radius: 3px;
+	}
+	.week-day {
+		height: 10em;
+		vertical-align: top;
+		font-weight: 500;
+	}
+	.date {
+		width: 1.8em;
+		text-align: center;
+	}
+	.date.active {
+		background-color: #1B9063;
+		border-radius: 1em;
+		font-weight: bold;
+		line-height: 1.8em;
+		color: white;
+	}
+	.vehicle-info {
+		background-color: rgb(138, 208, 153);
+		border-radius: 5px;
+		white-space: nowrap;
+		cursor: pointer;
+
+		/* display: inline-block; */
+		text-overflow: ellipsis;
+		overflow: hidden;
+	}
+
+	.vehicle-info:hover {
+		box-shadow: 0 0 8px rgb(122, 122, 122);
+	}
+	.vehicle-info.active {
+		box-shadow: 0 0 8px rgb(122, 122, 122);
+	}
+	.vehicle-info.training:hover {
+		box-shadow: 0 0 8px #15c87d;
+	}
+	.vehicle-info.training.active {
+		box-shadow: 0 0 8px #15c87d;
+	}
+	.vehicle-info.admin:hover {
+		box-shadow: 0 0 8px #c86813;
+	}
+	.vehicle-info.admin.active {
+		box-shadow: 0 0 8px #c86813;
+	}
+	.vehicle-info.operations:hover {
+		box-shadow: 0 0 8px #395ed6;
+	}
+	.vehicle-info.operations.active {
+		box-shadow: 0 0 8px #395ed6;
+	}
+	.vehicle-info.maintenance:hover {
+		box-shadow: 0 0 8px #e1a147;
+	}
+	.vehicle-info.maintenance.active {
+		box-shadow: 0 0 8px #e1a147;
+	}
+
+	.vehicle-info.hasVirtualTask {
+		border-top-right-radius: 0;
+		border-bottom-right-radius: 0;
+		border-right: solid 5px rgb(175, 175, 175);
+	}
+	.vehicle-info.isVirtualTask {
+		border-top-left-radius: 0;
+		border-bottom-left-radius: 0;
+		border-left: solid 5px rgb(175, 175, 175);
+	}
+	.monthTaskInfo tr:first-child td:first-child {
+		border-top-left-radius: 0.8em;
+	}
+	.monthTaskInfo tr:first-child td:last-child {
+		border-top-right-radius: 0.8em;
+	}
+	.monthTaskInfo tr:last-child td:first-child {
+		border-bottom-left-radius: 0.8em;
+	}
+	.monthTaskInfo tr:last-child td:last-child {
+		border-bottom-right-radius: 0.8em;
+	}
+
+	.maintenace-s {
+		width: fit-content;
+		text-align: center;
+		background-color: #1B9063;
+		border-radius: 5px;
+		color: white !important;
+		font-size: 14px !important;
+		padding: 2px;
+		margin-left: 2px;
+	}
+	.maintenace-e {
+		width: fit-content;
+		text-align: center;
+		background-color: red;
+		border-radius: 5px;
+		color: white !important;
+		font-size: 14px !important;
+		padding: 2px;
+	}
+
+	.date {
+		width: 1.8em;
+		text-align: center;
+	}
+	.date.active {
+		background-color: #1B9063;
+		border-radius: 1em;
+		font-weight: bold;
+		line-height: 1.8em;
+		color: white;
+	}
+	.vehicle-leave {
+		background-color: #f1b9b9 !important;
+	}
+	.invalid-date-td {
+		background-color: rgb(242, 242, 242);
+	}
+</style>
+
+<div class="calender-container">
+	<div class="container-fluid">
+		<div class="row mx-0 justify-content-between" style="line-height: 40px;">
+			<div class="col-auto ms-3">
+				<img alt="" class="arrow-img pre-month mx-2" style="margin-top: -11px;" src="../scripts/driverTo/icons/arrow-left.svg">
+				<label id="selectedMonth" class="selectedMonth user-select-none" style="display: none;"></label>
+				<label id="selectedMonth2" class="selectedMonth2 user-select-none"></label>
+				<img alt="" class="arrow-img next-month mx-2" style="margin-top: -11px;" src="../scripts/driverTo/icons/arrow-right.svg">
+			</div>
+			<div class="col-auto me-3" style="text-align: left;">
+				<div class="form-control px-3 pt-2 activity user-select-none">
+					<div class="div-table" >
+						<div class="div-table-cell" style="text-align: left; width: 90%;">
+							<div class="activity-content">All activities</div>
+						</div>
+						<div class="div-table-cell" style="width: 10%;">
+							<img alt="" class="activity-select-icon" style="width: 20px; margin-bottom: 2px;" src="../scripts/driverTo/icons/arrow-down.svg"/>
+						</div>
+					</div>
+				</div>
+				<div class="activity-container px-1 py-1">
+				</div>
+			</div>
+		</div>
+
+		<div class="row mx-2" style="margin-top: 1em;">
+			<table aria-hidden="true" class="monthTaskInfo" style="width: 100%;border-collapse: separate;"></table>
+		</div>
+	</div>
+</div>
+<%- include('../driverTo/task-reassign.html') -%>
+<%- include('vehicle-markAsUnavailable.html') -%>

@@ -1,0 +1,45 @@
+<script type="module" src="../scripts/mobile/mobileUser-view.js"></script>
+<style>
+    .dataTables_wrapper .dataTables_paginate .paginate_button, .paginate_button {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .paginate_button.current {
+        background: #1B9063 !important;
+        color: white !important;
+        border-color: #1B9063 !important;
+    }
+    .paginate_button:not(.disabled):hover {
+        background: #1B9063 !important;
+        color: white !important;
+        border-color: #1B9063 !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        color: white !important;
+    }
+</style>
+<div class="modal fade" id="view-mobileUser" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered" style="min-width: 800px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">View/Edit Mobile User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-3">
+                        <input type="search" class="form-control form-control-sm custom-search user-search" aria-controls="driver-list" placeholder="Search">
+                    </div>
+                </div>
+                <div>
+                    <table aria-hidden="true" id="mobileUser-list">
+
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>

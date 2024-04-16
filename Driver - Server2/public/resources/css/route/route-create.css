@@ -1,0 +1,58 @@
+.edit-route .route-name {
+    background-color: rgba(0, 0, 0, 0.9);
+    background-clip: padding-box;
+    border: 1px solid #b7b7b7;
+    color: whitesmoke;
+}
+
+.edit-route .start-end-point {
+    background-color: rgba(66,133,244,0.6);
+    border-radius: 5px;
+}
+
+.edit-route .edit-route-point {
+    padding-left: 5%;
+    width: 90%;
+    background-color: transparent;
+    border: 0px;
+    color: white;
+    font-size: 15px;
+    outline: none;
+    border-bottom: solid 1px white;
+    line-height: 10px;
+}
+
+.edit-route .add-waypoint, .edit-route .minus-point {
+    font-weight: bolder; 
+    font-size: x-large; 
+    padding: 0px 13px; 
+    line-height: 25px;
+}
+.edit-route .add-waypoint:hover, .edit-route .minus-point:hover {
+    color: white;
+}
+.edit-route .create-waypoint {
+    width: 45px;
+    height: 30px;
+    background-image: url(/images/route/new.png);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+.edit-route .waypoint-list {
+    max-height: 200px;
+    min-height: 200px;
+    overflow-y: auto;
+}
+
+.edit-route .color-picker .color-picker-item{
+    width: 50px;
+    height: 25px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 6px;
+}
+
+.edit-route .color-picker .color-picker-item.active{
+    border: solid 2px whitesmoke;
+}

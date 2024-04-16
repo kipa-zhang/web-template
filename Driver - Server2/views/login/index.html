@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title><%= title %></title>
+        <%- include('../common/common-html-base.html') -%>
+        <%- include('../registerAccount.html') -%>
+        <script type="text/javascript" src="../crypto-js/crypto-js.js"></script>
+        <link rel="stylesheet" href="../css/login/login.css">
+        <script type="module" src="../scripts/login/login.js"></script>
+        <style>
+            @media screen and (max-width: 1200px) {
+                .login-content {
+                    padding: 2rem 0 !important;
+                }
+            }
+            .login-div {
+                margin: auto; 
+                top: 0; 
+                left: 0; 
+                bottom: 0;
+                right: 0;
+                height: 50%; 
+                width: 70%; 
+                border-radius: 20px;
+                min-width: 800px;
+                min-height: 500px;
+            }
+            .login-div label {
+                margin-bottom: 0;
+            }
+            .login-content {
+                color: gray;
+                font-weight: 500;
+                padding-bottom: 0 !important;
+            }
+            .login-bg {
+                height: 100%;
+                background-image: url(images/login/bridge.png);
+                background-size: 100% 100%;
+                border-top-left-radius: 18px;
+                border-bottom-left-radius: 18px;
+                image-rendering: -webkit-optimize-contrast;
+            }
+            .login-bg > .logo-div {
+                z-index: 999;
+                height: 100%;
+                width: inherit; 
+                border-bottom-right-radius: 20px; 
+                border-top-right-radius: 20px;
+                text-align: center;
+                position: absolute;
+            }
+            .login-bg img {
+                width: 40%;
+                max-width: 150px;
+                z-index: 9999;
+            }
+            .btn-login {
+                border-radius: 15px;
+                font-size: 1.2rem;
+                color: whitesmoke;
+                line-height: 2rem;
+                background-image: url(images/login/green-button.svg) !important ; 
+                background-repeat: no-repeat; 
+                background-size: cover;
+            }
+            .btn-login-singpass:hover {
+                background-color: #3A5EC5; 
+                border-color: #3A5EC5;
+            }
+            .btn-login-singpass {
+                background-color: #A12426;
+                border-color: #A12426;
+                border-radius: 20px;
+                font-size: 15px;
+            }
+
+            input.form-control {
+                border-width: 0;
+                border-bottom: solid 2px rgb(200, 200, 200);
+                border-radius: 0;
+                color: gray;
+            }
+            .form-control:focus, input.form-control:focus{
+                border-color:#3EA3AC;
+                box-shadow: none;
+                color: #3EA3AC;
+                border-width: 0 !important;
+                border-bottom: solid 2px #3EA3AC !important;
+                box-shadow: none !important;
+            }
+            .label-focus {
+                color: #3EA3AC;
+            }
+
+            .div-filter {
+                z-index: 9;
+                background-color: rgb(255 255 255 / 0%);
+                backdrop-filter: blur(2px);
+                position: absolute;
+                top: 0;  
+                width: inherit;
+                height: inherit;
+                border-bottom-left-radius: 20px;
+                border-top-left-radius: 20px;
+            }
+
+        </style>
+        <script type="text/javascript" src="../lodash/lodash.min.js"></script>
+    </head>
+    <body style="background-image: url(images/login/bg-green.svg) !important; background-repeat: no-repeat; background-size: cover; font-size: 1rem;">
+        <div class="singpassError" style="display:none;"><%= singpassError%></div>
+        <div class="loginError" style="display:none;"><%= loginError%></div>
+        <div class="shadow bg-body position-absolute row login-div">
+            <div class="col col-6 login-bg" style="padding: 0;">
+                <div class="div-filter">
+                </div>
+                <div class="p-5 logo-div">
+                    <div class="div-table">
+                        <div class="div-table-cell">
+                            <img alt="" src="images/login/green-logo.svg"/>
+                                
+                                <br>
+                                <br>
+                            
+                            <img alt="" src="images/login/green-mobius.svg"/>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="col col-6">
+                <table aria-hidden="true" style="width: 100%; height: 100%;">
+                    <tr>
+                        <td>
+                            <div class="login-content mb-1 p-5">
+                                <div class="mb-3 px-5">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" id="username" class="form-control"  placeholder="" autocomplete="off">
+                                </div>
+                                <div class="mb-3 px-5">
+                                    <label class="form-label">Password</label>
+                                    <input type="password" id="password" class="form-control"  placeholder="" autocomplete="off">
+                                </div>
+                                <div class="mb-3 px-5">
+                                    <p class="text-end"><a href="#" style="color: #316b8c;">Forgot Password?</a></p>
+                                </div>
+                                <div class="mb-3 px-5">
+                                    <div class="d-grid gap-2 mx-auto">
+                                        <button class="btn-login" style="border: 0;" type="button">LOGIN</button>
+                                    </div>
+                                    <div class="d-grid gap-2 mx-auto pt-3">
+                                        <button class="btn btn-primary btn-login-singpass" name="btn-login-singpass" type="button">Login Using Singpass</button>
+                                    </div>
+                                    <div class="d-grid gap-2 mx-auto pt-3">
+                                        <button class="btn btn-primary btn-registerAccount" style="background-color: #1B9063;border-radius: 20px;" name="btn-registerAccount" type="button">Register Account</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>                
+            </div>
+        </div>
+    </body>
+</html>
+

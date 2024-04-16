@@ -1,0 +1,180 @@
+<style>
+    .layui-laydate-list.laydate-time-list>li:nth-child(1), .layui-laydate-list.laydate-time-list>li:nth-child(2) {
+        width: 48%;
+    }
+    .layui-laydate-list.laydate-time-list>li:nth-child(3) {
+        display: none;
+    }
+
+    .notice-container>div:last-child {
+        border-right: unset !important
+    }
+</style>
+<script type="text/javascript" src="../scripts/notice/notice-create.js"></script>
+<div class="modal fade" id="edit-notice" tabindex="-1" data-bs-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #1B9063 !important;">
+                <h4 class="modal-title">Add Notice</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row notice-container">
+                    <div class="col-4" style="border-right: solid 2px #e5e5e5;">
+                        <div class="row">
+                            <div class="col-12">
+                                <label class="fw-bold">Title</label>
+                                <input class="form-control form-control-sm" name="title">
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">Notice Type</label>
+                                <select class="form-select form-select-sm" name="type">
+                                    <option value="Alert">Alert</option>
+                                    <option value="Info">Info</option>
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Update">Update</option>
+                                    <!-- <option value="Urgent">Urgent</option> -->
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">Start Time</label>
+                                <div style="position: relative;">
+                                    <img alt="" src="../../icons/date.png" style="width: 20px;height: 20px;position: absolute;margin-top: 0.35rem;margin-left: 0.4rem;"/>
+                                    <input class="form-control form-control-sm" name="startDateTime" style="padding-left: 2rem !important;" readonly></input>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">End Time</label>
+                                <div style="position: relative;">
+                                    <img alt="" src="../../icons/date.png" style="width: 20px;height: 20px;position: absolute;margin-top: 0.3rem;margin-left: 0.4rem;"/>
+                                    <input class="form-control form-control-sm" name="endDateTime" style="padding-left: 2rem !important;" readonly></input>
+                                </div>
+                            </div>
+                            <div class="col-12 for-scheduled">
+                                <label class="fw-bold">Schedule Time</label>
+                                <div style="position: relative;">
+                                    <img alt="" src="../../icons/date.png" style="width: 20px;height: 20px;position: absolute;margin-top: 0.3rem;margin-left: 0.4rem;"/>
+                                    <input class="form-control form-control-sm" name="scheduledTime" style="padding-left: 2rem !important;" readonly></input>
+                                </div>
+                            </div>
+                            <div class="col-12 not-for-scheduled">
+                                <label class="fw-bold">Upload Cover Image</label>
+                                <div class="ms-2">
+                                    <img alt="" class="coverImage-select" src="../../icons/cover-image.png" style="margin-top: 0; width: 40px; cursor: pointer;">
+                                    <img alt="" class="coverImage-delete" src="../../icons/delete.svg" style="margin-top: 0; width: 25px; cursor: pointer;">
+                                    <!-- <input class="coverImage-input" style="display: none;" type="file" accept="image/*"/> -->
+                                </div>
+                                <div class="row coverImage-list ms-2 my-2 mx-0">
+
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">Description</label>
+                                <textarea class="form-control form-control-sm" name="description"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">Link</label>
+                                <textarea class="form-control form-control-sm" name="link"></textarea>
+                            </div>
+                            <div class="col-12 not-for-scheduled">
+                                <label class="fw-bold">Main Image</label>
+                                <div class="ms-2">
+                                    <img alt="" class="mainImage-select" src="../../icons/main-image.png" style="margin-top: 0; width: 40px; cursor: pointer;">
+                                    <img alt="" class="mainImage-delete" src="../../icons/delete.svg" style="margin-top: 0; width: 25px; cursor: pointer;">
+                                    <!-- <input class="mainImage-input" style="display: none;" type="file" accept="image/*"/> -->
+                                </div>
+                                <div class="row mainImage-list my-2 mx-0">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4" style="border-right: solid 2px #e5e5e5;">
+                        <div class="row">
+                            <div class="col-12">
+                                <label class="fw-bold">TO Category</label>
+                                <select class="form-select form-select-sm" name="toCategory">
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">TO Type</label>
+                                <select class="form-select form-select-sm" name="toType">
+                                </select>
+                            </div>
+                            <div class="col-12" style="display: none;">
+                                <label class="fw-bold">Unit</label>
+                                <select class="form-select form-select-sm" name="groupId">
+                                    <!-- <option>Group 1</option> -->
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="fw-bold">Platform</label>
+                                <select class="form-select form-select-sm" name="platform">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4" style="border-right: solid 2px #e5e5e5;">
+                        <div class="row">
+                            <div class="col-12">
+                                <label class="fw-bold">Audience</label>
+                            </div>
+                            <div class="col-12">
+                                <label class="">Hub/Node User</label>
+                                <div class="p-2" style="background-color: rgb(241, 241, 241); border-radius: 5px;">
+                                    <div style="position: relative;">
+                                        <img alt="" src="../images/btn-search.svg" style="width: 18px;height: 18px;position: absolute;margin-top: 0.4rem;margin-left: 0.5rem;"/>
+                                        <input class="form-control form-control-sm" name="searchHubNodeUser" style="padding-left: 2rem !important;" placeholder="Search"></input>
+                                    </div>
+                                    <div class="row px-1 mx-0">
+                                        <div class="col-1 p-0">
+                                            <div class="div-table">
+                                                <div class="div-table-cell">
+                                                    <input type="checkbox" class="select-all-hubNode" style="margin-top: 8px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-11 px-0">
+                                            ALL
+                                        </div>
+                                    </div>
+                                    <div class="hubNodeUser-list" style="height: 200px; overflow: auto; background-color: white; border-radius: 5px;">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="mt-1">TO User</label>
+                                <div class="p-2" style="background-color: rgb(241, 241, 241); border-radius: 5px;">
+                                    <div style="position: relative;">
+                                        <img alt="" src="../images/btn-search.svg" style="width: 18px;height: 18px;position: absolute;margin-top: 0.4rem;margin-left: 0.5rem;"/>
+                                        <input class="form-control form-control-sm" name="searchToUser" style="padding-left: 2rem !important;" placeholder="Search"></input>
+                                    </div>
+                                    <div class="row px-1 mx-0">
+                                        <div class="col-1 p-0">
+                                            <div class="div-table">
+                                                <div class="div-table-cell">
+                                                    <input type="checkbox" class="select-all-to" style="margin-top: 8px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-11 px-0">
+                                            ALL
+                                        </div>
+                                    </div>
+                                    <div class="toUser-list" style="height: 200px; overflow: auto; background-color: white; border-radius: 5px;">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="margin: auto;">
+                <button type="button" class="btn btn-sm custom-btn-gray modal-footer-bunton-cancel-bg" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm custom-btn-green modal-footer-bunton-confirm-bg" id="btn-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>

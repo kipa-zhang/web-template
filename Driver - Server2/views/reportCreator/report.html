@@ -1,0 +1,147 @@
+<%- include('../common/common-html-base.html') -%>
+    <title>Report Creator</title>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/drag-arrange.css">
+    <link rel="stylesheet" href="../multiple-select/multiple-select.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/reportCreator.css">
+
+    <script type="text/javascript" src="../layui/layui.js"></script>
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/drag-arrange.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/report.js"></script>
+    <script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+        .custom-line {
+            line-height: 35px;
+        }
+    </style>
+
+    <body style="background-color: #FAFAFA !important;">
+        <div class="container-full">
+            <div class="row justify-content-center">
+                <div class="col-12 text-center title">
+                    REPORT CREATOR 
+                </div>
+            </div>
+
+        </div>
+        <div class="px-5" style="height: calc(100% - 60px); width: 100%;">
+            <div class="row justify-content-center" style="text-align: -webkit-center;">
+                <div class="col-12 my-4">
+                    <!-- <div class="report-menu-img">
+                        <svg t="1700537399354" class="icon" viewBox="0 0 2067 1024" version="1.1"
+                            xmlns="http://www.w3.org/2000/svg" p-id="9096" width="64" height="64">
+                            <path
+                                d="M589.610106 1024h-222.218886c-58.788743 0-106.434522-47.773859-106.434522-106.434522V695.346592c0-58.788743 47.773859-106.562602 106.434522-106.562602H589.610106c58.788743 0 106.434522 47.773859 106.434522 106.562602v222.218886c0.12808 58.532583-47.645779 106.434522-106.434522 106.434522zM1142.275522 1024H920.184715c-58.788743 0-106.562602-47.773859-106.562601-106.434522V695.346592c0-58.788743 47.773859-106.562602 106.562601-106.562602h222.218887c58.788743 0 106.434522 47.773859 106.434522 106.562602v222.218886c0 58.532583-47.773859 106.434522-106.562602 106.434522zM589.610106 481.580988h-222.218886c-58.788743 0-106.434522-47.773859-106.434522-106.434521V152.92758c0-58.788743 47.773859-106.434522 106.434522-106.434522H589.610106c58.788743 0 106.434522 47.773859 106.434522 106.434522V375.146467c0.12808 58.660663-47.645779 106.434522-106.434522 106.434521zM1031.358199 527.561726c-28.561851 0-55.330582-11.014884-75.31107-31.251532L798.892908 339.155972c-41.497936-41.497936-41.497936-109.124203 0-150.878298l157.154221-157.154222c41.497936-41.497936 109.124203-41.497936 150.878299 0L1264.07965 188.277674c41.497936 41.497936 41.497936 109.124203 0 150.878298L1106.669268 496.310194c-20.236648 20.108568-47.005378 31.251532-75.311069 31.251532z"
+                                p-id="9097" data-spm-anchor-id="a313x.search_index.0.i0.104a3a81iCGsrg" class="selected"
+                                fill="#1F7246"></path>
+                        </svg>
+                    </div> -->
+                    <table aria-hidden="true">
+                        <tr>
+                            <td class="px-2">
+                                <div class="report-menu active" data-link="task">
+                                    <div class="d-inline">
+                                        <img alt="" class="task-image" style="display: none;" src="../images/menu/task.svg">
+                                        <img alt="" class="task-image-white" src="../images/menu/task-white.svg">
+                                    </div>
+                                    <div class="d-inlie">
+                                        <span>Task</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-2">
+                                <div class="report-menu" data-link="telematic">
+                                    <div class="d-inline">
+                                        <img alt="" class="telematic-image" src="../images/menu/Telematics.svg">
+                                        <img alt="" class="telematic-image-white" src="../images/menu/Telematics-white.svg">
+                                    </div>
+                                    <div class="d-inlie">
+                                        <span>Telematics</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-2">
+                                <div class="report-menu" data-link="obd">
+                                    <div class="d-inline">
+                                        <img alt="" class="obd-image" src="../images/menu/device.svg">
+                                        <img alt="" class="obd-image-white" src="../images/menu/device-white.svg">
+                                    </div>
+                                    <div class="d-inlie">
+                                        <span>OBD</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-2">
+                                <div class="report-menu" data-link="vehicleReport">
+                                    <div class="d-inline">
+                                        <img alt="" class="vehicleReport-image" src="../images/menu/Vehicle.svg">
+                                        <img alt="" class="vehicleReport-image-white" src="../images/menu/Vehicle-white.svg">
+                                    </div>
+                                    <div class="d-inlie">
+                                        <span>Vehicle</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-2">
+                                <div class="report-menu" data-link="driverReport">
+                                    <div class="d-inline">
+                                        <img alt="" class="driverReport-image" src="../images/menu/Driver.svg">
+                                        <img alt="" class="driverReport-image-white" src="../images/menu/Driver-white.svg">
+                                    </div>
+                                    <div class="d-inlie">
+                                        <span>Driver</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-2">
+                                <div class="report-menu" data-link="keypress">
+                                    <div class="d-inline">
+                                        <img alt="" class="keypress-image" src="../images/menu/Keypress.svg">
+                                        <img alt="" class="keypress-image-white" src="../images/menu/Keypress-white.svg">
+                                    </div>
+                                    <div class="d-inlie">
+                                        <span>Keypress</span>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="row" style="height: calc(100% - 120px);">
+                <div class="col-12 p-0" style="border: 1px solid #c3c3c3; border-radius: 5px;">
+                    <iframe class="report-iframe" style="border-radius: 5px;" src="/reportCreator/task" title=""></iframe>
+                </div>
+            </div>
+        </div>
+    </body>
+
+    <style>
+        .custom-loading {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: #E5EFF1;
+            opacity: 0.6;
+            left: 0;
+            top: 0;
+            display: none;
+        }
+        .custom-loading-img {
+            position: absolute;
+            margin: auto;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+        }
+    </style>
+    <div class="custom-loading">
+        <img alt="" class="custom-loading-img " style="width: 15em" src="./images/loading.gif">
+        <div >
+        </div>
+    </div>

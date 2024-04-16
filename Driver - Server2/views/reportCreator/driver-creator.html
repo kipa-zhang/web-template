@@ -1,0 +1,312 @@
+<%- include('../common/common-html-base.html') -%>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/drag-arrange.css">
+    <link rel="stylesheet" href="../multiple-select/multiple-select.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/reportCreator.css">
+
+    <script type="text/javascript" src="../layui/layui.js"></script>
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/drag-arrange.js"></script>
+    <script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="text/javascript" src="../scripts/reportCreator/driver-creator.js"></script>
+    <style>
+        .form-check label {
+            white-space: nowrap;
+        }
+        .form-check {
+            line-height: 2.3rem;
+        }
+        .form-check-input {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+        .form-check-label {
+            padding-left: 0.3rem;
+        }
+    </style>
+<body style="background-color: white !important;">
+    <div class="container-full report-form">
+        <div class="row">
+            <!-- <div class="mb-2 row">
+                <label class="col-sm-2 col-form-label">Report Date Range</label>
+                <div class="col-sm-3">
+                    <input type="text" readonly class="form-control" value="" id="reportDateRange">
+                </div>
+            </div> -->
+            <div class="col-6 mt-3">
+                <div><label class="label-1">Report Data Group Selection</label></div>
+                <div><label class="label-2">Choose the data to be included in the report</label></div>
+            </div>
+            <div class="col-6 mt-3">
+                <div><label class="label-1">Selected Data Group</label></div>
+            </div>
+            <div class="col-6">
+                <div class="row">
+                    <div class="col-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="select-all-checkbox">
+                            <label class="form-check-label fw-bold" for="select-all-checkbox">Select All</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row report-data-group">
+                    <div class="col-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Driver Name"
+                                name="driverName" id="driver-name-checkbox">
+                            <label class="form-check-label" for="driver-name-checkbox">Driver Name</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Driver NRIC" name="driver-nric"
+                                id="driver-nric-checkbox">
+                            <label class="form-check-label" for="driver-nric-checkbox">Driver NRIC</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="DOB" name="dob"
+                                id="dob-checkbox">
+                            <label class="form-check-label" for="dob-checkbox">DOB</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Contact No" name="contact-no"
+                                id="contact-no-checkbox">
+                            <label class="form-check-label" for="contact-no-checkbox">Contact No.</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Vocation"
+                                name="vocation" id="vocation-checkbox">
+                            <label class="form-check-label" for="vocation-checkbox">Vocation</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Driver Role"
+                                name="driver-role" id="driver-role-checkbox">
+                            <label class="form-check-label" for="driver-role-checkbox">Driver Role</label>
+                        </div>
+                        <div class="form-check hub-node-check">
+                            <input class="form-check-input" type="checkbox" value="Hub/Node" name="hubNode"
+                                id="hub-checkbox">
+                            <label class="form-check-label" for="hub-checkbox">Hub/Node</label>
+                        </div>
+                        <div class="form-check unit-check">
+                            <input class="form-check-input" type="checkbox" value="Unit" name="unit"
+                                id="unit-checkbox">
+                            <label class="form-check-label" for="unit-checkbox">Unit</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Enlistment Date"
+                                name="enlistment-date" id="enlistment-date-checkbox">
+                            <label class="form-check-label" for="enlistment-date-checkbox">Enlistment Date</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="ORD" name="ord"
+                                id="ord-checkbox">
+                            <label class="form-check-label" for="ord-checkbox">ORD</label>
+                        </div>
+                    </div>
+                    <div class="col-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Permit No" name="permit-no"
+                                id="permit-no-checkbox">
+                            <label class="form-check-label" for="permit-no-checkbox">Permit No.</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Date of Issue"
+                                name="date-of-ssue" id="date-of-ssue-checkbox">
+                            <label class="form-check-label" for="date-of-ssue-checkbox">Date of Issue</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Status"
+                                name="status" id="status-checkbox">
+                            <label class="form-check-label" for="status-checkbox">Status</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Category"
+                                name="category" id="category-checkbox">
+                            <label class="form-check-label" for="category-checkbox">Category</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Vehicle Class"
+                                name="vehicle-class" id="vehicle-class-checkbox">
+                            <label class="form-check-label" for="vehicle-class-checkbox">Vehicle Class</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Platforms"
+                                name="platforms" id="platforms-checkbox">
+                            <label class="form-check-label" for="platforms-checkbox">Platforms</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Demerit Points" name="demerit-points"
+                                id="demerit-points-checkbox">
+                            <label class="form-check-label" for="demerit-points-checkbox">Demerit Points</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Accumulated Mileage" name="accumulated-mileage"
+                                id="accumulated-mileage-checkbox">
+                            <label class="form-check-label" for="accumulated-mileage-checkbox">Accumulated Mileage per Class</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Last Driven Date" name="last-driven-date"
+                                id="last-driven-date-checkbox">
+                            <label class="form-check-label" for="last-driven-date-checkbox">Last Driven Date</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="mb-2 row div-report-group-list">
+                    <ul class="drag-list">
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 mt-3">
+                <div><label class="label-1">Report Data Filter</label></div>
+            </div>
+            <div class="row mt-3 div-report-data-filter">
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Role</label>
+                        <div class="col-8">
+                            <select class="form-select driver-role-select" name="role">
+    
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Vocation</label>
+                        <div class="col-8">
+                            <select class="form-select driver-vocation-select" name="Vocation">
+    
+                            </select>  
+                        </div>
+                    </div>
+                </div>
+               
+                <div class="mb-2 col-3 hub-node-div">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Hub</label>
+                        <!-- <div class="col-8 position-relative">
+                            <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                        </div> -->
+                        <div class="col-8">
+                            <select class="form-select" id="hubFilter">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3 hub-node-div">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Node</label>
+                        <!-- <div class="col-8 position-relative">
+                            <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                        </div> -->
+                        <div class="col-8">
+                            <select class="form-select" id="nodeFilter">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3 Unit-div">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Unit</label>
+                        <!-- <div class="col-8 position-relative">
+                            <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                        </div> -->
+                        <div class="col-8">
+                            <select class="form-select" id="UnitFilter">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">ORD Status</label>
+                        <div class="col-8">
+                            <select class="form-select form-control driverORDStatus">
+                                <option value="">All</option>
+                                <option value="effective">Effective</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Platforms</label>
+                        <div class="col-8">
+                            <select class="form-select" id="platforms">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Vehicle Class</label>
+                        <div class="col-8">
+                            <select class="form-select" id="vehicleClass">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Driving Permit Status</label>
+                        <div class="col-8">
+                            <select class="form-select" id="drivingPermitStatus">
+                                <option value="">All</option>
+                                <option value="Valid">Valid</option>
+                                <option value="Invalid">Invalid</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Category</label>
+                        <div class="col-8">
+                            <select class="form-select" id="category">
+                                <option value="">All</option>
+                                <option value="Category A Assessment">Category A Assessment</option>
+                                <option value="Category B Assessment">Category B Assessment</option>
+                                <option value="Category C Assessment">Category C Assessment</option>
+                                <option value="Category D Assessment">Category D Assessment</option>
+                                <option value="Transport Operator Guide (TOG) Assessment">Transport Operator Guide (TOG) Assessment</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">ORD Date Range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="ORD-date-range">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Enlistment Date Range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="enlistment-Date-Range">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-auto">
+                <button class="btn custom-btn-gray modal-footer-bunton-cancel-bg ms-3" onclick="window.location.reload()">Reset</button>
+                <button class="btn btn-success modal-footer-bunton-confirm-bg" id="task-report-create">Create</button>
+            </div>
+        </div>
+    </div>
+</body>

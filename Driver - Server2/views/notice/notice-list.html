@@ -1,0 +1,259 @@
+<style>
+    .ft-12 {
+        font-size: 12px !important;
+    }
+
+    .notice-offcanvas {
+        width: 460px !important;
+        background: #fff !important;
+    }
+
+    .notice-offcanvas>.offcanvas-body {
+        background: #F5F5F5 !important;
+    }
+
+    .notice-offcanvas .offcanvas-title {
+        color: #1A8D4A !important;
+    }
+
+    .notice-offcanvas .offcanvas-header {
+        border-bottom: solid 2px #1A8D4A !important;
+    }
+
+    .notice-offcanvas>.offcanvas-body>div {
+        border-radius: 8px;
+        background-color: white;
+        color: #000;
+        box-shadow: rgba(0, 0, 0, 0.25) 0px 2px 10px;
+        padding: 20px 8px;
+        position: relative;
+    }
+
+    .notice-offcanvas>.offcanvas-body>div label {
+        line-height: initial;
+    }
+
+    .img-wh {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .img-wh-2 {
+        width: 35px !important;
+        height: 35px !important;
+    }
+
+    .img-type {
+        width: 22px !important;
+        height: 22px !important;
+        background-color: aqua;
+        padding: 3px;
+        border-radius: 11px;
+    }
+    .img-back {
+        width: 40px !important;
+        height: 15px !important;
+    }
+
+    .bb {
+        border-bottom: 1px solid #d6d5d5;
+        padding-bottom: 8px;
+    }
+
+    #notice-detail {
+        background-color: #fff;
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        left: 0;
+        display: none;
+        border-radius: 8px;
+    }
+
+    .notice-detail-title {
+        border-left: 5px solid #1A8D4A;
+        padding: 0 5px;
+        font-weight: bold;
+    }
+
+    .notice-main-img {
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 5px;
+    }
+
+    .notice-main-img.active {
+        width: 100% !important;
+        height: fit-content !important;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .offcanvas-body {
+        overflow-y: hidden !important;
+        height: calc(100% - 50px);
+        position: relative;
+    }
+
+    .overflow-y-auto {
+        overflow-y: auto;
+    }
+
+    .notice-detail-back {
+        height: 30px;
+        background: #1A8D4A;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+
+    .overflow-y-auto::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .overflow-y-auto::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        -webkit-box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+        opacity: 0.2;
+    }
+
+    .overflow-y-auto::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+        border-radius: 0;
+    }
+
+    .align-center {
+        display: flex;
+        align-items: center;
+    }
+
+    .form-control:disabled {
+        background-color: #e9ecef7d;
+        border: 0;
+    }
+    .jconfirm.jconfirm-light .jconfirm-box {
+        padding: 0;
+    }
+    .jconfirm .jconfirm-box div.jconfirm-title-c {
+        background-color: #213537;
+        color: white;
+        padding: 0;
+        line-height: 2.5rem;
+        padding-left: 1rem !important;
+    }
+    .jconfirm .jconfirm-box div.jconfirm-closeIcon {
+        /* display: block !important; */
+        color: white;
+        top: 15px;
+    }
+
+    .jconfirm-type-animated {
+        max-width: 500px !important;
+        min-width: 310px !important;
+    }
+</style>
+<script type="module" src="../scripts/notice/notice.js"></script>
+<div class="offcanvas offcanvas-end notice-offcanvas" tabindex="-1" id="offcanvasRight-notice">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Notices</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="h-100">
+            <div class="overflow-y-auto h-100" id="notice-list">
+
+            </div>
+            <div id="notice-detail">
+                <div class="row m-0 align-items-center notice-detail-back">
+                    <img alt="" class="img-back cursor-pointer" src="/images/resourcesDashboard/left.png"
+                        onclick="NoticeUtil.backNoticeList()" role="button">
+                </div>
+                <div class="m-0 overflow-y-auto" style="height: calc(100% - 30px); padding: 0 10px;max-width: 500px;">
+                    <div class="row m-0 py-3">
+                        <div class="col-12"><span class="notice-detail-title">Title</span></div>
+                        <div class="col-12">
+                            <input type="text" class="form-control notice-title" disabled>
+                        </div>
+                    </div>
+                    <div class="row m-0 mb-3">
+                        <div class="col-12"><span class="notice-detail-title">Notice Type</span></div>
+                        <div class="col-12">
+                            <input type="text" class="form-control notice-type" disabled>
+                        </div>
+                    </div>
+                    <div class="row m-0 mb-3">
+                        <div class="col-12"><span class="notice-detail-title">Created By</span></div>
+                        <div class="col-12">
+                            <input type="text" class="form-control notice-createBy" disabled>
+                        </div>
+                    </div>
+                    <div class="row m-0 mb-3">
+                        <div class="col-12"><span class="notice-detail-title">Description</span></div>
+                        <div class="col-12">
+                            <textarea type="text" class="form-control notice-description" rows="3" disabled></textarea>
+                        </div>
+                    </div>
+                    <div class="row m-0 mb-3">
+                        <div class="col">
+                            <img alt="" class="notice-main-img" src="/images/notice/Image.svg">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script type="text/template" id="notice-row">
+    <div class="row m-0 align-items-center bb py-2 px-2" onclick="showNotice({{id}}, this)" role="button" tabindex="0">
+        <div class="col-8 p-0 text-left">
+            <div>
+                <img alt="" class="img-wh" src="{{coverImage}}">
+                <label class="fw-bold text-truncate" style="max-width:75%; display: inline;">{{title}}</label>
+            </div>
+            <div>
+                <label class="text-truncate" style="max-width:75%">{{description}}</label>
+            </div>
+        </div>
+        <div class="col-4 p-0 text-right">
+            <div style="float: right; padding-right: 5px;">
+                <div class="{{alreadyRead}}" style="width: 8px; height: 8px; border-radius: 4px; background-color: red; position: relative; left: 18px; top: 10px;">
+                </div>
+                <img alt="" class="img-type ms-1" style="background-color: {{backgroundColor}};" src="{{typeImage}}">
+                <img alt="" class="cursor-pointer" style="width: 18px;" src="/images/notice/View.svg">
+            </div>
+            <div>
+                <label class="ft-12" style="color: #898989;">{{datetime}}</label>
+            </div>
+        </div>
+
+        <!-- <div class="col-2 p-0 text-center">
+            <img alt="" class="img-wh" src="{{coverImage}}">
+        </div>
+        <div class="col-10 p-0">
+            <div class="row m-0">
+                <div class="col-7 p-0 align-center">
+                    <label class="fw-bold text-truncate" title="{{title}}" style="max-width:75%">{{title}}</label>
+                    <img alt="" class="img-type ms-1" src="{{typeImage}}">
+                </div>
+                <div class="col-5 p-0 align-center">
+                    <div class="float-end">
+                        <label class="ft-12">{{datetime}}</label>
+                    </div>
+                </div>
+            </div>
+            <div class="row m-0">
+                <div class="col-7 p-0">
+                    <label class="text-break text-secondary">{{description}}</label>
+                </div>
+                <div class="col-5 p-0">
+                    <div class="float-end me-3">
+                        <img alt="" class="cursor-pointer" style="width: 18px;" src="/images/notice/View.svg">
+                    </div>
+                </div>
+            </div>
+        </div> -->
+    </div>
+</script>

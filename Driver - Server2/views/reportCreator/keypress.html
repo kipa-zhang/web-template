@@ -1,0 +1,164 @@
+<%- include('../common/common-html-base.html') -%>
+    <title>Report Creator</title>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/drag-arrange.css">
+    <link rel="stylesheet" href="../multiple-select/multiple-select.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/reportCreator.css">
+
+    <script type="text/javascript" src="../layui/layui.js"></script>
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/drag-arrange.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/keypress.js"></script>
+    <script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        .form-check {
+            line-height: 2.3rem;
+        }
+        .form-check-input {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+        .form-check-label {
+            padding-left: 0.3rem;
+        }
+    </style>
+
+    <body style="background-color: white !important;">
+        <div class="col-12 report-form">
+            <div class="row">
+                <div class="mb-2 row">
+                    <label class="col-sm-2 col-form-label">Report Date Range</label>
+                    <div class="col-sm-3">
+                        <input type="text" readonly class="form-control" value="" id="reportDateRange">
+                    </div>
+                </div>
+                <div class="col-6 mt-3">
+                    <div><label class="label-1">Report Data Group Selection</label></div>
+                    <div><label class="label-2">Choose the data to be included in the report</label></div>
+                </div>
+                <div class="col-6 mt-3">
+                    <div><label class="label-1">Selected Data Group</label></div>
+                </div>
+                <div class="col-6">
+                    <div class="row">
+                        <div class="col-5">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select-all-checkbox">
+                                <label class="form-check-label fw-bold" for="select-all-checkbox">Select All</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row report-data-group">
+                        <div class="col-5">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Keypress Location"
+                                    name="keypressLocation" id="keypress-location-checkbox">
+                                <label class="form-check-label" for="keypress-location-checkbox">Keypress Location</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Keypress Box Name" name="keypressBoxName"
+                                    id="keypress-boxName-checkbox">
+                                <label class="form-check-label" for="hub-checkbox">Keypress Box Name</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Vehicle Type" name="vehicleType"
+                                    id="vehicleType-checkbox">
+                                <label class="form-check-label" for="vehicleType-checkbox">Vehicle Type</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Vehicle No."
+                                    name="vehicleNo" id="vehicle-no-checkbox">
+                                <label class="form-check-label" for="task-status-checkbox">Vehicle No.</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="User Name" name="userName"
+                                    id="userName-checkbox">
+                                <label class="form-check-label" for="userName-checkbox">User Name</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Driver Name" name="driverName"
+                                    id="driverName-checkbox">
+                                <label class="form-check-label" for="driverName-checkbox">Driver Name</label>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Transaction Type" name="transactionType"
+                                    id="transactionType-checkbox">
+                                <label class="form-check-label" for="transactionType-checkbox">Transaction Type</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Key Slot Location" name="keySlotLocation"
+                                    id="keySlotLocation-checkbox">
+                                <label class="form-check-label" for="keySlotLocation-checkbox">Key Slot Location</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Transaction Range" name="transactionRange"
+                                    id="transactionRange-checkbox">
+                                <label class="form-check-label" for="transactionRange-checkbox">Transaction Range</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Reason" name="reason"
+                                    id="reason-checkbox">
+                                <label class="form-check-label" for="reason-checkbox">Reason</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-2 row div-report-group-list">
+                        <ul class="drag-list">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 mt-3">
+                    <div><label class="label-1">Report Data Filter</label></div>
+                </div>
+                <div class="row mt-3 div-report-data-filter">
+                    <div class="mb-2 col-4" data-filter="keypressLocation">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Keypress Location</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="locationFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="boxName">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Keypress Box Name</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="boxNameFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="transactionType">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Transaction Type</label>
+                            <div class="col-8">
+                                <select class="form-select" id="transactionTypeFilter">
+                                    <option value="">All</option>
+                                    <option value="mobileReturn">Driver Return</option>
+                                    <option value="mobileWithdraw">Driver Withdraw</option>
+                                    <option value="manualReturn">Manual Return</option>
+                                    <option value="returnConfirmQrcode">Manual Return Qrcode</option>	
+                                    <option value="manualWithdraw">Manual Withdraw</option>
+                                    <option value="withdrawConfirmQrcode">Manual Withdraw Qrcode</option>
+                                    <option value="Mustering">Mustering</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-auto">
+                    <button class="btn custom-btn-gray modal-footer-bunton-cancel-bg ms-3" onclick="window.location.reload()">Reset</button>
+                    <button class="btn btn-success modal-footer-bunton-confirm-bg" id="keypress-report-create">Create</button>
+                </div>
+            </div>
+        </div>
+    </body>

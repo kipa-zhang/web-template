@@ -1,0 +1,33 @@
+.offcanvas {
+    width: 320px !important;
+}
+.modal .modal-header .modal-title {
+    font-size: large;
+}
+.modal .modal-content {
+    border-width: 0;
+}
+.modal .modal-content .modal-header {
+    padding: 0.5rem 1rem;
+    background-color: #1B9063 !important;
+    color: white;
+}
+.modal .modal-content .modal-body {
+    padding: 1.5rem 2rem 0.5rem 2rem;
+} 
+.modal .modal-content .modal-footer {
+    padding: 0.2rem 1.5rem 0.8rem 1rem;
+    border-top: 0;
+}
+.modal .modal-header .close {
+    padding: 0.7rem 1rem;
+    margin: -0.5rem -1rem -1rem auto;
+}
+
+.toast {
+    width: 300px;
+}
+
+.dataTable .form-check .form-check-input {
+    float: inherit;
+}

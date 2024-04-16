@@ -1,0 +1,337 @@
+<!doctype html>
+<meta charset="UTF-8">
+<title>Users</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<%- include('../registerAccount.html') -%>
+<script type="text/javascript" src="../axios/axios.min.js"></script>
+<script type="text/javascript" src="../moment/moment.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+<script type="text/javascript" src="../numeral/numeral.min.js"></script>
+
+<script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+<script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+
+<script src="../DataTables-bootstrap4/jquery.dataTables.min.js"></script>
+<script src="../DataTables-bootstrap4/dataTables.bootstrap4.min.js"></script>
+
+<link rel="stylesheet" href="../css/common-style.css">
+<link rel="stylesheet" href="../css/common-bootstrap.css">
+<link rel="stylesheet" href="../css/common-datatables.css">
+
+<script type="text/javascript" src="../lodash/lodash.min.js"></script>
+
+<link rel="stylesheet" href="../layui/css/layui.css">
+<script type="text/javascript" src="../layui/layui.js"></script>
+
+<link rel="stylesheet" href="../multiple-select/multiple-select.css">
+<script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+
+<script type="text/javascript" src="../pagehelper/pageHelper.js"></script>
+<script type="module" src="../scripts/user/user-management.js"></script>
+
+
+<style>
+
+	.container-fluid {
+		background-color: white;
+	}
+
+	.container-fluid .tab-label {
+		font-weight: 600;
+		font-size: 20px;
+		line-height: 40px;
+		cursor: pointer;
+		color: #9f9f9f;
+	}
+	.container-fluid .tab-label.active {
+		color: black;
+		border-bottom: 5px solid #1B9063;
+	}
+
+	table thead th {
+		border-style: none;
+	}
+
+	table.dataTable tbody tr td {
+		display: table-cell; 
+		vertical-align: middle;
+		line-height: 22px;
+	}
+
+	table.dataTable tbody tr {
+		background-color: white;
+		border: solid 10px #F3F3F3;
+	}
+
+	table.dataTable tbody tr td:first-child {
+		border-bottom-left-radius: 25px;
+		border-top-left-radius: 25px;
+	}
+	table.dataTable tbody tr td:last-child {
+		border-bottom-right-radius: 25px;
+		border-top-right-radius: 25px;
+	}
+
+	table.dataTable tbody tr {
+		background-color: white;
+	}
+
+	.table-shadow {
+		box-shadow: none;
+	}
+	.table-common {
+		border: none;
+		border-radius: 0px;
+		background-color: #F3F3F3;
+	}
+
+	.paginate_button.page-item {
+		line-height: 1.5em;
+	}
+
+	.dataTables_length {
+		padding-top: 10px;
+	}
+
+	.add-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid #1B9063;
+		border-radius: 5px;
+		background-color: #1B9063;
+		height: 36px;
+		width: fit-content;
+		min-width: 140px;
+	}
+	.add-img {
+		height: 100%;
+		width: 30px;
+		background-image: url('../images/vehicle/add.svg');
+		background-size: 24px;
+		background-repeat: no-repeat;
+		background-position: center center;
+	}
+	.add-label {
+		color: white;
+	}
+	.table-btn {
+		border: solid 1px #1B9063; 
+		background-color: #1B9063; 
+		color: white;
+	}
+	.pending-approval-user-num {
+		border: 1px solid #9f9f9f;
+		border-radius: 10px;
+		width: fit-content;
+		min-width: 30px;
+		height: 15px;
+		margin-left: 5px;
+		color: black;
+		font-size: 14px;
+		font-weight: 300;
+	}
+</style>
+
+<div class="container-fluid" style="min-height: 80px;">
+	<div class="row" style="display: flex; align-items: center;">
+		<div class="col-auto">
+			<label class="mx-3 title-label" style="font-size: 30px; font-weight: bolder; line-height: 40px;">Users</label>
+		</div>
+	</div>
+	<div class="row m-0 resource-menu" style="text-align: center;">
+		<div class="col-auto px-0 userType-common"> 
+			<div class="tab-label px-3 user-select-none" data-tab="1">
+				Active Users
+			</div>
+		</div>
+		<div class="col-auto px-0 ">
+			<div class="tab-label px-3 user-select-none TO-div" data-tab="2">
+				Pending Approval
+				<span class="pending-approval-user-num px-2">0</span>
+			</div>
+		</div>
+		<div class="col-auto px-0 resources-licensing">
+			<div class="tab-label px-3 user-select-none" data-tab="3">
+				Rejected
+			</div>
+		</div>
+		<div class="col-auto px-0 resources-licensing">
+			<div class="tab-label px-3 user-select-none" data-tab="4">
+				Deactivated
+			</div>
+		</div>
+		<!-- <div class="col-auto div-hub-node">
+			<div class="row">
+				<div class="col-auto hubNode-btn">
+					<select class="form-select " id="select-hub">
+					</select>
+				</div>
+				<div class="col-auto hubNode-btn">
+					<select class="form-select " id="select-node">
+						<option value="">Node: All</option>
+					</select>
+				</div>
+				<div class="customer-button col-auto select-group" style="display: none; line-height: 35px;;">
+					<input class="form-check-input" style="margin-top: 12px; margin-right: 5px; cursor: pointer;" type="checkbox" value="" id="select-customer">
+					<label class="form-check-label" style="font-weight: bold;" for="select-customer">
+						Customer
+					</label>
+
+				</div>
+				<div class="col-auto mx-0 px-0" style="line-height: 35px;">
+					<select class="form-select " style="display: none;" id="select-group">
+						<option value="">Group: All</option>
+					</select>
+				</div>
+			</div>
+		</div> -->
+	</div>
+</div>
+<!-- <div class="row m-0" style="height: 5px; background-color: white;"></div> -->
+<!-- <div style="height: calc(100% - 125px); background-color: red;"></div> -->
+<div class="container-fluid h-100 p-3 m-0" style="background-color: #ebe7e7; height: calc(100% - 100px) !important; overflow: auto;">
+	<div class="body-bottom">
+		<div class="col-12" id="user-filter">
+			<div class="row" style="margin-left: 1rem;margin-right: 1rem;">
+				<div class="filter-div col-12">
+					<div class="row float-start" id="filter">
+						<div class="col-auto filter-item cvUserRole">
+							<select class="form-select form-control cvUserRoleSelect" name="cvUserRole">
+								<option value="">CV Role: All</option>
+							</select>
+						</div>
+						<div class="col-auto filter-item mvUserType">
+							<select class="form-select form-control mvUserTypeSelect" name="mvUserType">
+								<option value="">MV Account Type: All</option>
+								<option value="ADMINISTRATOR">MV Account Type: ADMINISTRATOR</option>
+								<option value="HQ">MV Account Type: HQ</option>
+								<option value="UNIT">MV Account Type: UNIT</option>
+								<option value="CUSTOMER">MV Account Type: CUSTOMER</option>
+								<option value="LICENSING OFFICER">MV Account Type: LICENSING OFFICER</option>
+							</select>
+						</div>
+						<div class="col-auto filter-item">
+							<div class="search-input-div">
+								<div class="search-img-div"></div>
+								<input class="search-input" placeholder="Search by Name/Hub/Node/Unit/Group..."/>
+							</div>
+						</div>
+					</div>
+					<div class="col-auto float-start">
+						<button class="btn btn-clear" name="clean-all" onclick="UserManageCleanAllClick()">Clear all</button>
+					</div>
+					<div class="col-auto user-opt-btn float-start">
+						<% if (pageList.find(item => item.action == 'New')) { %>
+							<div class="add-btn" onclick="initCreateUserPage('create')" role="button" tabindex="0">
+								<div class="add-img"></div>
+								<label class="add-label fs-6">New User</label>
+							</div>
+						<% } %>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row m-0" style="padding: 10px; overflow: auto; ">
+			<div class="table-common table-shadow" style="border-radius: 1em;">
+				<table aria-hidden="true" class="table user-table pb-2 w-100" style="white-space: nowrap;border-collapse:collapse !important; margin-top: 10px;">
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="loadingModal" style="z-index: 5000;" tabindex="-1" data-bs-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="width: 350px;">
+        <div class="modal-content">
+            <div class="d-flex align-items-center shadow-lg px-4 py-2 rounded">
+                <h5 style="line-height: 2; margin-bottom: 0;">Loading...</h5>
+                <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="apply-reject" tabindex="-1" data-backdrop="static" data-keyboard="false" data-bs-backdrop="static">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header" style="background-color: #1C9063 !important;">
+				<h4 class="modal-title licensing-modal-title">Reject</h4>
+			</div>
+			<div class="modal-body" style="padding-bottom: 2rem;">
+				<div class="row apply-reject-info-div" style="display: none;">
+					<div class="col-md-6 col-sm-6 col-lg-6">
+						<label class="info-title">Reject By:</label><br><label class="apply-reject-by-label"></label>
+					</div>
+					<div class="col-md-6 col-sm-6 col-lg-6">
+						<label class="info-title">Reject Time:</label><br><label class="apply-reject-time-label"></label>
+					</div>
+				</div>
+				<div class="row">
+					<input id="currentApproveId" value="" style="display: none;"/>
+					<div class="col-md-12 col-sm-12 col-lg-12 mt-2">
+						<label class="info-title">Reason:</label><br>
+						<textarea rows="3" class="form-control apply-reject-remarks-input"></textarea>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer" style="padding-bottom: 1.5rem;">
+				<button type="button" class="btn btn btn-secondary btn-primary custom-btn-gray" id="rejectCancel">Cancel</button>
+				<button type="button" class="btn btn btn-primary custom-btn-green" id="rejectConfirm">Confirm</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="change-user-password-modal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-centered">
+		<div class="modal-content" style="max-width: 500px;">
+			<div class="modal-header">
+				<h4 class="modal-title">Change Password</h4>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form class="row">
+					<input id="currentChangePasswordUserBaseId" value="" style="display: none;"/>
+					<div class="mb-3 col-md-12 col-sm-12">
+						<label class="col-form-label text-end" for="nric">New Password</label>
+						<input type="password"  class="form-control  newUserPassword" name="newUserPassword">
+					</div>
+					<div class="mb-3 col-md-12 col-sm-12">
+						<label class="col-form-label text-end" for="nric">Confirm Password</label>
+						<input type="password"  class="form-control  confirmUserPassword" name="confirmUserPassword">
+					</div>
+				</form>
+				<div class="row my-3" style="display: flex; justify-content: flex-end;">
+					<div class="mt-1" style="width: 33%;display: flex;justify-content: flex-end;">
+						<div class="opt-btn-div change-user-pwd-opt-btn custom-btn-green px-2">
+							<label style="color: white;" class="opt-btn-label fs-6">Confirm</label>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="modal fade" id="user-opt-list-modal" tabindex="-1" data-backdrop="static" data-keyboard="false" data-bs-backdrop="static">
+	<div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
+	  <div class="modal-content" style="width: 600px; height: 450px; background-color: #f4f4f4;">
+		<div class="modal-header" style="background-color: #1C9063 !important;">
+		  <h4 style="font-size: large; color: white;" >Operation Detail</h4>
+		</div>
+		<div class="modal-body" style="height: 400px; overflow: auto; padding-left: 15px; padding-right: 15px; padding-top: 0;">
+		  <div class="row">
+			  <div class="col-12 mt-2">
+				<div class="user-opt-detail-content-div">
+				</div>
+			  </div>
+		  </div>
+		</div>
+		<div class="modal-footer" style="padding-bottom: 1.5rem;">
+		  <button type="button" class="btn btn-success" id="confirmOptDetailBtn">Confirm</button>
+		</div>
+	  </div>
+	</div>
+</div>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Overview</title>
+    <%- include('../common/common-html.html') -%>
+    <style>
+        div {
+            white-space: nowrap;
+        }
+
+        .resources-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .vehicles-owned img {
+            width: 12px;
+            height: 12px;
+        }
+
+        .leftimg {
+            width: 37px;
+            height: 37px
+        }
+
+        .user-state {
+            font-size: 25px;
+            color: black;
+            font-weight: bold;
+        }
+
+        .state-name {
+            font-size: 14px;
+            color: #A6A6A6;
+            font-weight: bold;
+            line-height: 20px;
+        }
+
+        .div-state {
+            background-color: white;
+            border-radius:10px 10px 10px 10px;
+            height: 210px;
+        }
+
+        .user-state-number {
+            font-size: 25px;
+            color: #6EB825;
+            font-weight: bold;
+        }
+
+        .user-state-allNumber {
+            font-size: 25px;
+            color: #A6A6A6;
+            font-weight: bold;
+        }
+        
+        .tooltip-inner {
+            width: fit-content;
+            max-width: fit-content;
+            margin-left: -270px;
+            background-color: lightgrey;
+            color: rgb(87, 87, 87);
+        }
+ 
+        .tooltip-arrow:before {
+            border-top-color: lightgrey !important;
+        }
+    </style>
+</head>
+
+<body>    
+    <div class="container-fluid h-100">
+        <div class="mt-2" style="display: flex; width: 100%;">
+            <div class="col-md-12 col-sm-12 col-lg-6" style="margin-right: 3px;" id="overviewPage-vehicles">
+                <div style="width: 100%; height: 100%; border: 1px solid #f4f4f4; border-radius: 10px; background-color: #f4f4f4; padding: 5px;">
+                    <div class="resources-name">Military Vehicles</div>
+                    <div class="p-1" style="background-color: white;border-radius:10px 10px 10px 10px;" id="vehicle-assigned">
+                        <div class="row mx-2">
+                            <div style="width: 100%; height: fit-content; display: flex; padding-left: 0px; padding-right: 0px;">
+                                <div style="background-color: #F2F8F6;display: flex;align-items: center;justify-content: center;border-radius:10px 10px 10px 10px; width: 50px;height: 54px;">
+                                    <img alt="" src="../images/overview/vehicle-task.svg" class="leftimg" alt="" draggable="false"/>
+                                </div>
+                                <div style="width: calc(100% - 50px); padding-left: 5px;">
+                                    <div style="width: 100%; height: 30px; display: flex; align-items: center;">
+                                        <div style="font-size: 14px; color: #A6A6A6;font-weight: bold; width: 50%; text-align: left;">Today's RealTime Task</div>
+                                        <div style="font-size: 26px;font-weight: bold; width: calc(50% - 20px); text-align:right;" id="vehicleTodayAssigned"></div>
+                                        <div style="width: 20px; height: 100%;">
+                                            <img alt="" style="width: 18px; height: 18px; display: flex; padding-top: 5px;" src="../images/overview/notice-img.svg" 
+                                                data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Today total / (Not start + Ongoing) / Assigned" class="overview-task-tooltip"> 
+                                        </div>
+                                    </div>
+                                    <div class="progress p-0 my-2" style="height: 10px;">
+                                        <div class="progress-bar" style="background-color: #1B9063;" id="vehicleYetToStartTaskPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #FAD028;" id="vehicleOnGoingPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #979090;" id="vehicleTodayCheckedPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #494747;" id="vehicleCancelledPercentage"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-left: 35px;">
+                                <div class="row">
+                                    <table aria-hidden="true">
+                                        <tr>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #1B9063"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleYetToStartTask"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Yet to Start</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #FAD028"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleOnGoing"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">On-going</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #979090"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleEnded"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Ended</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #494747"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleCancelled"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Cancelled</span></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row m-1"></div>
+                    <div class="p-1" style="background-color: white;border-radius:10px 10px 10px 10px;">
+                        <div class="row mx-2">
+                            <div style="width: 100%; height: fit-content; display: flex; padding-left: 0px; padding-right: 0px;">
+                                <div style="background-color: #F2F8F6;display: flex;align-items: center;justify-content: center;border-radius:10px 10px 10px 10px; width: 50px;">
+                                    <img alt="" src="../images/indent/tank.png" class="leftimg" style="width: 56px; height: 56px;" alt="" draggable="false"/>
+                                </div>
+                                <div style="width: calc(100% - 50px); padding-left: 5px;">
+                                    <div style="width: 100%; height: 30px; display: flex; align-items: center;">
+                                        <div style="font-size: 14px; color: #A6A6A6; font-weight: bold; width: 50%; text-align: left;">My Vehicles</div>
+                                        <div style="font-size: 20px;font-weight: bold; width: 50%; text-align:right;" id="vehicleOwned"></div>
+                                    </div>
+                                    <div class="progress p-0 my-2" style="height: 10px;">
+                                        <div class="progress-bar" style="background-color: #6EB825;" id="vehicleUnAssignedPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #FAD028;" id="vehicleAssignedPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #f705ce;" id="vehicleMaintenancePercentage"></div>
+                                        <div class="progress-bar" style="background-color: #3e3b3b;" id="vehicleOutOfServicePercentage"></div>
+                                        <div class="progress-bar loanOutDiv" style="background-color: blue; display: none;" id="vehicleLoanOutPercentage"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-left: 35px;">
+                                <div class="row">
+                                    <table aria-hidden="true">
+                                        <tr>
+                                            <td style="width: 20%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #6EB825"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleUnAssigned"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Unassigned</span></div>
+                                            </td>
+                                            <td style="width: 18%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #FAD028"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleAssigned"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Assigned</span></div>
+                                            </td>
+                                            <td style="width: 24%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #f705ce"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleMaintenance1"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Under Maintenance</span></div>
+                                            </td>
+                                            <td style="width: 20%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #3e3b3b"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleOutOfService1"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Out Of Service</span></div>
+                                            </td>
+                                            <td class="loanOutDiv" style="width: 18%; height: 15px; display: none;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: blue"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="vehicleLoanOut1"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Loan Out</span></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-1 pt-2" style="display: flex;">
+                        <div style="width: calc(20% - 4px); padding-right: 0;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Deployable.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#6EB825;font-size: 26px; text-align: center;" id="vehicleDeployable"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Deployable
+                                </div>
+                            </div>
+                        </div>
+                        <div style="width: calc(20% - 4px); margin-left: 5px; padding-right: 0;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Deployed.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#FAD028;font-size: 26px; text-align: center;" id="vehicleDeployed"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Deployed
+                                </div>
+                            </div>
+                        </div>
+                        <div style="width: calc(20% - 4px); margin-left: 5px; padding-right: 0;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Under Maintenance.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#f705ce;font-size: 26px; text-align: center;" id="vehicleMaintenance"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Under
+                                    <br/>
+                                    Maintenance
+                                </div>
+                            </div>
+                        </div>
+                        <div style="width: calc(20% - 4px); margin-left: 5px; padding-right: 0;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Out Of Service.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#3e3b3b;font-size: 26px; text-align: center;" id="vehicleOutOfService"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Out Of Service
+                                </div>
+                            </div>
+                        </div>
+                        <div class="loanOutDiv" style="width: calc(20% - 4px); margin-left: 5px; padding-right: 0; display: none;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Loan Out.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:blue;font-size: 26px; text-align: center;" id="vehicleLoanOut"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Loan Out
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12 col-sm-12 col-lg-6" style="margin-left: 3px;">
+                <div style="width: 100%; height: 100%; border: 1px solid #f4f4f4; border-radius: 10px; background-color: #f4f4f4; padding: 5px;">
+                    <div class="resources-name">Transport Operators</div>
+                    <div class="p-1" style="background-color: white;border-radius:10px 10px 10px 10px;">
+                        <div class="row mx-2">
+                            <div style="width: 100%; height: fit-content; display: flex; padding-left: 0px; padding-right: 0px;">
+                                <div class="transport-operators" style="background-color: #F2F8F6;display: flex;align-items: center;justify-content: center;border-radius:10px 10px 10px 10px; width: 50px;height: 54px;">
+                                    <img alt="" src="../images/overview/to-task.svg" class="leftimg" alt="" draggable="false"/>
+                                </div>
+                                <div style="width: calc(100% - 50px); padding-left: 5px;">
+                                    <div style="width: 100%; height: 30px; display: flex; align-items: center;">
+                                        <div style="font-size: 14px; color: #A6A6A6;font-weight: bold; width: 50%; text-align: left;">Today's RealTime Task</div>
+                                        <div style="font-size: 26px;font-weight: bold; width: calc(50% - 20px); text-align: right;" id="tsOperatorTodayAssigned"></div>
+                                        <div style="width: 20px; height: 100%;">
+                                            <img alt="" style="width: 18px; height: 18px; display: flex; padding-top: 5px;" src="../images/overview/notice-img.svg" 
+                                                data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-placement="top" title="Today total / (Not start + Ongoing) / Assigned" class="overview-task-tooltip"> 
+                                        </div>
+                                    </div>
+                                    <div class="progress p-0 my-2" style="height: 10px;">
+                                        <div class="progress-bar" style="background-color: #1B9063;" id="tsOperatorYetToStartTaskPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #FAD028;" id="tsOperatorOnGoingPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #979090;" id="tsOperatorEndedPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #494747;" id="tsOperatorCancelledPercentage"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-left: 35px;">
+                                <div class="row">
+                                    
+                                    <table aria-hidden="true">
+                                        <tr>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #1B9063"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorYetToStartTask"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Yet to Start</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #FAD028"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorOnGoing"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">On-going</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #979090"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorEnded"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Ended</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #494747"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorCancelled"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Cancelled</span></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    <div class="row m-1"></div>
+                    <div class="p-1" style="background-color: white;border-radius:10px 10px 10px 10px;">
+                        <div class="row mx-2">
+                            <div style="width: 100%; height: fit-content; display: flex; padding-left: 0px; padding-right: 0px;">
+                                <div class="transport-operators" style="background-color: #F2F8F6;display: flex;align-items: center;justify-content: center;border-radius:10px 10px 10px 10px; width: 50px;height: 54px;">
+                                    <img alt="" src="../images/overview/Operators.svg" class="leftimg" alt="" draggable="false"/>
+                                </div>
+                                <div style="width: calc(100% - 50px); padding-left: 5px;">
+                                    <div style="width: 100%; height: 30px; display: flex; align-items: center;">
+                                        <div style="font-size: 14px; color: #A6A6A6;font-weight: bold; width: 50%; text-align: left;">My Transport Operators</div>
+                                        <div style="font-size: 20px;font-weight: bold; width: 50%; text-align: right;" id="tsOperatorOwned"></div>
+                                    </div>
+                                    <div class="progress p-0 my-2" style="height: 10px;">
+                                        <div class="progress-bar" style="background-color: #6EB825;" id="tsOperatorUnAssignedPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #FAD028" id="tsOperatorAssignedPercentage"></div>
+                                        <div class="progress-bar" style="background-color: #3e3b3b" id="tsOperatorOnleavePercentage"></div>
+                                        <div class="progress-bar loanOutDiv" style="background-color: blue; display: none;" id="tsOperatorLoanOutPercentage"></div>
+                                        <div class="progress-bar" style="background-color: red;" id="tsOperatorPermitInvalidPercentage"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-left: 35px;">
+                                <div class="row">
+                                    <table aria-hidden="true">
+                                        <tr>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #6EB825"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorUnAssigned"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Unassigned</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #FAD028"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorAssigned"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Assigned</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: #3e3b3b"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorOnleave1"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">On Leave</span></div>
+                                            </td>
+                                            <td class="loanOutDiv" style="width: 25%; height: 15px; display: none;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: blue;"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorLoanOut"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Loan Out</span></div>
+                                            </td>
+                                            <td style="width: 25%; height: 15px;">
+                                                <div style="display: flex; align-items: center; height: 20px;">
+                                                    <div style="width: 10px;height: 10px;border-radius: 10px;background-color: red;"></div>
+                                                    <span style="font-size: 16px;font-weight: bold; padding-left: 5px;" id="tsOperatorPermitInvalid"></span>
+                                                </div>
+                                                <div><span class="state-name" style="padding-left: 15px;">Permit Invalid</span></div>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-1 pt-2" style="display: flex;">
+                        <div style="width: calc(20% - 4px); ">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Deployable.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#6EB825;font-size: 26px; text-align: center;" id="tsOperatorDeployable"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Deployable
+                                </div>
+                            </div>
+                        </div>
+                        <div style="width: calc(20% - 4px); margin-left: 5px;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Deployed.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#FAD028;font-size: 26px; text-align: center;" id="tsOperatorDeployed"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Deployed
+                                </div>
+                            </div>
+                        </div>
+                        <div style="width: calc(20% - 4px); margin-left: 5px;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/On Leave.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:#3e3b3b;font-size: 26px; text-align: center;" id="tsOperatorOnleave"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    On Leave
+                                </div>
+                            </div>
+                        </div>
+                        <div class="loanOutDiv" style="width: calc(20% - 4px); margin-left: 5px; display: none;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Loan Out.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:blue;font-size: 26px; text-align: center;" id="driverLoanOut"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Loan Out
+                                </div>
+                            </div>
+                        </div>
+                        <div style="width: calc(20% - 4px); margin-left: 5px;">
+                            <div class="div-state px-2 py-2">
+                                <div style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                                    <div style="width: 80px;height: 80px; border-radius: 60px; background-color: #F7F7F7; display: flex; align-items: center; justify-content: center;">
+                                        <img alt="" style="width: 35px; height: 35px;" src="../images/overview/Permit Invalid.svg">
+                                    </div>
+                                </div>
+                                <div style="font-weight: bold;color:red;font-size: 26px; text-align: center;" id="tsOperatorInvalid"></div>
+                                <div class="state-name" style="text-align: center;">
+                                    Permit Invalid
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../scripts/indent/overview.js"></script>
+</body>
+</html>

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Track</title>
+    <%- include('../common/common-html.html') -%>
+    <style>
+        body {
+            line-height: 1.3 !important;
+        }
+
+        .track-table{
+            width: 100%;
+            height: 100%;
+            border-collapse: separate !important;
+            border-spacing: 10px !important;
+        }
+        .track-table td:first-child{
+            width: 25%;
+            text-align: right;
+        }
+        .track-table td:last-child{
+            width: 80%;
+        }
+        .track-table tr:last-child td{
+            text-align: center;
+        }
+        #map{
+            z-index: 1;
+            height: 100%;
+        }
+        .search-user-history-content{
+            z-index: 2;
+            position: absolute;
+            left: 3%;
+            top: 5%;
+            background-color: #bababa;
+            border-radius: 10px;
+            width: 500px;
+            background-color: rgba(51, 49, 50, .8);
+        }
+        .speedSlide-content{
+            display: none;
+            z-index: 2;
+            position: absolute;
+            right: 2%;
+            top: 5%;
+            padding-left: 10px;
+            padding-right: 10px;
+            width: calc(100% - 700px);
+            background-color: rgba(51, 49, 50, .3);
+            border-radius: 10px;
+            height: 42px;
+        }
+        .realTimeSpeed{
+            display: none;
+            z-index: 2;
+            position: absolute;
+            bottom: 2%;
+            background-color: #bababa;
+            border-radius: 10px;
+            background-color: rgb(255 255 255 / 63%);
+        }
+        .convoy-select{
+            width: 90%;
+            font-size: 9pt;
+            line-height: 9pt;
+            border: 0;
+            border-radius: 5px;
+            height: 20px;
+            color: #fff;
+            background: url('../images/track/down-arrow-yellow01.png') no-repeat right #333;
+            -webkit-appearance: none;
+            background-position-x: 95%;
+            text-transform: uppercase;
+            background-size: 12px;
+            padding-left: 10px;
+            outline: 0;
+        }
+        .convoy-btn{
+            background-color: #337ab7;
+            /*border-color: #337ab7;*/
+            color: white;
+            border: 1px solid transparent;
+            padding: 3px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .layui-layer-dialog{
+            border-radius: 10px !important;
+        }
+        .layui-layer-title{
+            font-size: medium !important;
+            font-weight: bolder !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            border-top-left-radius: 10px !important;
+            border-top-right-radius: 10px !important;
+        }
+        .layui-layer-content{
+            font-size: medium !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+        }
+        .layui-layer-btn{
+            font-size: medium !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            color: white !important;
+            border-bottom-left-radius: 10px !important;
+            border-bottom-right-radius: 10px !important;
+        }
+        .layui-input-block {
+            margin-left: 20px !important;
+        }
+        .layui-transfer-box {
+            border-radius: 5px !important;
+        }
+        .layui-input-block span {
+            color: white !important;
+        }
+        .layui-input-block .layui-form-checkbox {
+            width: 100%;
+        }
+        .layui-form-checkbox span {
+            color: white !important;
+        }
+        .layui-form-checkbox:hover span{
+            /* color: black !important; */
+        }
+        .layui-transfer-data li:hover span {
+            /* color: black !important; */
+        }
+        .layui-transfer-box {
+            background-color: rgba(51, 49, 50, .8) !important;
+            border-width: 0 !important;
+            color: white !important;
+            height: 302px !important;
+        }
+        .layui-transfer-header {
+            height: 28px !important;
+            line-height: 28px !important;
+        }
+        .layui-transfer-data {
+            height: 225px !important;
+        }
+        .layui-transfer-data li {
+            height: 26px !important;
+            line-height: 26px !important;
+        }
+        .layui-transfer-search .layui-input {
+            height: 26px !important;
+        }
+        .layui-transfer-search .layui-icon-search {
+            /* margin-top: -11px !important; */
+        }
+        .layui-collapse {
+            border-width: 0 !important;
+        }
+        .layui-colla-title {
+            background-color: rgba(51, 49, 50, .8) !important;
+            color: white !important;
+            border-radius: 10px !important;
+        }
+        .layui-colla-content {
+            color: white !important;
+        }
+        .layui-btn-sm {
+            height: 20px !important;
+            line-height: 20px !important;
+        }
+        .layui-transfer-active .layui-btn {
+            padding: 0 6px !important;
+        }
+        #convoy-select .layui-transfer-active .layui-btn .layui-icon {
+            font-size: 10px !important;
+        }
+        .track-action{
+            display: none;
+            z-index: 2;
+            position: absolute;
+            right: 3%;
+            top: 5%;
+            margin-top: 50px;
+        }
+        
+        .layui-icon-date:before {
+            margin-right: 10px;
+        }
+        .layui-form-checkbox[lay-skin=primary]>div {
+            color: white !important;
+        }
+        .layui-transfer-data>li:hover {
+            background-color: #1B9063;
+        }
+        #speed-echart canvas {
+            border-radius: 10px;
+        }
+        .layui-slider {
+            height: 10px !important;
+        }
+        .layui-slider-wrap-btn {
+            width: 18px;
+            height: 18px;
+            border-width: 4px !important;
+        }
+        .layui-slider-wrap {
+            height: 42px;
+        }
+    </style>
+
+</head>
+<body>
+    <div id="map"></div>
+    <div class="search-user-history-content">
+
+        <div class="layui-collapse" lay-filter="test">
+            <div class="layui-colla-item">
+                <h2 class="layui-colla-title">
+                    User Track
+                </h2>
+                <div class="layui-colla-content">
+                    <table aria-hidden="true" class="track-table">
+                        <tr>
+                            <td>
+                                <label>Select Date :</label>
+                            </td>
+                            <td>
+                                <div style="height: 28px; width: 190px; background-color: #242122; padding: 2px 15px 2px 15px;border-radius: 5px;">
+                                    <label class="layui-icon layui-icon-date selectDate" style="cursor: pointer;font-size: 13px; width: 100%;">&nbsp;&nbsp;</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><label>Device Name:</label></td>
+                            <td class="px-3 py-2" style="background-color: rgba(51, 49, 50, .8); border-radius: 5px;">
+                                <!-- <div>
+                                    <input class="form-control form-control-sm" style="color: white; border-width: 0; background-color: rgba(51, 49, 50, .8);" placeholder="Search" type="search" />
+                                </div> -->
+                                <div id="convoy-select" class="demo-transfer" style="min-height: 100px; max-height: 200px; overflow-y: auto;"></div>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td>
+                                <label>Select Time :</label>
+                            </td>
+                            <td>
+                                <div style="height: 28px; width: 190px; background-color: #242122; padding: 2px 15px 2px 15px;border-radius: 5px;">
+                                    <label class="layui-icon layui-icon-date selectTime" style="cursor: pointer;font-size: 13px; width: 100%;">&nbsp;&nbsp;</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- <tr>
+                            <td>
+                                <label>Start Time :</label>
+                            </td>
+                            <td>
+                                <div style="height: 28px; width: 190px; background-color: #242122; padding: 2px 15px 2px 15px;border-radius: 5px;">
+                                    <label class="layui-icon layui-icon-date start-time" style="cursor: pointer;font-size: 13px;">&nbsp;&nbsp;</label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label>End Time :</label>
+                            </td>
+                            <td>
+                                <div style="height: 28px; width: 190px; background-color: #242122; padding: 2px 15px 2px 15px;border-radius: 5px;">
+                                    <label class="layui-icon layui-icon-date end-time" style="cursor: pointer;font-size: 13px;">&nbsp;&nbsp;</label>
+                                </div>
+                            </td>
+                        </tr> -->
+                        <tr>
+                            <td>
+                                <label>Speed :</label>
+                            </td>
+                            <td>
+                                <select class="convoy-select speed" style="width: 190px; height: 28px;">
+                                    <option value="0.5">0.5</option>
+                                    <option value="1" selected>1</option>
+                                    <option value="2">2</option>
+                                    <option value="4">4</option>
+                                    <option value="8">8</option>
+                                    <option value="16">16</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr style="text-align: center;">
+                            <td colspan="2">
+                                <button class="convoy-btn custom-btn-green search-user-position-history" style="margin-top: 10px;">Search</button>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="speedSlide-content ">
+        <div class="row">
+            <div class="col-1">
+                <div class="convoy-pause" style="background-color: white; margin-top: 3px; border-radius: 19px; width: 38px;">
+                    <svg t="1705464127558" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7103" width="38" height="38" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <path d="M512 1024A512 512 0 1 1 512 0a512 512 0 0 1 0 1024zM320 320v384h128V320H320z m256 0v384h128V320H576z" fill="#16BAAA" p-id="7104">
+                        </path>
+                    </svg>
+                </div>
+                <div class="convoy-continue" style="background-color: white; margin-top: 2px; border-radius: 19px; width: 38px;">
+                    <svg t="1705464086071" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5940" width="38" height="38" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <path d="M512 1024C229.23264 1024 0 794.76736 0 512S229.23264 0 512 0s512 229.23264 512 512-229.23264 512-512 512z m190.42304-563.58912L451.77856 296.3456c-66.4064-44.58496-62.65856 0-62.65856 0v420.41344c0 62.13632 62.65856 10.25024 62.65856 10.25024l250.64448-164.06528c78.32576-52.65408 0-102.53312 0-102.53312z" fill="#16BAAA" p-id="5941">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+            <div class="col-11">
+                <div id="slideTest1" class="demo-slider" style="margin-top: 16px;"></div>
+            </div>         
+        </div>
+    </div>
+    <div class="track-action row" style="width: 60px;">
+        <!-- <button class="convoy-btn convoy-track-action convoy-pause">Pause</button> -->
+        
+        <!-- <button class="convoy-btn convoy-track-action convoy-continue">Continue</button> -->
+    </div>
+
+    <div class="realTimeSpeed" style="width: 98%; margin-left: 1%">
+        <div class="showRealTimeSpeed" data-status="show" style="z-index: 999; cursor: pointer; position: absolute; width: 40px; height: 40px; right: -5px; top: -25px; padding-top: 7px; background-color: #1B9063; border-radius: 40px; text-align: center;">
+            <svg transform="rotate(180)" t="1705394407527" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5940" width="25" height="25" xmlns:xlink="http://www.w3.org/1999/xlink">
+                <path d="M854.016 739.328l-313.344-309.248-313.344 309.248q-14.336 14.336-32.768 21.504t-37.376 7.168-36.864-7.168-32.256-21.504q-29.696-28.672-29.696-68.608t29.696-68.608l376.832-373.76q14.336-14.336 34.304-22.528t40.448-9.216 39.424 5.12 31.232 20.48l382.976 379.904q28.672 28.672 28.672 68.608t-28.672 68.608q-14.336 14.336-32.768 21.504t-37.376 7.168-36.864-7.168-32.256-21.504z" p-id="5941" fill="#ffffff">
+                </path>
+            </svg>
+        </div>
+        <div id="speed-echart" style="height: 380px; "></div>
+    </div>
+    <script type="module" src="./scripts/track/track.js"></script>
+</body>
+</html>

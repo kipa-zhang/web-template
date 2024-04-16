@@ -1,0 +1,194 @@
+<link rel="stylesheet" href="../css/noGoZone/noGoZone-create.css">
+<script type="module" src="../scripts/noGoZone/noGoZone-create.js"></script>
+
+<style>
+    .alert-container {
+        transition-property: width;
+        transition-duration: 2s;  
+        height: 0;
+        overflow-y: auto;
+    }
+    .alert-container.expand {
+        height: 400px
+    }
+    .selectedWeeks .weeks {
+        width: 36px;
+        margin-right: 2px;
+        background-color: rgb(155, 154, 154);
+        color: white;
+        font-size: smaller;
+        padding: 2px 2px;
+    }
+    .selectedWeeks .weeks.active {
+        background-color: #1B9063;
+        border-color: #05422b;
+    }
+    .selectedWeeks .weeks:hover {
+        background-color: #1B9063;
+    }
+    .selectedTimes {
+        height: 210px;
+        overflow-y: auto;
+    }
+
+    .laydate-time-list>li:last-child {
+        display: none;
+    }
+    .laydate-time-list>li{
+        width: 50% !important;
+    }
+</style>
+
+<div class="offcanvas offcanvas-end edit-noGoZone" data-bs-backdrop="false" tabindex="-1" id="create-noGoZone">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Create No Go Zone</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" style="padding-right: 10px;">
+        <div style="height: 100%; overflow-y: auto;">
+            <!-- <label class="edit-label" style="color: #c1c1c1;">Click on the map to redraw No-Go Zone.</label> -->
+            <div class="mb-3 row mx-0">
+                <label for="inputPassword ml-0" class="col-sm-5 px-0 ms-0 col-form-label  text-end" style="font-size: smaller;">No Go Zone Name:&nbsp;</label>
+                <div class="col-sm-7 p-0">
+                    <input type="text" class="form-control form-control-sm zoneName py-0" placeholder="No Go Zone Name">
+                </div>
+            </div>
+            <div class="mb-3 row mx-0">
+                <div class="col-sm-6 px-4">
+                    <button class="btn btn-success btn-sm reDrawPolygon" style="background-color: #1B9063; padding: 2px 8px;">Re-Draw</button>
+                </div>
+            </div>
+            <div class="mb-3 alert-config p-1" style="border-radius: 5px; border: dashed 1px gray;">
+                <div class="row mx-0">
+                    <div class="col-2" style="padding-top: 5px;;">
+                        <input class="form-check-input select-alert" style="float: right;" type="checkbox" value="" id="flexCheckDefault-alert">
+                    </div>
+                    <div class="col-4 p-0">
+                        <label class="form-check-label" for="flexCheckDefault-alert">
+                            Alert
+                        </label>
+                    </div>
+                </div>
+                <div class="row mx-0 mt-1">
+                    
+                    <div class="col px-0 alert-container">
+                        <div class="selectedWeeks">
+                            <table aria-hidden="true" style="width: 100%;">
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="1">Mon</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="2">Tue</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="3">Wed</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="4">Thur</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="5">Fri</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="6">Sat</button>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm weeks" data-value="7">Sun</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <label>Date Zone</label>
+                            <div class="row mx-0 ms-2" id="selectedDate">
+                                <div class="col-5 px-0">
+                                    <div class="layui-input-inline">
+                                        <input type="text" autocomplete="off" id="startDate" class="form-control form-control-sm" placeholder="Start Date">
+                                    </div>
+                                </div>
+                                <div class="col-1">
+                                    <div class="layui-form-mid">-</div>
+                                </div>
+                                <div class="col-5 px-0">
+                                    <div class="layui-input-inline">
+                                        <input type="text" autocomplete="off" id="endDate" class="form-control form-control-sm" placeholder="End Date">
+                                    </div>
+                                </div>
+                            </div>
+                            <input class="invisible" style="width: 0; height: 0;" id="addTime"/>
+                            <button class="btn btn-success btn-sm addTime mt-3" style="background-color: #1B9063; padding: 2px 8px;">Add Time Zone</button>
+                            <div class="selectedTimes mt-1">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- <div class="col-4 text-end">
+                        <label class="form-check-label" for="">
+                            Start Time:
+                        </label>
+                    </div>
+                    <div class="col-7 p-0">
+                        <input class="form-control form-control-sm alertStartTime" type="text" placeholder="Start Time" disabled>
+                    </div> -->
+                </div>
+                <!-- <div class="row mt-1 mb-2">
+                    <div class="col-4 text-end">
+                        <label class="form-check-label" for="">
+                            End Time:
+                        </label>
+                    </div>
+                    <div class="col-7 p-0">
+                        <input class="form-control form-control-sm alertEndTime" type="text" placeholder="End Time" disabled>
+                    </div>
+                </div> -->
+                <!-- <div class="row mt-1">
+                    <div class="col-4 text-end">
+                        <label class="form-check-label" for="flexCheckDefault-all">
+                            All Day
+                        </label>
+                    </div>
+                    <div class="col-7 p-0">
+                        <input class="form-check-input select-all-alert" style="float: right;" type="checkbox" value="" id="flexCheckDefault-all">
+                    </div>
+                </div> -->
+            </div>
+            
+            <div class="color-picker">
+                <label>Zone Color:</label><br>
+                <table aria-hidden="true">
+                    <tr>
+                        <td>
+                            <div class="color-picker-item active" data-color="#F3141D" style="background-color: #F3141D;"></div>
+                        </td>
+                        <td>
+                            <div class="color-picker-item" data-color="#210DFE" style="background-color: #210DFE;"></div>
+                        </td>
+                        <td>
+                            <div class="color-picker-item" data-color="#267F00" style="background-color: #267F00;"></div>
+                        </td>
+                        <td>
+                            <div class="color-picker-item" data-color="#F7A61D" style="background-color: #F7A61D;"></div>
+                        </td>
+                        <td>
+                            <div class="color-picker-item" data-color="#7B0880" style="background-color: #7B0880;"></div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="color-picker">
+                <label>Choose Color:</label><br>
+                <input type="color"/>
+            </div>
+            
+            <hr>
+            <div class="row mx-0 mt-5" style="text-align: center;">
+                <div class="col-sm-6" style="text-align: right;">
+                    <div class="btn btn-secondary btn-sm custom-btn cancel-createZone" data-bs-dismiss="offcanvas">Cancel</div>
+                </div>
+                <div class="col-sm-6" style="text-align: left;">
+                    <div class="btn btn-primary btn-sm custom-btn createZone" style="background-color: #1B9063;">Confirm</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

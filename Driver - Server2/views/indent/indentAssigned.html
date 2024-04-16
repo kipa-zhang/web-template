@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Indent Assigned</title>
+    <%- include('../common/common-html.html') -%>
+    
+    <!-- <link rel="stylesheet" href="../css/projection/projection.css">  -->
+    <link rel="stylesheet" href="../css/stylesheets/style.css">
+    <link rel="stylesheet" href="../css/stylesheets/icon/iconfont.css">
+    <link rel="stylesheet" href="../css/indent/indent.css">
+    <link rel="stylesheet" href="../css/indent/history.css">
+    <script type="text/javascript" src="../pagehelper/pageHelper.js"></script>
+    <script src="../scripts/indent/indentAssigned.js"></script>
+
+    <style>
+        body {
+            line-height: 1 !important;
+        }
+
+        .dataTables_wrapper.no-footer .dataTables_scrollBody {
+            border-bottom: none;
+        }
+
+        table.dataTable thead .sorting_asc {
+            background-image: none;
+        }
+
+        div.dataTables_wrapper div.dataTables_info {
+            padding-top: 0.85em !important;
+        }
+        .dataTables_length {
+            padding-top: 0.85em !important;
+        }
+
+        .dataTables_length select {
+            border-radius: 6px;
+            color: black;
+            background-color: #F9EED8 !important;
+            border: 1px solid #EBDE99 !important;
+            cursor: pointer;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #6e6f6f;
+        }
+
+        .paginate_button {
+            width: 2rem !important;
+            background-color: white;
+            border: 1px solid #c2c6c6 !important;
+            border-radius: 4px !important;
+        }
+
+        table.dataTable.no-footer {
+            border-bottom: 0px;
+            border-color: var(--bs-table-border-color);
+        }
+
+        table.dataTable tbody tr {
+            border-color: var(--bs-table-border-color);
+        }
+
+        table.dataTable thead th {
+            border-bottom: 2px solid var(--bs-table-border-color);
+            /* border-color: var(--bs-table-border-color); */
+        }
+
+        .justify-content-end {
+            line-height: 2rem;
+        }
+
+        .dataTables_length select {
+            height: 2rem;
+        }
+
+        span>.paginate_button {
+            border-radius: 0 !important
+        } 
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            color: white !important;
+            background: #0D6EFE !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button, .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            color: #0d6efd !important;
+        }
+
+        .paginate_button:hover {
+            color: #0d6efd !important;
+            background: #f0f3f3 !important;
+        } 
+    </style>
+</head>
+<body>
+    <div class="container-fluid h-100 m-0 p-0" style="overflow-x: hidden;">
+        <div class="row p-2"></div>
+        <div class="shadow" style="background-color: white;">
+            <div class="row mx-0 justify-content-around py-3">
+                <div class="col-12 ps-3" id="new-indent-div">
+                    <div class="row justify-content-around">
+                        <div class="col" id="indent-filter">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <select class="form-select" name="task-status" id="task-status">
+                                        <option value="">Task Status: All</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <select class="form-select" name="indent-vehicle-type" id="indent-vehicle-type">
+                                        <option value="">Vehicle Type: All</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <input type="text" class="form-control" name="execution-date" id="execution-date" placeholder="Execution Date" autocomplete="off">
+                                </div>
+                                <div class="col-auto">
+                                    <input type="text" class="form-control input-width" name="created-date" id="created-date" placeholder="Created Date" autocomplete="off">
+                                </div>
+                                <div class="col-auto">
+                                    <input type="text" class="form-control input-width" name="trip-no" id="trip-no" placeholder="Trip ID" autocomplete="off">
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-clear" name="clean-all">Clear all</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="body-bottom">
+            <div class="row m-0" style="padding: 10px;">
+                <div class="table-common table-shadow" style="line-height: 1.6 !important;">
+                    <table aria-hidden="true" class="table table-hover jobTask-table pb-2 w-100" style="white-space: nowrap;">
+                        
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    
+</body>
+</html>

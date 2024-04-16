@@ -1,0 +1,43 @@
+<script type="module" src="../scripts/group/group-view.js"></script>
+<div class="modal modal-lg fade" id="group-view" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Edit Group</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table aria-hidden="true" class="tb-create-group" style="margin: 0 auto;border-collapse:separate; border-spacing:0px 10px;">
+                    <tr>
+                        <td>Group Name: </td>
+                        <td>
+                            <div class="group_name_list">
+                                <select class="form-select" id="groupType"> </select>
+                            </div>
+                            <div class="group-name-items">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>User: </td>
+                        <td><div id="acecom-select-user"></div></td>
+                    </tr>
+                </table> 
+    
+            </div>
+            <div class="modal-footer">
+                <div class="row">
+                    <div class="col-sm-6" style="text-align: right;">
+                        <div class="btn btn-secondary btn-sm custom-btn cancel-create-user" data-bs-dismiss="modal">Cancel</div>
+                    </div>
+                    <div class="col-sm-6" style="text-align: left;">
+                        <div class="btn btn-primary btn-sm custom-btn update-user-group">Update</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

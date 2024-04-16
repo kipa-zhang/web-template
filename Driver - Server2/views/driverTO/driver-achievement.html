@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+		<title></title>
+		<style type="text/css">
+			* {
+				margin: 0;
+				padding: 0; 
+				border: 0;
+				font-family: 'Inter'
+			}
+			body {
+				overflow-x: hidden;
+				background-color: #f6f6f6;
+			}
+			.top-div {
+				background-color: white;
+				color: white;
+				width: 100vw;
+				height: 60px;
+				border-bottom: 1px solid #f4f4f4;
+			}
+			.top-shadow {
+				width: 100vw;
+				height: 10px;
+				background: linear-gradient(to bottom, #f4f4f4, #ffffff);
+			}
+
+			.achievement-content-div {
+				overflow-x: hidden;
+				overflow-y: auto;
+				background-color: white;
+				width: 500px;
+				margin-left: 10;
+				height: 100%;
+				margin-top: 10px;
+				margin-bottom: 10px;
+				border-radius: 10px;
+			}
+
+			.achievement-content-head {
+				margin-top: 20px;
+				width: 100%;
+				height: 40px;
+				border: 1px solid rgb(177, 176, 176);
+				border-radius: 10px 10px 0 0;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.achievement-self-container {
+				width: 100%;
+				height: fit-content;
+			}
+			.achievement-item {
+				width: 21%;
+				margin-left: 1%;
+				height: fit-content;
+			}
+			.achievement-img-div {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 10px;
+			}
+			.achievement-num-div {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 20px; 
+				font-weight: 900;
+				text-align: center;
+			}
+			.achievement-desc-div {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 14;
+				text-align: center;
+				padding: 10px;
+				font-weight: 900;
+			}
+			.achievement-leaderBoard-head {
+				width: calc(100% - 10px);
+				height: 60px;
+				border-radius: 10px 10px 0 0;
+				background-color: #fff4d6;
+				margin-left: 5px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.achievement-leaderBoard-container {
+				width: calc(100% - 10px);
+				height: fit-content;
+				margin-left: 5px;
+				border-radius: 0 0 10px 10px;
+				background-color: #f9f9f9;
+			}
+			.achievement-leaderBoard-nav {
+				width: calc(100% - 10px);
+				height: fit-content;
+				margin-left: 5px;
+				padding-top: 10px;
+				display: flex;
+			}
+			.achievement-leaderBoard-item {
+				width: 50%;
+				height: 40px;
+				border-bottom: 3px solid #d3d3d3;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: #484848;
+				font-weight: 900;
+				font-size: 18px;
+			}
+			.leaderBoard-active {
+				color: #1B9063;
+				border-bottom: 3px solid #1B9063;
+			}
+			.achievement-leaderBoard-content {
+				width: calc(100% - 10px);
+				height: fit-content;
+				margin-left: 5px;
+				margin-top: 10px;
+			}
+			.achievement-leaderBoard-content-head {
+				width: 100%;
+				height: 30px;
+				background-color: #e5fce6;
+				display: flex;
+			}
+			.achievement-ranking-div {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 36; 
+				font-weight: 900;
+				text-align: center;
+			}
+			.leader-board-item {
+				width: 100%;
+				height: 32px;
+				margin-top: 10px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				position: relative;
+			}
+			.default_theme {
+				background-color: #fafafa;
+				width: 18px;
+				height: 18px;
+				transform: rotate(45deg);
+				position: absolute;
+				right: 2px;
+			}
+		</style>
+	</head>
+	<!-- <body>
+		<div class="achievement-content-div">
+			<div class="achievement-self-div">
+				<div class="achievement-self-head row py-2">
+					<div class="col-5"><label class="current-month-label" style="font-size: 20; font-weight: 900; padding-left: 20px;"></label></div>
+					<div class="col-7" style="display: flex; align-items: center; justify-content: flex-end; padding-right: 20px;">
+						<div class="date-select-div" style="width: fit-content; height: 24px;display: flex; align-items:center; border: 1px solid #f6f6f6; border-radius: 5px;">
+							<label class="date-label" style="font-size: 16px; font-weight: 900; padding-left: 5px;"></label>
+							<img alt="" class="date-select-img" style="width: 32px; padding-left: 5px; padding-right: 5px;" src="../images/achievement/calender.svg">
+						</div>
+					</div>
+				</div>
+				<div class="achievement-self-container">
+					<div style="width: 100%; margin-left: 6%; display: flex;">
+						<div class="achievement-item my-2" style="margin-left: 0px;">
+							<div class="achievement-img-div">
+								<img alt="" style="width: 60px; height: 60px;" src="../images/achievement/pl_trained.png">
+							</div>
+							<div class="row achievement-num-div platform-trained" style="color: #e3a826;">0</div>
+							<div class="row achievement-desc-div">Most <br> Trained</div>
+						</div>
+						<div class="achievement-item my-2">
+							<div class="achievement-img-div">
+								<img alt="" style="width: 60px; height: 60px;" src="../images/achievement/mostMileage.png">
+							</div>
+							<div class="row achievement-num-div task-mileage" style="color: #e3a826;">0</div>
+							<div class="row achievement-desc-div">Most <br> Mileage</div>
+						</div>
+						<div class="achievement-item my-2">
+							<div class="achievement-img-div">
+								<img alt="" style="width: 60px; height: 60px;" src="../images/achievement/mostTask.png">
+							</div>
+							<div class="row achievement-num-div task-num" style="color: #e3a826;">0</div>
+							<div class="row achievement-desc-div">Most <br> Task</div>
+						</div>
+						<div class="achievement-item my-2">
+							<div class="achievement-img-div">
+								<img alt="" style="width: 60px; height: 60px;" src="../images/achievement/Most Hrs.svg">
+							</div>
+							<div class="row achievement-num-div task-hours" style="color: #e3a826;">0</div>
+							<div class="row achievement-desc-div">No. <br> of Hrs</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="achievement-leaderBoard-div">
+				<div class="achievement-leaderBoard-head">
+					<label style="font-size: 20px; font-weight: 900; color: #484848;">Leaderboard</label>
+				</div>
+				<div class="achievement-leaderBoard-container">
+					<div class="achievement-leaderBoard-nav">
+						<div class="achievement-leaderBoard-item leaderBoard-active mynode-nav">My Node</div>
+						<div class="achievement-leaderBoard-item allnode-nav">All</div>
+					</div>
+					<div class="achievement-leaderBoard-content">
+						<div class="achievement-leaderBoard-content-head">
+							<div style="width: 20%;"></div>
+							<div style="width: 55%; color: #484848; font-size: 14px; font-weight: 900; display: flex; align-items: center; justify-content: center;">Name</div>
+							<div style="width: 25%; color: #484848; font-size: 14px; font-weight: 900; display: flex; align-items: center; justify-content: flex-start;" >Hours</div>
+						</div>
+						<div class="row mynode-leader-board">
+						</div>
+						<div class="row allnode-leader-board" style="display: none;">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body> -->
+
+	<script type="text/javascript" src="../scripts/driverTo/driver-achievement.js"></script>
+</html>

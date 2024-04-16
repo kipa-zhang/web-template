@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MV Dashboard</title>
+    <%- include('../common/common-html2.html') -%>
+    <%- include('../waypoint/waypoint-create.html') -%>
+    <%- include('../incident/incident-create.html') -%>
+    
+    <style>
+      .paginate_button {
+        padding: 0 0.5em !important;
+      }
+
+        .top-calendar {
+            height: 30px;
+        }
+
+        .layui-laydate {
+          line-height: 1rem;
+        }
+
+        .div-node {
+          /* border: 1px solid #e3e3e3;
+          border-radius: 10px;
+          background-color: #FAFAFA; */
+          /* margin-right: 1.1rem!important;
+          margin-bottom: 0.6rem!important; */
+          width: 500px;
+          height: 200px;
+        }
+
+      .status-div {
+            height: 300px;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 0 5px rgb(177, 177, 177);
+        } 
+        
+
+        .active {
+          background-color: #f5faef !important;
+        } 
+
+        .nodes-chart canvas {
+          top: -1rem !important;
+        }
+
+        .div-started {
+          margin-top: -7rem !important;
+        }
+
+        .div-row-nodes {
+          /* height: 20px !important; */
+        }
+
+        .leaflet-popup-content {
+          width: unset !important; 
+          margin: 0;
+        }
+        canvas {
+          left: -10px !important;
+        }
+        .div-node-title {
+          border-radius: 3px 3px 0px 0px;
+          white-space:nowrap;
+          background-color: #3AA354;
+          color: white;
+          min-width: 100px;
+          line-height: 30px;
+          text-align: center;
+          margin: 0 !important;
+        }
+
+        .div-node-totalNumber {
+          font-weight: bold;
+          background-color: white;
+          text-align: center;
+          border-radius: 5px;
+        }
+
+       .leaflet-popup-close-button {
+          display: none !important;
+        }
+
+        .leaflet-tooltip {
+            padding: 0px !important;
+            border: none !important;
+        }
+
+        .leaflet-popup-pane .leaflet-zoom-animated {
+          bottom: 2px !important
+        }
+
+        .driver-datas, .real-speed, .real-alert {
+          overflow-y: auto;
+          margin-top: 5px;
+          max-height: calc(100% - 200px);
+        }
+
+        /**
+            left menu
+            */
+        .left-view-container {
+            position: absolute;
+            top: 10%;
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+        }
+
+        .left-view-container .vehicle-status-view {
+            cursor: pointer;
+            color: white;
+            border: solid white 2px;
+            line-height: 44px;
+            text-align: center;
+            width: 30px;
+            height: 30px;
+            margin: auto;
+            margin: 15px auto;
+        }
+        .left-view-container .view-indent {
+          width: 27px;
+          background-repeat: no-repeat;
+          background-size: 100%;
+          background-image: url('../images/mvAndMtTotal/work-image - unselected.svg');
+        }
+        .left-view-container .view-indent.active {
+          background-image: url('../images/mvAndMtTotal/work-image - selected.svg');
+        }
+
+        .left-view-container .view-offence-speeding {
+          width: 27px;
+          background-repeat: no-repeat;
+          background-size: 100%;
+          background-image: url("../images/transport/event/Speeding - unselected.svg");
+        }
+        .left-view-container .view-offence-speeding.active {
+          background-image: url("../images/transport/event/Speeding - selected.svg");
+        }
+        .left-view-container .view-offence-rapidAcc {
+          width: 27px;
+          background-repeat: no-repeat;
+          background-size: 100%;
+          background-image: url("../images/transport/event/Rapid Acc - unselected.svg");
+        }
+        .left-view-container .view-offence-rapidAcc.active {
+          background-image: url("../images/transport/event/Rapid Acc - selected.svg");
+        }
+        .left-view-container .view-offence-hardBraking {
+          width: 27px;
+          background-repeat: no-repeat;
+          background-size: 100%;
+          background-image: url("../images/transport/event/Hard Braking - unselected.svg");
+        }
+        .left-view-container .view-offence-hardBraking.active {
+          background-image: url("../images/transport/event/Hard Braking - selected.svg");
+        }
+        .left-view-container .view-offence-missing {
+          width: 27px;
+          background-repeat: no-repeat;
+          background-size: 100%;
+          background-image: url("../images/transport/event/Idle Time - unselected.svg");
+        }
+        .left-view-container .view-offence-missing.active {
+          background-image: url("../images/transport/event/Idle Time - selected.svg");
+        }
+
+
+        .left-view-container .vehicle-status-view.view-obd {
+            background-image: url(../images/index/speed-unselected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-obd.active {
+            background-image: url(../images/index/speed.svg);
+        }
+        
+        .left-view-container .vehicle-status-view.view-missing-car {
+            background-image: url(../images/index/radio-unselected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-missing-car.active {
+            background-image: url(../images/index/radio.svg);
+        }
+        .left-view-container .vehicle-status-view.view-zone {
+            background-image: url(../images/index/zone-unselected.svg);
+            background-size: 25px 25px;
+            background-repeat: no-repeat;
+        }
+        .left-view-container .vehicle-status-view.view-zone.active {
+            background-image: url(../images/index/zone-selected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-camera {
+            background-image: url(../images/index/camera-unselected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-camera.active {
+            background-image: url(../images/index/camera-selected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-traffic-incident {
+            background-image: url(../images/index/traffic-incident-unselected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-traffic-incident.active {
+            background-image: url(../images/index/traffic-incident-selected.svg);
+        }
+        .left-view-container .vehicle-status-view.view-speed-bands {
+            background-image: url(../images/index/traffic-speedBands-unselected.svg);
+            background-size: 28px 28px;
+        }
+        .left-view-container .vehicle-status-view.view-speed-bands.active {
+            background-image: url(../images/index/traffic-speedBands-selected.svg);
+            background-size: 28px 28px;
+        }
+        .custom-tooltip {
+            --bs-tooltip-bg: var(--bs-success);
+        }
+        .below-view-marquee-traffic {  
+            bottom: 0;
+            position: absolute;
+            color: white;
+        }
+        .below-view-marquee-sos {  
+            position: absolute;
+            color: white;
+            bottom: 25px;
+        }
+        marquee {
+            /* direction: right;
+            ehavior: scroll; */
+            font-size: 0.9rem;
+            line-height: 25px;
+            /* display: inline; */
+        }
+        .default_theme {
+          width: 12px;
+          height: 12px;
+          transform: rotate(45deg);
+          position: absolute;
+          left: 5.8rem;
+          top: 7px;
+        }
+        .default_theme_accident {
+          background-color: #CC6633;
+        }
+        .default_theme_sos {
+          background-color: #c91919;
+        }
+    </style>
+    <style>
+      .leaflet-div-icon{
+          background: none !important;
+          border: none !important;
+      }
+      .speed-marker-div{
+          width: 32px;
+          height: 32px;
+          position: relative;
+      }
+      .speed-marker-icon{
+          position: absolute;
+          left: 0;
+          top: 0;
+      }
+      .speed-marker-number{
+          position: absolute;
+          top: 7px;
+          left: 1px;
+          z-index: 2000;
+          width: 32px;
+          height: 32px;
+          text-align: center;
+          font-weight: bold;
+          font-size: 14px;
+      }
+  </style>
+  <style>
+    .offence-row>div{
+       border-right: solid 1px #c4c4c4 !important;
+    }
+    .offence-row>div:last-child {
+       border-right: solid 0px #c4c4c4 !important;
+    }
+
+    .speedBands {
+      opacity: 0.8
+    }
+
+    #clr-picker {
+      z-index: 9999;
+      margin-top: 22px;
+    }
+
+    .paginate_button {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    .paginate_button.current {
+        background: #1B9063 !important;
+        color: white !important;
+        border-color: #1B9063 !important;
+    }
+    .paginate_button:not(.disabled):hover {
+        background: #1B9063 !important;
+        color: white !important;
+        border-color: #1B9063 !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        color: white !important;
+    }
+  </style>
+</head>
+<body style="overflow-x: hidden;">
+  <audio id="sound" autoplay="autoplay" src=""></audio>
+  <div class="container-fluid py-4 px-4 pt-1" style="height: 100%;">
+    <div class="row" style="padding-left: 1.3rem;">
+      <div class="">
+          <div class="row">
+            <div class="col-10">
+              <div class="row">
+                <div class="col-sm-2" style="width: 31px !important;height: 30px;padding: 0 !important;">
+                  <img alt="" src="../images/mvAndMtTotal/calendar.png" alt="" class="top-calendar" draggable="false" style="height: 30px !important;">
+                  <input style="display: none;" id="input-calendar"/>
+                </div>
+                <div class="col-sm-10" style="padding-top: 0.1rem !important;padding-left: 0.4rem !important; font-weight: bolder;">
+                  <span id="div-calendar"></span>
+                  <img alt="" src="../images/mvAndMtTotal/asdfaw111.png" class="mvAndMtTotal-close-below" style="width: 30px !important;height: 24px;padding-left: 0.3rem;" alt="" draggable="false"/>
+                  <img alt="" src="../images/mvAndMtTotal/ads22.png" class="mvAndMtTotal-close-up" style="width: 30px !important;height: 24px;padding-left: 0.3rem;display: none;" alt="" draggable="false"/>
+                </div>
+              </div>
+            </div>
+            <div class="col-2">
+              <div class="row" style="float: right;">
+                <img alt="" src="../images/mvAndMtTotal/shrink.png" class="divTop-shrink" style="width: 28px !important;height: 22px;padding-left: 0.3rem; margin-top: 5px; display: block;cursor:pointer;" alt="" draggable="false"/>
+                <img alt="" src="../images/mvAndMtTotal/zoom.png" class="divTop-zoom" style="width: 30px !important;height: 26px;padding-left: 0.3rem; margin-top: 5px; display: none;cursor:pointer;" alt="" draggable="false"/>
+              </div>
+            </div>
+            
+          </div>
+      </div>
+
+      <!-- <div class="col-5" style="text-align: right;padding-right: 1rem;">
+          <button type="button" class="btn btn-primary mvAndMtTotal-close">close</button>
+      </div> -->
+        
+    </div>
+    
+    <div class="divTop">
+      <div class="row px-0 div-hub-row div-hub-page-action" style="display: none; padding-left: 0.5rem;padding-right: 0.2rem !important;">
+        <div class="row py-2 div-top" style="padding-right: 0.9rem !important;padding-top: 0rem !important;overflow-x: auto;flex-wrap: nowrap;display: flex;justify-content: normal;align-items: center;">
+          
+  
+        </div>
+      </div>
+  
+      <div class="row px-0 div-hub-row div-hub-page-action2" style="padding-left: 0.5rem;padding-right: 0.2rem !important;">
+        <div class="row py-2 div-top2" style="padding-right: 0.9rem !important;padding-top: 0rem !important;overflow-x: auto;flex-wrap: nowrap;display: flex;justify-content: normal;align-items: center;">
+          
+  
+        </div>
+      </div>
+    </div>
+
+    <!-- <div class="div-deployed">
+      <div class="row px-0" style="padding-left: 0.5rem;padding-right: 0.2rem !important;">
+        <div class="row py-2 div-deployed-top" style="padding-right: 0.9rem !important;padding-top: 0rem !important;overflow-x: auto;flex-wrap: nowrap;display: flex;justify-content: normal;align-items: center;">
+          
+        </div>
+      </div>
+    </div> -->
+  
+    <div class="row px-0 py-2" style="height: 100%;">
+        <div class="px-0" style="height: 100%;">
+          <div class="py-1 map" style="width: calc(100% - 460px); position: relative; float: left;height: 100%; border-top-left-radius: 10px; border-bottom-left-radius: 10px;box-shadow: 0 0 5px rgb(177, 177, 177);" id="map">
+              
+          </div>          
+          
+      
+          <!--Driver Box-->
+          <div class="px-2 pb-1 driver-card" style="height: 100%; width: 460px; position: relative; float: right; box-shadow: 0 0 5px rgb(177 177 177);border-top-right-radius: 10px;border-bottom-right-radius: 10px;">
+              <div class="row text-center driver-statistics" style="padding: 0;">
+                                    
+                  <div class="col p-2 pb-0" >
+                      <div class="driver-statistics-card driver-statistics-card1" data-type="speeding" style="background-color: #BF9F27 !important;">
+                          <div style="height: 50px; line-height: 1;">
+                            <div class="div-table">
+                              <div class="div-table-cell">
+                                <label class="text-black"  >Speeding</label>
+                                <label class="text-black" style=" padding-top: 0;"> </label>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-1"><img alt="" src="../images/transport/event/Speeding.svg"></div>
+                          <div><label class="card-font-number speeding">0</label></div>
+                      </div>
+                  </div>
+                  <div class="col p-2 pb-0" style="padding-left: 0 !important;">
+                      <div class="driver-statistics-card driver-statistics-card1" data-type="rapidAcc" style="background-color: #6287F3 !important;">
+                          <div style="height: 50px; line-height: 1;">
+                            <div class="div-table">
+                              <div class="div-table-cell">
+                                <label class="text-black" >Rapid</label><br>
+                                <label class="text-black" style=" padding-top: 0;">Acc</label>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-1"><img alt="" src="../images/transport/event/Rapid Acc.svg"></div>
+                          <div><label class="card-font-number rapidAcc">0</label></div>
+                      </div>
+                  </div>
+                  <div class="col p-2 pb-0" style="padding-left: 0 !important;">
+                      <div class="driver-statistics-card driver-statistics-card1" data-type="hardBraking" style="background-color: #79BCDF !important;">
+                          <div style="height: 50px; line-height: 1;">
+                            <div class="div-table">
+                              <div class="div-table-cell">
+
+                                <label class="text-black">Hard</label>
+                                <label class="text-black" style=" padding-top: 0;">Braking</label>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-1"><img alt="" src="../images/transport/event/Hard Braking.svg"></div>
+                          <div><label class="card-font-number hardBraking">0</label></div>
+                      </div>
+                  </div>
+                  <div class="col p-2 pb-0" style="padding-left: 0 !important;">
+                      <div class="driver-statistics-card driver-statistics-card1" data-type="missing" style="background-color: #B976EA !important;">
+                          <div style="height: 50px; line-height: 1;">
+                            <div class="div-table">
+                              <div class="div-table-cell">
+                                
+                                <label class="text-black">Missing</label>
+                                <label class="text-black" style=" padding-top: 0;"> </label>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mt-1"><img alt="" src="../images/transport/event/Idle Time.svg"></div>
+                          <div><label class="card-font-number missing">0</label></div>
+                      </div>
+                  </div>
+                  <div class="col p-2 pb-0" style="padding-left: 0 !important;">
+                    <div class="driver-statistics-card driver-statistics-card1" data-type="noGoAlert" style="background-color: #db7198  !important;">
+                        <div style="height: 50px; line-height: 1;">
+                          <div class="div-table">
+                            <div class="div-table-cell">
+                            
+                              <label class="text-black" >Alert</label>
+                              <label class="text-black" style=" padding-top: 0;"> </label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="mt-1"><img alt="" src="../images/transport/event/alert-white.svg"></div>
+                        <div><label class="card-font-number noGoAlert">0</label></div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="row mx-2 my-2">
+                      <div class="col-6 text-start">
+                        <label class="showReal showRealSpeed px-2" style="border: solid 1px #215bc7; border-radius: 5px; line-height: 1.5; cursor: pointer;  color: #215bc7;user-select: none;">>>> Realtime Speeding</label><br>
+                      </div>
+                      <div class="col-6 text-end">
+                        <label class="showReal showRealAlert px-2" style="border: solid 1px #215bc7; border-radius: 5px; line-height: 1.5; cursor: pointer;  color: #215bc7;user-select: none;">>>> Realtime Alert</label>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- <div class="col-12 text-end mt-2" style="padding-right: 5px; line-height: 1;">
+                    <label class="showReal showRealSpeed" style="cursor: pointer; font-weight: 600; color: #215bc7;user-select: none;">>>> Realtime Speeding</label><br>
+                  </div>
+                  <div class="col-12 text-end mt-2 mb-2" style="padding-right: 5px; line-height: 1;">
+                    <label class="showReal showRealAlert" style="cursor: pointer; font-weight: 600; color: #215bc7;user-select: none;">>>> Realtime Alert</label>
+                  </div> -->
+              </div>
+              <div class="row driver-datas position-relative">
+                  
+              </div>
+              <div class="row real-speed position-relative px-2" style="display: none;">
+                  
+              </div>
+              <div class="row real-alert position-relative px-2" style="display: none;">
+                  
+              </div>
+          </div>
+        </div>
+    </div>
+    
+</div>
+
+    <link rel="stylesheet" href="../css/transport/event.css">
+    <link rel="stylesheet" href="../coloris-0.22.0/coloris.min.css">
+    <script type="module" src="../coloris-0.22.0/coloris.min.js"></script>
+    <script type="module" src="../scripts/mvAndMtTotal/mvAndMtTotal.js"></script>
+    <script type="module" src="../scripts/mvAndMtTotal/hubConf.js"></script>
+    <script type="module" src="../scripts/mvAndMtTotal/event.js"></script>
+    <script type="module" src="../scripts/the3rdAPI.js"></script>
+    <script type="module" src="../scripts/speedBands/speedBands.js"></script>
+    <script type="module" src="../scripts/noGoZone/noGoZone-alert.js"></script>
+</body>
+<div class="invisible onlyShowAlert" style="display: none;">1</div>
+<div class="modal fade" id="modal-speed-chart" tabindex="-1" data-backdrop="static" data-keyboard="false">
+  <style>
+    #modal-speed-chart td, #modal-speed-chart th {
+      line-height: 1.2 !important;
+    }
+    .driver-statistics-card {
+      width: 100%; 
+      height: 125px !important; 
+      border: 1px solid white; 
+      border-radius: 5px;
+      box-shadow: 1px 1px 5px #888888;
+      text-align: center;
+      cursor: pointer;
+    }
+    .driver-statistics-card2.active,.driver-statistics-card1.active {
+      box-shadow: 5px 5px 10px #215bc7 !important;
+      border: 2px solid #779ee6; 
+    }
+    .driver-statistics-card2 label {
+      cursor: pointer;
+    }
+    .dataTables_wrapper.no-footer .dataTables_scrollBody {
+        border-bottom: none;
+    }
+    /* .event-table th {
+      white-space: nowrap;
+    } */
+  </style>
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 90%;">
+      <div class="modal-content">
+          <div class="modal-header" style="background-color: #1B9063 !important;">
+              <h5 class="modal-title" style="color: white;">Attention</h5>
+              <label class="modal-time" style="margin-left: 80px; color: white; font-weight: 300; font-size: 15px;"></label>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" style="padding-bottom: 2em; padding-top: 1em;">
+              <div class="row">
+                  <div class="col-2 px-2">
+                    <div class="driver-statistics-card driver-statistics-card2 active" data-type="all" style="height: fit-content !important; background-color: rgb(170, 170, 170) !important; ">
+                      <div>
+                        <label class="text-black">ALL</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-2 px-2">
+                    <div class="driver-statistics-card driver-statistics-card2" data-type="speeding" style="height: fit-content !important; background-color: #BF9F27 !important;">
+                      <div>
+                        <label class="text-black">Speeding</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-2  px-2">
+                    <div class="driver-statistics-card driver-statistics-card2" data-type="rapidAcc" style="height: fit-content !important; background-color: #6287F3 !important;">
+                      <div>
+                        <label class="text-black">Rapid Acc</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-2  px-2">
+                    <div class="driver-statistics-card driver-statistics-card2" data-type="hardBraking" style="height: fit-content !important; background-color: #79BCDF !important;">
+                      <div>
+                        <label class="text-black">Hard Braking</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-2  px-2">
+                    <div class="driver-statistics-card driver-statistics-card2" data-type="missing" style="height: fit-content !important; background-color: #B976EA !important;">
+                      <div>
+                        <label class="text-black">Missing</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-2  px-2">
+                    <div class="driver-statistics-card driver-statistics-card2" data-type="noGoZone" style="height: fit-content !important; background-color: #db7198  !important;">
+                      <div>
+                        <label class="text-black">Alert</label>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+              <div class="row ">
+                  <div class="mt-3 col-6 col-sm-12 col-md-12 col-lg-12 col-xl-12 col-xxl-6 datatables-div" style="padding-right: 10px;">
+                      <table aria-hidden="true" class="event-table" style="text-align: center;"></table>
+                  </div>
+                  <div class="mt-3 col-6 col-sm-12 col-md-12 col-lg-12 col-xl-12 col-xxl-6 echarts-div">
+                      <div class="echarts-title">
+                          <label class="modal-title2"></label>
+                      </div>
+                      <div id="speed-echart" style="height: 480px;"></div>
+                  </div>
+              </div>
+              
+          </div>
+          <!-- <div class="modal-footer">
+              <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-sm btn-primary" id="btn-ok">OK</button>
+          </div> -->
+      </div>
+  </div>
+</div>
+<style>
+  #track-map {
+      width: 900px;
+      height: 650px;
+      border-bottom-left-radius: 5px;
+      border-bottom-right-radius: 5px;
+  }
+  .layui-layer .layui-layer-content {
+      padding: 0 !important;
+  }
+</style>
+<div id="track-map" style="display: none;">
+
+</div>
+</html>
+
+<% if ([ 'hq', 'administrator' ].includes(userType.toLowerCase())) { %>
+<div class="modal fade" id="modal-hubConf" style="min-width: 1250px; overflow-x: auto;" tabindex="-1" data-backdrop="static" data-keyboard="false">
+  <style>
+  </style>
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+          <div class="modal-header" style="background-color: #1B9063 !important;">
+              <h5 class="modal-title fs-5" style="color: white;">Color Configuration</h5>
+              <label class="modal-time" style="margin-left: 80px; color: white; font-weight: 300; font-size: 15px;"></label>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center" style="overflow-y: auto;">
+              <div class="row py-2" style="background-color: #f1f1f1;">
+                  <div class="col-3">
+                    <label class="fw-bold">Hub</label>
+                  </div>
+                  <div class="col-4">
+                    <label class="fw-bold">Current Color</label>
+                  </div>
+                  <div class="col-5">
+                    <label class="fw-bold">New Color</label>
+                  </div>
+              </div>
+              <div class="color-item-container">
+                
+              </div>         
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-sm btn-secondary custom-btn-gray modal-footer-bunton-cancel-lg" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-sm btn-primary modal-footer-bunton-confirm-lg" style="background-color: #1B9063 !important; border-color: #1B9063 !important; width: 50px;" id="updateHubConf">Save</button>
+          </div>
+      </div>
+  </div>
+</div>
+<% } %>

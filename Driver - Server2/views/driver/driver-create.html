@@ -1,0 +1,82 @@
+<link rel="stylesheet" href="../css/driver/driver-create.css">
+<script type="module" src="../scripts/driver/driver-create.js"></script>
+
+<div class="modal fade" id="create-driver" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Driver Task Definition</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row">
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 form-label text-end" style="white-space:nowrap;">Driver Name :</label>
+                        <div class="col-sm-5">
+                            <select class="form-select form-select-sm select-driverId">
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="form-check" style="white-space:nowrap;">
+                                <input class="form-check-input" name="highPriority" style="margin-top: 7px;" type="checkbox" value="" id="flexCheckDefault">
+                                <label class="form-check-label user-select-none" style="cursor: pointer;" for="flexCheckDefault">
+                                    Set to high priority
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end">Unit :</label>
+                        <div class="col-sm-9">
+                            <select class="form-select form-select-sm select-unit">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end">Sub Unit :</label>
+                        <div class="col-sm-9">
+                            <select class="form-select form-select-sm select-subUnit">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end">Vehicle :</label>
+                        <div class="col-sm-9">
+                            <select class="form-select form-select-sm select-vehicle">
+                            </select>
+                        </div>
+                    </div>
+                    <!-- <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end">Vehicle Qty :</label>
+                        <div class="col-sm-9">
+                            <input type="number" class="form-control form-control-sm vehicleQty" step="1" min="0" max="100" value="0"/>
+                        </div>
+                    </div> -->
+                    <!-- <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end">Estimate Start Time :</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control form-control-sm estimateStartTime"/>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end">Estimate End Time :</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control form-control-sm estimateEndTime"/>
+                        </div>
+                    </div> -->
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label text-end" style="white-space:nowrap;">Select Route :</label>
+                        <div class="col-sm-9">
+                            <select class="form-select form-select-sm select-route">
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary custom-btn-gray" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-primary custom-btn-green create-driverTask">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>

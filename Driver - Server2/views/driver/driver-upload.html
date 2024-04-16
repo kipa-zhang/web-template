@@ -1,0 +1,30 @@
+<script type="module" src="../scripts/driver/driver-upload.js"></script>
+
+<div class="modal fade" id="view-driver-upload" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Upload Driver List</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <% if (pageList.find(item => item.page == 'Upload Driver' && item.action == 'Upload' )) { %>
+                <div class="row">
+                    <div class="mb-3">
+                        <button type="button" class="layui-btn" id="driver-upload">
+                            <i class="layui-icon">&#xe67c;</i>Upload Driver
+                        </button>
+                    </div>
+                </div>
+                <% } %>
+                <div>
+                    <table aria-hidden="true" id="driver-upload-list">
+
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>

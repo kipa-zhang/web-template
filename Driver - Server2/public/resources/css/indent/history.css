@@ -1,0 +1,222 @@
+
+.custom-timeline-item{
+    position: relative;
+    float: left;
+    width: 200px;
+}
+.custom-timeline-item:before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 5px;
+    z-index: 0;
+    height: 1px;
+    width: 99%;
+    border-top: 1px dashed #000;
+}
+
+.custom-timeline-item:last-child:before {
+    display: none;
+}
+
+.custom-timeline-content{
+    padding-top: 25px;
+}
+.custom-timeline-axis {
+    position: absolute;
+    left: -5px;
+    top: -5px;
+    z-index: 10;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    border-radius: 50%;
+    text-align: center;
+}
+
+.custom-timeline-status {
+    position: absolute;
+    padding: 0px 15px;
+    height: 30px;
+    line-height: 30px;
+    left: -5px;
+    top: -10px;
+    border-radius: 15px;
+    border: 1px solid;
+    z-index: 10;
+    background-color: #fff;
+    text-align: center;
+}
+.custom-timeline-item-create .custom-timeline-content-action{
+    color: #A8BBE5;
+    border-color: #A8BBE5;
+}
+.custom-timeline-item-approve .custom-timeline-content-action{
+    color: #2BB982;
+    border-color: #2BB982;
+}
+.custom-timeline-item-reject .custom-timeline-content-action{
+    color: #D400F8;
+    border-color: #D400F8;
+}
+.custom-timeline-item-edit .custom-timeline-content-action{
+    color: #4AAAFC;
+    border-color: #4AAAFC;
+}
+.custom-timeline-item-cancel .custom-timeline-content-action{
+    color: #9D9D9D;
+    border-color: #9D9D9D;
+}
+.custom-timeline-item-endorse .custom-timeline-content-action{
+    color: #9d61fc;
+    border-color: #9d61fc;
+}
+.custom-timeline-item-change .custom-timeline-content-action{
+    color: #5073C7;
+    border-color: #5073C7;
+}
+
+.custom-timeline-item-assigned .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-assigned.svg');
+    background-color: white;
+}
+.custom-timeline-item-assigned .driver-status, .color-assigned{
+    color: #008AFF
+}
+
+.custom-timeline-item-acknowledged .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-acknowledged.svg');
+    background-color: white;
+}
+
+.color-approved {
+    color: #2BB982;
+}
+
+.custom-timeline-item-acknowledged .driver-status, .color-acknowledged{
+    color: #339061
+}
+
+.custom-timeline-item-started .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-started.svg');
+    background-color: white;
+}
+.custom-timeline-item-started .driver-status, .color-started{
+    color: #BCDB2C
+}
+
+.custom-timeline-item-arrived .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-arrived.svg');
+    background-color: white;
+}
+.custom-timeline-item-arrived .driver-status, .color-arrived{
+    color: #10CBF8
+}
+
+.custom-timeline-item-completed .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-completed.svg');
+    background-color: white;
+}
+.custom-timeline-item-completed .driver-status, .color-completed{
+    color: #1B7981
+}
+
+.custom-timeline-item-late .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-late.svg');
+    background-color: white;
+}
+.custom-timeline-item-late .driver-status, .color-late{
+    color: #FD7624
+}
+
+.custom-timeline-item-noshow .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-noshow.svg');
+    background-color: white;
+}
+.custom-timeline-item-noshow .driver-status, .color-noshow{
+    color: #FF80A5
+}
+
+.custom-timeline-item-declined .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-declined.svg');
+    background-color: white;
+}
+.custom-timeline-item-declined .driver-status, .color-declined{
+    color: #EB3531
+}
+
+.custom-timeline-item-pending .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-pending.svg');
+    background-color: white;
+}
+.custom-timeline-item-pending .driver-status, .color-pending{
+    color: #008AFF
+}
+
+.custom-timeline-item-collected .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-collected.svg');
+    background-color: white;
+}
+.custom-timeline-item-collected .driver-status, .color-collected{
+    color: #008AFF
+}
+
+.custom-timeline-item-waitingforack .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-waitingforack.svg');
+    background-color: white;
+}
+.custom-timeline-item-waitingforack .driver-status, .color-waitingforack{
+    color: #F6BA2F
+}
+.custom-timeline-item-waitingforack {
+    width: 300px !important;
+}
+
+.custom-timeline-item-allocated .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-allocated.svg');
+    background-color: white;
+}
+.custom-timeline-item-allocated .driver-status, .color-allocated{
+    color: #008AFF
+}
+
+.custom-timeline-item-endorsed .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-endorsed.svg');
+    background-color: white;
+}
+.custom-timeline-item-endorsed .driver-status, .color-endorsed{
+    color: #9d61fc
+}
+
+.custom-timeline-item-unassigned .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-endorsed.svg');
+    background-color: white;
+}
+.custom-timeline-item-unassigned .driver-status, .color-unassigned{
+    color: #9d61fc
+}
+
+.custom-timeline-item-else .custom-timeline-axis{
+    background: url('../images/indent/driver/radio-else.svg');
+    background-color: white;
+}
+.custom-timeline-item-else .driver-status, .color-else{
+    color: #999999
+}
+
+
+.color-time{
+    color: rgba(0,0,0,0.65);
+}
+
+.bd-flow{
+    background-color: #D4E9E9;
+    height: 50px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+.card-shadow{
+    box-shadow: 0px 0px 4px rgb(185 177 177);
+    border-radius: 15px;
+}

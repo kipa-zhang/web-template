@@ -1,0 +1,89 @@
+<link rel="stylesheet" href="../css/route/route-create.css">
+<script type="module" src="../scripts/route/route-create.js"></script>
+<link rel="stylesheet" href="../dragArrange/drag-arrange.css">
+<script type="module" src="../dragArrange/drag-arrange.js"></script>
+<div class="offcanvas offcanvas-end operate-route edit-route" data-bs-backdrop="false" tabindex="-1" id="create-route" aria-labelledby="createRouteLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="createRouteLabel">Create Route</h5>
+        <!-- <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button> -->
+    </div>
+    <div class="offcanvas-body">
+        <div class="start-end-point pt-2 pb-3 mb-4">
+            <div class="row mb-2">
+                <div class="col-sm-2 px-0" style="text-align: center;">
+                    <img alt="" style="width: 20px;margin-left: 15px;margin-top: 6px; cursor: pointer;" src="../images/route/route-start.png"/>
+                </div>
+                <div class="col-sm-10 px-1 pt-2">
+                    <input class="edit-route-point start-point"/>
+                    <div class="position-names">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-2 px-0" style="text-align: center;">
+                    <img alt="" style="width: 25px;margin-left: 15px;margin-top: 6px; cursor: pointer;" src="../images/route/route-end.png"/>
+                </div>
+                <div class="col-sm-10 px-1 pt-2">
+                    <input class="edit-route-point end-point"/>
+                    <div class="position-names">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mb-3 row">
+            <label for="inputPassword" class="col-sm-4 col-form-label">Route Name: </label>
+            <div class="col-sm-7 p-0">
+                <input type="text" class="form-control form-control-sm routeName py-0" placeholder="Route Name">
+            </div>
+        </div>
+        <hr>
+        <div class="mb-3 row">
+            <div class="col-9">
+                <label>Waypoints:&nbsp;</label>
+                <div class="btn custom-btn btn-primary add-waypoint" style="width: fit-content;">+</div>
+            </div>
+            <!-- <div class="col-2">
+                <div class="btn custom-btn btn-primary create-waypoint"></div>
+            </div> -->
+        </div>
+        <div class="mb-3 row py-2 div-waypoint-list">
+            <ul class="drag-list waypoint-list">
+            </ul>
+        </div>
+        <div class="color-picker">
+            <label>Route Color:</label><br>
+            <table aria-hidden="true">
+                <tr>
+                    <td>
+                        <div class="color-picker-item active" data-color="#F3141D" style="background-color: #F3141D;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#210DFE" style="background-color: #210DFE;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#267F00" style="background-color: #267F00;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#F7A61D" style="background-color: #F7A61D;"></div>
+                    </td>
+                    <td>
+                        <div class="color-picker-item" data-color="#7B0880" style="background-color: #7B0880;"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="color-picker">
+            <label>Choose Color:</label><br>
+            <input type="color" class="line-color" style="margin-left: 5px;"/>
+        </div>
+        <div class="row mt-5" style="text-align: center;">
+            <div class="col-sm-6" style="text-align: right;">
+                <div class="btn btn-sm btn-secondary custom-btn cancel-create-route" data-bs-dismiss="offcanvas">Cancel</div>
+            </div>
+            <div class="col-sm-6" style="text-align: left;">
+                <div class="btn btn-sm btn-primary custom-btn create-route">Confirm</div>
+            </div>
+        </div>
+    </div>
+</div>
+

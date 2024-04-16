@@ -1,0 +1,233 @@
+<script type="module" src="../scripts/mtAdmin/mt_Admin.js"></script> 
+<script type="text/javascript" src="../driver-vehicle-select/img-select.js"></script>
+<style>
+    .input-group:not(.has-validation)>:not(:last-child):not(.dropdown-toggle):not(.dropdown-menu):not(.form-floating) {
+        border-top-right-radius: 6px !important;
+        border-bottom-right-radius: 6px !important;
+    }
+
+    #mtAdminModal .leftimg {
+        width: 20px;
+        height: 20px;
+        position: absolute;
+        margin-top: 0.5rem;
+        margin-left: 0.3rem;
+    }
+</style>
+<div class="modal fade" id="mtAdminModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0">
+          <div class="modal-header modal-header-background">
+              <button type="button" class="btn-close btn-close-white mtAdminCancel" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+              <div class="row m-2">
+                  <div class="col-md-12 col-sm-12 col-lg-6">
+                      <form id="base-task-form">
+                          <div class="mb-2 row">
+                              <label for="purposeType" class="col-sm-5 col-form-label">Purpose:</label>
+                              <div class="col-sm-7">
+                                  <select class="form-select" id="purposeType" name="purposeType">
+                                      <option value=""></option>
+                                  </select>
+                              </div>
+                          </div>
+                          <div class="mb-2 row">
+                              <label for="additionalRemarks" class="col-sm-5 col-form-label">Activity Name:</label>
+                              <div class="col-sm-7">
+                                  <input class="form-control" id="additionalRemarks" name="additionalRemarks" autocomplete="off">
+                              </div>
+                          </div>
+                          <div class="mb-2 row remarks-field" style="display: none;">
+                              <label for="remarks" class="col-sm-5 col-form-label">Remarks:</label>
+                              <div class="col-sm-7">
+                                <textarea rows="2" class="form-control" id="remarks" name="remarks"
+                                placeholder="Remarks Field"
+                                autocomplete="off"></textarea>
+                              </div>
+                          </div>
+                          <div class="mb-2 row hub-select-row" style="display: none;">
+                            <label class="col-sm-5 col-form-label">Hub:</label>
+                            <div class="col-sm-7">
+                                <select class="form-select hub-select" name="hub"></select>
+                            </div>
+                        </div>
+                        <div class="mb-2 row node-select-row" style="display: none;">
+                            <label class="col-sm-5 col-form-label">Node:</label>
+                            <div class="col-sm-7">
+                                <select class="form-select node-select" name="node"></select>
+                            </div>
+                        </div>
+                      </form>
+                  </div>
+                  <div class="col-md-12 col-sm-12 col-lg-6 " >
+                      <div class="card card-body">
+                          <form id="task-form">
+                              <div class="row">
+                                  <div class="mb-2 row">
+                                      <label for="category" class="col-sm-5 col-form-label">Category:</label>
+                                      <div class="col-sm-7" id="category-radio">
+                                        <div class="form-check">
+                                          <input class="form-check-input" type="radio" name="category" id="MV" value="MV" checked>
+                                          <label class="form-check-label" for="MV">MV</label>
+                                        </div>
+                                      </div>
+                                  </div>
+                                  <div class="mb-2 row">
+                                      <label for="serviceMode" class="col-sm-5 col-form-label">Service Mode:</label>
+                                      <div class="col-sm-7">
+                                          <select class="form-select" id="serviceMode" name="serviceMode">
+                                            <option></option>
+                                          </select>
+                                      </div>
+                                  </div>
+                                  
+                                  <div class="mb-2 row mt-2" id="date-select">
+                                    <div class="col-sm-5 mb-2">
+                                      <label class="col-form-label mb-2">Start Date:</label>
+                                    </div>
+                                    <div class="col-sm-7 mb-2">
+                                      <input class="form-control" id="periodStartDate" name="periodStartDate" autocomplete="off" lay-key="8" readonly>
+                                    </div>
+                                    <div class="col-sm-5 mb-2">
+                                      <label class="col-form-label mb-2">End Date:</label>
+                                    </div>
+                                    <div class="col-sm-7 mb-2">
+                                      <input class="form-control" id="periodEndDate" name="periodEndDate" autocomplete="off" lay-key="9" readonly>
+                                    </div>
+                                  </div>
+
+                                  <div class="mb-2 row typeOfVehicle-row">
+                                    <label for="typeOfVehicle" class="col-sm-5 col-form-label">Resource:</label>
+                                    <div class="col-sm-7">
+                                        <div class="position-relative">
+                                            <div class="input-group">
+                                                <input type="text" class="form-select" id="typeOfVehicle" data-unitId="" name="typeOfVehicle" data-value="" autocomplete="off" style="border-radius: 6px;" readonly>
+                                                <div class="search-select shadow" id="typeOfVehicle-shadow" style="max-width: 100%;">
+                                                    <img alt="" src="../images/hq/search.png" class="leftimg" alt="" draggable="false"/>
+                                                    <input type="text" class="form-control" autocomplete="off" id="search5" placeholder="search Resource" style="padding: 0.375rem 2rem !important;">
+                                                    <div class="form-search-select">
+                                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                  <div class="mb-2 row">
+                                    <label for="vehicleNo" class="col-sm-5 col-form-label">Vehicle No:</label>
+                                    <div class="col-sm-7">
+                                        <div class="position-relative">
+                                            <div class="input-group">
+                                                <input type="text" class="form-select" id="vehicleNo" data-unitId="" name="vehicleNo" data-value="" autocomplete="off" style="border-radius: 6px;" readonly>
+                                                <div class="search-select shadow" id="vehicleNo-shadow" style="max-width: 100%;">
+                                                    <img alt="" src="../images/hq/search.png" class="leftimg" alt="" draggable="false"/>
+                                                    <input type="text" class="form-control" autocomplete="off" id="search3" placeholder="search VehicleNo" style="padding: 0.375rem 2rem !important;">
+                                                    <div class="form-search-select">
+                                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                          
+                                <div class="mb-2 row">
+                                    <label for="driver" class="col-sm-5 col-form-label">Driver:</label>
+                                    <div class="col-sm-7">
+                                        <div class="position-relative">
+                                            <div class="input-group">
+                                                <input type="text" class="form-select" id="driver" data-id="" data-unitId="" name="driver" autocomplete="off" style="border-radius: 6px;" readonly>
+                                                <div class="search-select shadow" id="driver-shadow" style="max-width: 100%;">
+                                                    <img alt="" src="../images/hq/search.png" class="leftimg" alt="" draggable="false"/>
+                                                    <input type="text" class="form-control" autocomplete="off" id="search4" placeholder="search driver" style="padding: 0.375rem 2rem !important;">
+                                                    <div class="form-search-select">
+                                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                  <div class="mb-2 row">
+                                      <label for="pickupDestination" class="col-sm-5 col-form-label">Reporting Location:</label>
+                                      <div class="col-sm-7">
+                                          <div class="position-relative">
+                                              <div class="input-group">
+                                                  <input type="text" class="form-select" id="pickupDestination" name="pickupDestination" autocomplete="off" readonly>
+                                                  <div class="search-select shadow" id="pickupDestination-shadow" style="max-width: 100%;">
+                                                    <img alt="" src="../images/hq/search.png" class="leftimg" alt="" draggable="false"/>
+                                                      <input type="text" class="form-control" autocomplete="off" id="search1" placeholder="Search" style="padding: 0.375rem 2rem !important;">
+                                                      <div class="form-search-select">
+                                                          
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div class="mb-2 row">
+                                      <label for="dropoffDestination" class="col-sm-5 col-form-label">Destination:</label>
+                                      <div class="col-sm-7">
+                                          <div class="position-relative">
+                                              <div class="input-group">
+                                                  <input type="text" class="form-select" id="dropoffDestination" name="dropoffDestination" autocomplete="off" readonly>
+                                                  <div class="search-select shadow"  id="dropoffDestination-shadow"  style="max-width: 100%;">
+                                                    <img alt="" src="../images/hq/search.png" class="leftimg" alt="" draggable="false"/>
+                                                      <input type="text" class="form-control" autocomplete="off" id="search2" placeholder="Search" style="padding: 0.375rem 2rem !important;">
+                                                      <div class="form-search-select">
+                                                          
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <!-- <div class="mb-2 row">
+                                      <label for="pocName" class="col-sm-5 col-form-label">POC:</label>
+                                      <div class="col-sm-7">
+                                          <input class="form-control" id="pocName" name="pocName"
+                                              autocomplete="off">
+                                      </div>
+                                  </div> -->
+                                  <!-- <div class="mb-2 row">
+                                      <label for="contactNumber" class="col-sm-5 col-form-label">Mobile
+                                          Number:</label>
+                                      <div class="col-sm-7">
+                                          <div class="input-group">
+                                              <span class="input-group-text" id="contactNumberPrefix">+65</span>
+                                              <input type="text" class="form-control" id="contactNumber" name="contactNumber" autocomplete="off" onKeypress="return (/[\d]/.test(String.fromCharCode(event.keyCode)))">
+                                          </div>
+                                      </div>
+                                  </div> -->
+                        
+                                  <!-- <div class="mb-2 row" id="serviceProviderSelect">
+          
+                                  </div> -->
+                                  <!-- <div class="mb-3 row">
+                                      <label for="tripRemarks" class="col-sm-5 col-form-label">Trip Remarks:</label>
+                                      <div class="col-sm-7">
+                                          <textarea rows="2" class="form-control" id="tripRemarks" name="tripRemarks"
+                                              placeholder="<5 days require justification"
+                                              autocomplete="off" disabled></textarea>
+                                      </div>
+                                  </div> -->
+                              </div>
+                          </form>
+                      </div>
+                  </div>
+              </div>
+              <div class="row justify-content-center pt-3" id="button1-row" style="padding-bottom: 3rem;padding-top: 3rem !important;">
+                  <div class="col-auto modal-footer-bunton-cancel-lg">
+                      <button type="button" class="btn custom-btn-gray mtAdminCancel" data-bs-dismiss="modal">Cancel</button>
+                  </div>
+                  <div class="col-auto action-button modal-footer-bunton-confirm-lg">
+                    <button type="button" class="btn btn-success" id="mtAdminConfirm">Confirm</button>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>

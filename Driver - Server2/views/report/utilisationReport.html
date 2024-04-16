@@ -1,0 +1,152 @@
+<%- include('../common/common-html-base.html') -%>
+<link rel="stylesheet" href="../layui/css/layui.css">
+<script type="text/javascript" src="../layui/layui.js"></script>
+
+<link rel="stylesheet" href="../DataTables-bootstrap4/dataTables.bootstrap4.min.css">
+<script src="../DataTables-bootstrap4/jquery.dataTables.min.js"></script>
+<script src="../DataTables-bootstrap4/dataTables.bootstrap4.min.js"></script>
+
+<script type="text/javascript" src="../pagehelper/pageHelper.js"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+    table {
+        -webkit-print-color-adjust:exact;
+    }
+    
+    #indent-echart {
+        height: 280px;
+        width: 1000px;
+        margin: auto;
+    }
+    .indentTypes-report-chart {
+        width: 330px;
+        height: 140px;
+        margin: auto;
+    }
+    #safety-echart {
+        width: 1000px;
+        height: 220px;
+        margin: auto;
+    }
+
+    .report-content {
+        width: 100%;
+    }
+    .report-title {
+        background: #399062;
+        color: white;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        height: 60px;
+        font-size: 20px;
+        padding-left: 20px;
+    }
+    .content-head {
+        background: #d4e9e9; 
+        border-radius: 10px 10px 0 0;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        height: 50px;
+    }
+    .content-data {
+        background: #ffffff;
+        border-radius: 0 0 10px 10px;
+        min-height: 300px;
+        width: 100%;
+    }
+    .report-type-tab {
+        width: fit-content;
+        padding-left: 15px;
+        padding-right: 15px;
+        border-bottom: 5px solid #acacac;
+        color: #969696;
+        height: 100%;
+        font-weight: 700;
+    }
+    .report-type-tab.active {
+        border-bottom: 5px solid #399062;
+        color: black;
+    }
+    table tr:first-child td {
+        color: #3e5bcd !important;
+        font-weight: 700;
+    }
+    .paginate_button.page-item {
+        line-height: 1.5em;
+    }
+    .dataTables_length {
+        padding-top: 10px;
+    }
+
+    .dataTables_scrollHeadInner {
+        width: 100% !important;
+    }
+</style>
+<title></title>
+<body style="background-color: white !important;">
+    <div class="" style="height: 100%; width: 100%;">
+        <div class="report-content" style="height: 100%;">
+            <div class="report-title">
+                <label>Utilisation Report</label>
+            </div>
+            <div class="py-2 px-2" style="background: #f3f3f3;width: 100%; height: calc(100% - 60px);">
+                <div class="content-head px-3">
+                    <div style="display: flex; padding: 0px;" class="col-4 report-type">
+                        <div class="report-type-tab tab-to active">
+                            <label>Transport Operators</label>
+                        </div>
+                        <div class="report-type-tab tab-vehicle">
+                            <label>Military Vehicle</label>
+                        </div>
+                    </div>
+                    <div style="display: flex;" class="col-8 limit-condition justify-content-end">
+                        <div class="row justify-content-end">
+                            <div class="col-auto px-0" style="width: 100px;">
+                                <select class="form-select form-control selectedYear" id="select-hub" style="height: 35px; font-size: 15px; color: #399062;">
+                                </select>
+                            </div>
+                            <div class="col-auto" style="width: 130px; padding-right: 0;">
+                                <!-- input type="text" class="form-control selectedMonth" style="height: 35px; font-size: 15px; color: #399062;"/ -->
+                                <select class="form-select form-control selectedMonth" id="select-hub" style="height: 35px; font-size: 15px; color: #399062;">
+                                </select>
+                            </div>
+                            <div class="col-auto hubNode-btn">
+                                <select class="form-select form-control unitSelect" id="select-hub" style="height: 35px; font-size: 15px; color: #399062;">
+                                    <option value="">HUB: All</option>
+                                </select>
+                            </div>
+                            <div class="col-auto hubNode-btn px-0">
+                                <select class="form-select subUnitSelect" id="select-node" style="height: 35px; font-size: 15px; color: #399062;">
+                                    <option value="">Node: All</option>
+                                </select>
+                            </div>
+                            <div class="col-auto pl-0 vehicle-type-div" style="display: none;">
+                                <select class="form-select vehicleTypeSelect" id="select-node" style="height: 35px; font-size: 15px; color: #399062;">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-data">
+                    <div class="to-report-datatable" style="width: 100%; height: 100%;">
+                        <div class="table-common table-shadow" style="height: 100%;">
+                            <table aria-hidden="true" class="table data-list-toReport pb-2 w-100" style="white-space: nowrap; border-collapse:collapse !important;">
+                            </table>
+                        </div>
+                    </div>
+                    <div class="vehicle-report-datatable" style="width: 100%; height: 100%; display: none;">
+                        <div class="table-common table-shadow" style="height: 100%;">
+                            <table aria-hidden="true" class="table data-list-vehicleReport pb-2 w-100" style="white-space: nowrap; border-collapse:collapse !important;">
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</body>
+<script src="../scripts/report/utilisationReport.js"></script>

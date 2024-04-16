@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta charset="UTF-8">
+    <title></title>
+
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <script type="text/javascript" src="../layui/layui.js"></script>
+
+    <script type="text/javascript" src="../jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+    <script type="text/javascript" src="../axios/axios.min.js"></script>
+
+    <style>
+        body {
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Inter';
+        }
+        .callback-content {
+            width: 100%;
+            height: 100%;
+        }
+        .top-img {
+            width: 100%;
+            height: 60%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tail-text1 {
+            width: 100%;
+            height: 40px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: black;
+        }
+        .tail-text2 {
+            width: 100%;
+            height: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: grey;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="code" style="display: none;"><%= code%></div>
+    <div class="nric" style="display: none;"><%= nric%></div>
+    <div class="error" style="display: none;"><%= error%></div>
+    <div class="callback-content">
+        <div class="top-img">
+            <img alt="" src="./images/login/green-logo.svg">
+        </div>
+        <div class="tail-text1"><label>Please wait while we are checking your account</label></div>
+        <div class="tail-text2"><label>If it takes longer than 10 seconds, please check your browser for login page</label></div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            loginRequest()
+        };
+
+        const loginRequest = async function () {
+            let nric = $(".nric").html()
+            if(!nric){
+                return
+            }
+            await axios.post('./loginUseSingpass', {
+                nric: nric,
+            }).then(res => {
+                if(res.data.respCode == 0) {
+                    layui.use('layer', function () {
+                        let layer = layui.layer;
+                        layer.ready(function() {
+                            layer.open({
+                                title: 'Login Fail',
+                                content: res.data.respMessage,
+                                btn: ['Ok'],
+                                yes: function (index) {
+                                    layer.close(index);
+                                    window.location = '/login';
+                                }
+                            });
+                        });
+                    });
+                } else {
+                    window.location = '/'
+                }
+            });
+        };
+    </script>
+</body>
+</html>

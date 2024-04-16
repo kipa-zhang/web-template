@@ -1,0 +1,319 @@
+<script type="module" src="../scripts/detailIncident/detailIncident.js"></script>
+
+<style>
+    /* .fw-bold {
+        white-space: nowrap;
+    } */
+
+    .info-title {
+        color: black;
+        font-weight: 600;
+        font-size: 0.75rem;
+        line-height: 22px;
+    }
+
+    .check-input {
+        appearance: none;
+        position: relative;
+        outline: none;
+    }
+
+    .check-input::before {
+        content: "";
+        height: 17px;
+        width: 17px;
+        border: 1px solid #999;
+        display: inline-block;
+        border-radius: 50%;
+        vertical-align: middle;
+    }
+
+    .check-input:checked::before {
+        content: "";
+        height: 17px;
+        width: 17px;
+        border: 1px solid #999;
+        display: inline-block;
+        border-radius: 50%;
+        vertical-align: middle;
+    }
+
+    .check-input:checked::after {
+        content: "";
+        height: 9px;
+        width: 9px;
+        text-align: center;
+        background-color: #1B9063;
+        border-radius: 50%;
+        display: block;
+        position: absolute;
+        top: 0.55rem;
+        left: 0.25rem;
+    }
+
+    .check-input::after {
+        content: "";
+        height: 9px;
+        width: 9px;
+        text-align: center;
+        background-color: #DDDDDD;
+        border-radius: 50%;
+        display: block;
+        position: absolute;
+        top: 0.55rem;
+        left: 0.25rem;
+    }
+
+    .btn-disabled {
+        pointer-events: none;
+        cursor: not-allowed;
+        background-color: #bbbab9 !important;
+    }
+</style>
+<div class="modal fade" id="view-incident-new" tabindex="-1" data-backdrop="static" data-keyboard="false" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header modal-header-background">
+                <h5 class="modal-title">Incident Detail</h5>
+                <button type="button" class="btn-close btn-close-white button-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="overflow-x: hidden; overflow-y: auto;">
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 col-lg-6 div-hr-modal" style="padding-right: 4rem;border-right: 2px dashed #D7D7D7;">
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Brief Description of Incident :</div>
+                            <div class="col-7">
+                                <textarea class="form-control form-control-sm textarea-description"></textarea>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Follow Up Actions :</div>
+                            <div class="col-7">
+                                <textarea class="form-control form-control-sm textarea-action"></textarea>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-5 p-0"></div>
+                            <div class="col-7">
+                                <div class="row p-0">
+                                    <div class="col-5 p-0">
+                                        <div class="" style="line-height: 1.5rem;">
+                                            <input class="check-input" type="radio" name="Negligence" id="Negligence" value="Negligence" checked>
+                                            <label class="form-check-label" for="Negligence">Negligence</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-7 p-0">
+                                        <div class="" style="line-height: 1.5rem;">
+                                            <input class="check-input" type="radio" name="Negligence" id="Non-Negligence" value="Non-Negligence">
+                                            <label class="form-check-label" for="Non-Negligence">Non-Negligence</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Closed On :</div>
+                            <div class="col-7">
+                                <textarea class="form-control form-control-sm textarea-closed-on"></textarea>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Location Of Incident :</div>
+                            <div class="col-7">
+                                <textarea class="form-control form-control-sm textarea-location-incident"></textarea>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Location Type :</div>
+                            <div class="col-7">
+                                <select class="form-select select-location-type" name="locationType">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-5 p-0"></div>
+                            <div class="col-7">
+                                <div class="row p-0">
+                                    <div class="col-5 p-0">
+                                        <div class="" style="line-height: 1.5rem;">
+                                            <input class="check-input" type="radio" name="Local" id="Local" value="Local" checked>
+                                            <label class="form-check-label" for="Local">Local</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-7 p-0">
+                                        <div class="" style="line-height: 1.5rem;">
+                                            <input class="check-input" type="radio" name="Local" id="Overseas" value="Overseas">
+                                            <label class="form-check-label" for="Overseas">Overseas</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">
+                               Week Range :
+                            </div>
+                            <div class="col-7">
+                                <img alt="" src="../images/incidentDetail/calendar.png" style="width: 23px;height: 23px;position: absolute;margin-top: 0.4rem;margin-left: 0.5rem;">
+                                <input placeholder="YYYY-MM-DD" placeholder-class="enlistment-date-placeholder" class="form-control enlistment-date-input" readonly="" disabled="disabled" style="padding: 0.375rem 0 0.375rem 2.3rem !important;">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">
+                               Time :
+                            </div>
+                            <div class="col-7">
+                                <img alt="" src="../images/incidentDetail/alarm-clock.png" style="width: 20px;height: 20px;position: absolute;margin-top: 0.4rem;margin-left: 0.5rem;">
+                                <input placeholder="HH:mm" placeholder-class="enlistment-date-placeholder" class="form-control enlistment-time-input" readonly="" disabled="disabled" style="padding: 0.375rem 0 0.375rem 2.3rem !important;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 col-sm-12 col-lg-6">
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">
+                               Week Number :
+                            </div>
+                            <div class="col-7">
+                                <input class="form-control week-number-input" placeholder="Week Number" disabled="disabled">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">
+                               Month Number :
+                            </div>
+                            <div class="col-7">
+                                <input class="form-control month-number-input" placeholder="Month Number" disabled="disabled">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">
+                               Work Year :
+                            </div>
+                            <div class="col-7">
+                                <input class="form-control work-year-input" placeholder="Work Year" disabled="disabled">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0" style="line-height: 1.3rem;">
+                                Incident Peak Hour :
+                                <br/>
+                                <label class="info-title" style="font-size: 10px;">
+                                    (07:30-09:30 And 17:30-19:30)
+                                </label>
+                            </div>
+                            <div class="col-7">
+                                <input class="form-control peak-hour-input" placeholder="Incident Peak Hour" disabled="disabled">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0" style="line-height: 1.3rem;">
+                                Incident :
+                                <br/>
+                                <label class="info-title" style="font-size: 10px;">
+                                    (Night=19:00-07:00,Day=07:01-18:59)
+                                </label>
+                            </div>
+                            <div class="col-7">
+                                <input class="form-control incident-input" placeholder="Incident" disabled="disabled">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Weather :</div>
+                            <div class="col-7">
+                                <select class="form-select select-weather" name="Weather">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Traffic Condition :</div>
+                            <div class="col-7">
+                                <select class="form-select select-traffic-condition" name="Traffic Condition">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Type Of Detail :</div>
+                            <div class="col-7">
+                                <select class="form-select select-detail-type" name="Type Of Detail">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Second Order Of Detail :</div>
+                            <div class="col-7">
+                                <select class="form-select select-detail-second-order" name="Second Order Of Detail">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Direction Of Movement :</div>
+                            <div class="col-7">
+                                <select class="form-select select-direction-movement" name="Direction Of Movement">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Type Of Manoeuvre :</div>
+                            <div class="col-7">
+                                <select class="form-select select-manoeuvre-type" name="Type Of Manoeuvre">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">Location Of lmpact :</div>
+                            <div class="col-7">
+                                <select class="form-select select-location-lmpact" name="Location Of lmpact">
+                                    <option></option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">lssue Demerit Points :</div>
+                            <div class="col-7">
+                                <input type="number" class="form-control lssue-demerit-points-input" 
+                                <% if (!pageList.find(item => item.page == 'Edit Issue')) { %>
+                                    disabled="disabled" 
+                                <% } %> 
+                                onkeyup="value=value.replace(/[^\d]/g,'')">
+                                
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-5 text-end fw-bold p-0">
+                                Suspension Period :
+                            </div>
+                            <div class="col-7">
+                                <img alt="" src="../images/incidentDetail/data-green.png" style="width: 18px;height: 18px;position: absolute;margin-top: 0.5rem;margin-left: 0.5rem;">
+                                <input class="form-control suspension-period-input"  
+                                <% if (!pageList.find(item => item.page == 'Edit Issue')) { %>
+                                    disabled="disabled" 
+                                <% } %> 
+                                style="padding: 0.375rem 0 0.375rem 1.9rem !important;font-size: 0.86rem;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="" style="padding-top: 4rem;padding-bottom: 4rem;">
+                <div class="row justify-content-center">
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-secondary button-close custom-btn-gray modal-footer-bunton-cancel-bg" data-bs-dismiss="modal">Close</button>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-primary btn-update-incident modal-footer-bunton-confirm-bg" style="background-color: #1B9063;">Update</button>
+                    </div>
+                </div>
+              </div>
+        </div>
+    </div>
+</div>
+
+

@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title><%= title %></title>
+        <%- include('../common/common-html-base.html') -%>
+
+        <script type="text/javascript" src="../DataTables-1.10.21/js/jquery.dataTables.min.js"></script>
+        <link rel="stylesheet" href="../DataTables-1.10.21/css/jquery.dataTables.min.css" media="all">
+
+        <script src="../DataTables-bootstrap4/dataTables.bootstrap4.min.js"></script>
+        <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+        <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+
+        <link rel="stylesheet" href="../layui-v2.5.4/layui/css/layui.css">
+        <script type="text/javascript" src="../layui-v2.5.4/layui/layui.js"></script>
+        <script type="text/javascript" src="../scripts/notice/notice-view.js"></script>
+
+    </head>
+    <style>
+        table thead th {
+            border-style: none;
+        }
+
+        table.dataTable tbody tr td {
+            text-align: center;
+            border-top: 1px solid var(--bs-table-border-color);
+            border-bottom: 1px solid var(--bs-table-border-color);
+            display: table-cell; 
+            vertical-align: middle;
+            line-height: 18px;
+        }
+
+        table.dataTable tbody tr {
+            background-color: white;
+            border: solid 10px #F3F3F3;
+            border-radius: 10px;
+        }
+
+        table.dataTable tbody tr td:first-child {
+            border-bottom-left-radius: 25px;
+            border-top-left-radius: 25px;
+        }
+        table.dataTable tbody tr td:last-child {
+            border-bottom-right-radius: 25px;
+            border-top-right-radius: 25px;
+        }
+
+        .justify-content-end.m-3 {
+            margin-top: 0 !important;
+        }
+
+        .table-shadow {
+            box-shadow: none;
+        }
+        .table-common {
+            border: none;
+            border-radius: 0px;
+            background-color: #F3F3F3;
+        }
+
+        .jobTask-table {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
+        .nav-item {
+            font-size: large;
+            color: #6c757d;
+        }
+        .nav-item.active {
+            font-size: large;
+            color: black;
+        }
+        .search-input-div {
+            display: flex;
+            justify-content: left;
+            width: calc(100% - 30px);
+            margin: 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 30px;
+            background-color: white;
+        }
+        .search-img-div {
+            background-image: url('../images/btn-search.svg');
+            width: 30px;
+            background-repeat: no-repeat;
+            background-size: 15px;
+            background-position: 8px center;
+        }
+        .search-input {
+            line-height: 2;
+            border: none;
+            width: calc(100% - 70px);
+            height: 42px;
+        }
+        .filter-div {
+            display: flex;
+            margin: 1rem;
+            width: calc(100% - 30px);
+        }
+        .filter-item {
+            margin-right: 10px;
+        }
+        .div-table {
+            display: table; 
+            height: 100%;
+        }
+        .div-table-cell {
+            display: table-cell; 
+            text-align: center; 
+            vertical-align: middle;
+        }
+        .circle-status {
+            width: fit-content;
+            padding: 0 20px;
+            border-radius: 5px;
+            border: solid 1px rgb(232, 232, 232);
+            margin: auto;
+        }
+        .circle-status label {
+            line-height: 15px;
+            font-size: 15px;
+            color: rgb(153, 153, 153);
+        }
+        .div-circle {
+            width: 10px; 
+            height: 10px; 
+            border-radius: 5px; 
+            margin: 0 5px;
+        }
+        .filter-div .form-control {
+            background-color: #F9EED8 !important;
+            border: 1px solid #EBDE99 !important;
+            cursor: pointer;
+        }
+        .paginate_button.page-item {
+            line-height: 1.5em;
+        }
+        
+        .dataTables_length {
+            padding-top: 10px;
+        }
+        .layui-laydate {
+            line-height: 1rem !important;
+            margin-left: 10px !important;
+        }
+        
+    </style>
+    <style>
+        body {
+            background-color: white !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0 !important;
+            line-height: 1;
+        }
+        .dataTables_wrapper .dataTables_info {
+            clear: both;
+            float: left;
+            padding-top: 0;
+        }
+        #notice-list_paginate>ul {
+            margin-bottom: 2px !important;
+            padding-bottom: 0 !important;
+        }
+        table.dataTable thead th {
+            color: black !important;
+            border-bottom: solid 2px rgb(209, 209, 209) !important;
+            line-height: 17px;
+        }
+        table.dataTable tbody td {
+            border-bottom: solid 1px rgb(209, 209, 209) !important;
+            line-height: 15px;
+        }
+        table.dataTable.no-footer {
+            border-bottom: 0 !important;
+        }
+
+        .active>.page-link, .page-link.active {
+            background-color: #198754;
+            border-color: #198754;
+        }
+
+        .paginate_button.page-item:hover {
+            border-color: #dee2e6 !important;
+        }
+    </style>
+    <body>
+        <div class="row px-4 py-2 mx-0" style="box-shadow: 0 5px 5px #a5a4a4;">
+            <label class="fs-6 fw-bold" style="color: #133034;">Notices</label>
+        </div>
+        <div class="row px-3 py-2 mx-0 my-3 justify-content-between">
+            <div class="col-10 col-sm-8">
+                <div class="row">
+                    <div class="col-2 col-sm-3 col-xs-6">
+                        <input class="form-control form-control-sm search-title" placeholder="Title"/>
+                    </div>
+                    <div class="col-2 col-sm-3 col-xs-6">
+                        <select class="form-select form-select-sm search-type">
+                            <option value="">All</option>
+                            <option value="Alert">Alert</option>
+                            <option value="Info">Info</option>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Update">Update</option>
+                            <!-- <option value="Urgent">Urgent</option> -->
+                        </select>
+                    </div>
+                    <div class="col-2 col-sm-3 col-xs-6">
+                        <button class="btn btn-sm btn-clear" name="clean-all">Clear all</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-2 col-sm-4 text-end">
+                <% if (pageList.find(item => item.page == 'Notice' && item.action == 'New')) { %>
+                <button type="button" class="btn btn-success btn-sm add-notice">Add New Notice<img alt="" style="width: 20px; margin-left: 5px; margin-top: -2px;" src="./images/notice/Right-Arrow.svg" /></button>
+                <% } %>
+            </div>
+        </div>
+        <div class="row px-0 py-2 mx-4 my-3 justify-content-between" style="overflow: auto; border: solid 1px rgb(201, 201, 201); box-shadow: 0 0 5px rgb(201, 201, 201); border-radius: 5px; background-color: #F3F3F3;">
+            <table aria-hidden="true" id="notice-list" style="text-align: center; border-collapse:collapse !important;">
+
+            </table>
+        </div>
+
+        <%- include('notification-create.html') -%>
+    </body>
+</html>

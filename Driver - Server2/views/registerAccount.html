@@ -1,0 +1,138 @@
+<link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+<link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="../DataTables-bootstrap4/dataTables.bootstrap4.min.css">
+<link rel="stylesheet" href="../css/common-style.css">
+<link rel="stylesheet" href="../css/common-bootstrap.css">
+<link rel="stylesheet" href="../layui/css/layui.css">
+
+<script type="text/javascript" src="../axios/axios.min.js"></script>
+<script type="text/javascript" src="../moment/moment.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.form.min.js"></script>
+
+<script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+<script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="../layui/layui.js"></script>
+
+<link rel="stylesheet" href="../multiple-select/multiple-select.css">
+<script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+
+<script type="module" src="../scripts/registerAccount.js"></script>
+
+
+
+<style>
+    .leftimg{
+        float: left;
+        width: 20px;
+        height: 20px;
+        position: absolute;
+        top: 10px;
+        left: 5px;
+    }
+        
+    .search-select, .unit-search-select {
+        position: absolute;
+        z-index: 999;
+        display: none;
+        background-color: #fff;
+        border: 1px solid #ced4da;
+    }
+    /* #registerAccount-modal .multiple-select-content {
+        bottom: 9.2rem;
+    } */
+</style>
+<div class="modal fade" id="registerAccount-modal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Register Account</h4>
+                <button type="button" class="btn-close btn-close-white close-create-user" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn returnLogin" style="color: white;position: absolute;right: 0;">Return to login page</button>
+            </div>
+            <div class="modal-body">
+                <form class="row" id="userFrom">
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end" for="userName">Name</label>
+                        <input type="text"  class="form-control  username" name="userName"
+                        id="user-userName">
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end" for="nric">Nric</label>
+                        <input type="text"  class="form-control  nric" name="nric"  autocomplete="off" id="user-nric">
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end" for="mobileNumber">Mobile Number</label>
+                        <input oninput="value=value.replace(/[^\d]/g,'')"  class="form-control  mobileNumber" name="mobileNumber"  autocomplete="off">
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end" for="email">E-Mail</label>
+                        <input type="email" class="form-control email" name="email" autocomplete="off">
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end" for="ORD Date">Operationally Ready Date (ORD)</label>
+                        <input type="ORD-Date" class="form-control ORD-Date" name="ORD-Date" autocomplete="off">
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end">CV Account Type Request</label>
+                        <select class="form-select cv-accountType"></select>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 cv-unit-div">
+                        <label class="col-form-label text-end">Unit</label>
+                        <select class="form-select cv-unit"></select>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 cv-platformType-div" style="display: none;">
+                        <label class="col-form-label text-end">CV Platform Type</label>
+                        <div style="border: 1px solid #dcdbda;border-radius: 0.375rem; height: calc(100% - 28px);height: 100px;overflow-x: hidden;overflow-y: auto;">
+                            <div class="cv-platformType p-2">
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 cv-serviceProvider-div" style="display: none;">
+                        <label class="col-form-label text-end">CV Service Provider</label>
+                        <div style="border: 1px solid #dcdbda;border-radius: 0.375rem; height: calc(100% - 28px);height: 100px;overflow-x: hidden;overflow-y: auto;">
+                            <div class="cv-serviceProvider p-2">
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6">
+                        <label class="col-form-label text-end">MV Account Type Request</label>
+                        <select class="form-select mv-accountType" id="userType"></select>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 role-div" style="display: none;">
+                        <label class="col-form-label text-end">Role</label>
+                        <select class="form-select mv-role" id="userRole"></select>
+                    </div>
+                   
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 hq-hub">
+                        <label class="col-form-label text-end">HQ Unit</label>
+                        <!-- <input class="form-control" name="Hub" id="hubType" autocomplete="off" placeholder="Hub" readonly="readonly"> -->
+                        <select class="form-select" id="hubType"></select>
+                    </div>
+
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 unit">
+                        <label class="col-form-label text-end">Hub</label>
+                        <select class="form-select" id="unitType"></select>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 subUnit">
+                        <label class="col-form-label text-end">Node</label>
+                        <select class="form-select" id="subUnitType"></select>
+                    </div>
+                    <div class="mb-3 col-md-12 col-sm-12 col-lg-6 unitGroup-row">
+                        <label class="col-form-label text-end">Unit</label>
+                        <select class="form-select mv-unit"></select>
+                    </div>
+                
+                    <div class="modal-footer" style="padding-bottom: 1.5rem;padding-top: 1rem;">
+                        <button type="button" class="btn btn-secondary btn-primary custom-btn-gray modal-footer-bunton-cancel-lg cancel-create-user" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                        <button type="button" class="btn btn-primary custom-btn-green modal-footer-bunton-confirm-lg create-registerAccountUser">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+

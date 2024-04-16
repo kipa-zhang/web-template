@@ -1,0 +1,348 @@
+<!doctype html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script type="text/javascript" src="../axios/axios.min.js"></script>
+<script type="text/javascript" src="../moment/moment.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.form.min.js"></script>
+<script type="text/javascript" src="../socket.io/socket.io.min.js"></script>
+<script type="text/javascript" src="../numeral/numeral.min.js"></script>
+
+<script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+<link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+
+<link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="../bootstrap-table/bootstrap-table.min.css">
+<script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="../bootstrap-table/bootstrap-table.min.js"></script>
+
+<script type="text/javascript" src="../DataTables-1.10.21/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="../DataTables-1.10.21/css/jquery.dataTables.min.css" media="all">
+
+<link rel="stylesheet" href="../transfer/transfer.css">
+<script type="text/javascript" src="../transfer/transfer.js"></script>
+
+<!-- <link rel="stylesheet" href="../leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="../leaflet-contextmenu/dist/leaflet.contextmenu.min.css">
+<script type="text/javascript" src="../leaflet/dist/leaflet.js"></script>
+<script type="text/javascript" src="../leaflet-contextmenu/dist/leaflet.contextmenu.min.js"></script>
+<script type="text/javascript" src="../MovingMarker.js"></script> -->
+
+<link rel="stylesheet" href="../css/common-style.css">
+<link rel="stylesheet" href="../css/common-bootstrap.css">
+<link rel="stylesheet" href="../css/common-datatables.css">
+
+<script type="text/javascript" src="../lodash/lodash.min.js"></script>
+
+<link rel="stylesheet" href="../layui/css/layui.css">
+<script type="text/javascript" src="../layui/layui.js"></script>
+
+<script type="text/javascript" src="../scripts/driverTo/calender-view.js"></script>
+
+<style>
+	.calender-container {
+		padding: 2em;
+	}
+	.layui-laydate .laydate-month-list>li {
+		margin: 0;
+	}
+	.container-fluid {
+		background-color: white;
+		min-height: 100px;
+		border-radius: 2em;
+		padding: 2em 1em;
+		box-shadow: 0 0 10px #d1d1d1;
+		height: 100%;
+		overflow: auto;
+	}
+	.laydate-month-list>li {
+		margin: 0;
+	}
+	
+	.arrow-img {
+		width: 20px;
+		cursor: pointer;
+	}
+	.selectedMonth {
+		font-weight: 600;
+		font-size: large;
+		cursor: pointer;
+	}
+	.selectedWeek {
+		font-weight: 600;
+		font-size: large;
+		cursor: pointer;
+	}
+	#selectedMonth {
+		cursor: pointer;
+	}
+
+	.calender-container label {
+		font-size: 16px;
+		line-height: 16px;
+	}
+	
+	.calender-container table tr td {
+		width: 12%;
+		border: solid 1px rgb(212, 212, 212);
+		padding: 10px;
+	}
+	.calender-container table tr td.preMonth {
+		background-color: rgb(242, 242, 242);
+	}
+	.calender-container table tr td:nth-child(0) {
+		width: 16%
+	}
+	
+	.calender-container .weekday {
+		width: 25px; 
+		height: 25px; 
+		border-radius: 13px; 
+		text-align: center;
+	}
+	.calender-container .weekday.active {
+		width: 25px; 
+		height: 25px; 
+		border-radius: 13px; 
+		background-color: #1B9063; 
+		color: white; 
+		text-align: center;
+	}
+	.week.active {
+		color: #1B9063 !important;
+		font-weight: 600;
+	}
+	.date-img {
+		width: 20px;
+		margin-top: -2px;
+	}
+	.date-label {
+		font-size: 15px !important;
+		color: gray;
+	}
+	.div-table {
+		display: table; 
+		height: 100%;
+	}
+	.div-table-cell {
+		display: table-cell; 
+		text-align: center; 
+		vertical-align: middle;
+	}
+	.driverName {
+		font-weight: 600;
+	}
+	.driver-task-container {
+		background-color: rgb(239, 239, 239);
+		border-radius: 5px;
+		color: rgb(164, 164, 164);
+		padding-left: 5px;
+
+		text-overflow: ellipsis;
+		overflow: hidden;
+		white-space: nowrap;
+
+	}
+	.weekTaskInfo {
+
+		table-layout:fixed ;
+	}
+	.driver-task-container label {
+		font-size: 10px;
+		line-height: 14px;
+	}
+	.driver-task-container label span {
+		font-size: 10px;
+		line-height: 14px;
+	}
+	.driver-task-container.active {
+		background-color: #023435;
+		border-radius: 5px;
+		color: whitesmoke;
+	}
+	.driver-leave {
+		background-color: #f1b9b9 !important;
+		/* border: solid 1px #ce0a0a; */
+	}
+
+	.layui-laydate {
+		line-height: 1rem;
+	}
+</style>
+
+<div class="calender-container">
+	<div class="container-fluid">
+		<div class="row mx-0 justify-content-between" style="line-height: 40px;">
+			<div class="col-sm-4 col-md-4 col-lg-3 col-xl-2" id="selectedMonth123">
+				<label class="selectedMonth user-select-none"></label>
+				<img alt="" class="arrow-img" style="margin-top: -4px;margin-left: 10px;" src="../scripts/driverTo/icons/arrow-down.svg">
+			</div>
+			<div class="col-sm-4 col-md-4 col-lg-3 col-xl-2" style="text-align: right;">
+				<img alt="" class="arrow-img pre-week" style="margin-top: -4px;margin-right: 10px;" src="../scripts/driverTo/icons/arrow-left.svg">
+				<label class="selectedWeek user-select-none"></label>
+				<img alt="" class="arrow-img next-week" style="margin-top: -4px;margin-left: 10px;" src="../scripts/driverTo/icons/arrow-right.svg">
+			</div>
+		</div>
+		<div class="row mx-2" style="margin-top: 20px;">
+			<div class="search-input-div">
+				<div class="search-img-div"></div>
+				<input class="search-input" placeholder="Search Transport Operator"/>
+			</div>
+			<!-- <input class="search-input" placeholder="Search Transport Operator"/> -->
+		</div>
+
+		<div class="row mx-2" style="margin-top: 20px;">
+			<table aria-hidden="true" class="weekTaskInfo" style="width: 100%;">
+				<tr>
+					<td></td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Mon</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Tue</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Wed</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Thu</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Fri</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Sat</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+					<td>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight p-1">
+								<div class="weekday">
+									<label>6</label>
+								</div>
+							</div>
+							<div class="bd-highlight py-1"><label class="week">Sun</label></div>
+						</div>
+						<div class="d-flex flex-row justify-content-center">
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/file.svg">
+								<label class="date-label indentCount">0</label>
+							</div>
+							<div class="bd-highlight px-1">
+								<img alt="" class="date-img" src="../scripts/driverTo/icons/person.svg">
+								<label class="date-label driverCount">0</label>
+							</div>
+						</div>
+					</td>
+
+				</tr>
+			</table>
+		</div>
+	</div>
+</div>
+
+<%- include('task-reassign.html') -%>
+<%- include('driver-markAsUnavailable.html') -%>

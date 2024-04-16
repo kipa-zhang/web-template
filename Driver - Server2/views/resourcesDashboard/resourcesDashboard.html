@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resources Dashboard</title>
+    <%- include('../common/common-html.html') -%>
+    <link rel="stylesheet" href="../DataTables-bootstrap4/dataTables.bootstrap4.min.css">
+    
+    <link rel="stylesheet" href="../css/stylesheets/style.css">
+    <link rel="stylesheet" href="../css/stylesheets/icon/iconfont.css">
+    <link rel="stylesheet" href="../css/indent/indent.css">
+    <link rel="stylesheet" href="../css/indent/history.css">
+    
+    <script src="../scripts/resourcesDashboard/resourcesDashboard.js"></script>
+    <style>
+        /* .ranking-number-div {
+            background-image: url('../images/resourcesDashboard/bg1.png');
+            background-repeat: no-repeat;
+        } */
+        body {
+            background-color: black !important;
+            /* margin:0;
+            padding:0; */
+        }
+        
+    </style>
+    <style>
+        .node-card {
+            height: 155px !important;
+        }
+        .node-card .card-detail-title {
+            background-color: #ffffff !important;
+            color: black;
+        }
+        .node-card .card-count,.node-card .card-percent {
+            font-size: 22px;
+            line-height: 95px;
+        }
+        .node-card-img {
+            width: 25px; 
+            cursor: pointer;
+            margin-bottom: 5px; 
+            margin-right: 10px;
+        }
+        .driver-card-detail,.vehicle-card-detail {
+            /* border-radius: 8px; */
+            background-color: #3AA50A;
+        }
+
+        .driver-card-detail.color1, .vehicle-card-detail.color1 {
+            background-color: #3AA50A;
+        }
+        .driver-card-detail.color2, .vehicle-card-detail.color2 {
+            background-color: #F52478;
+        }
+        .driver-card-detail.color3, .vehicle-card-detail.color3 {
+            background-color: #D8CA3B;
+        }
+
+        .card-detail {
+            border-radius: 8px;
+            border: solid 1px rgb(181 181 181);
+            margin: 5px 5px;
+            /* background-color: #181F2A; */
+            background-color: #ffffff;
+            width: 400px;
+            height: 230px;
+            float: left;
+        }
+        .card-detail-title {
+            border-top-right-radius: 8px;
+            border-top-left-radius: 8px;
+            height: 45px;
+            line-height: 45px;
+            color: black;
+            font-size: medium;
+            font-weight: bolder;
+            background-color: #4BBF2E;
+        }
+        .card-detail-content {
+            height: calc(100% - 50px);
+            background-color: white;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        .card-detail-content table {
+            width: 80%;
+            margin-left: 10%;
+            text-align: center;
+        }
+        .card-detail-content table .purpose-count {
+            line-height: 20px;
+            font-weight: 300;
+            font-size: 21px;
+        }
+        .card-detail-content table .purpose-type {
+            line-height: 15px;
+            font-size: 8px;
+        }
+
+        .card-detail-content table td {
+            padding-top: 6px;
+            padding-bottom: 6px;
+            border-bottom: solid 1px rgb(54, 54, 54);
+            border-right: solid 1px rgb(54, 54, 54);
+        }
+        .card-detail-content table td:last-child {
+            border-right: solid 0px gray;
+        }
+        .card-detail-content table tr:last-child td {
+            border-bottom: solid 0px gray;
+        }
+
+        .card-detail-title.color1 {
+            background-color: #4BBF2E;
+        }
+        .card-detail-title.color2 {
+            background-color: #F52478;
+        }
+        .card-detail-title.color3 {
+            background-color: #D8CA3B;
+        }
+
+        .card-detail-echart {
+            margin-top: -20px;
+        }
+
+        .busAndPersonnelTotal-div-node {
+            padding: 0 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid m-0 p-0" style="overflow-x: hidden;">
+        <div class="row px-4 py-2 busAndPersonnelTotal-div-page">
+            <div class="row" style="padding-right: 0;">
+                <div class="" style="text-align: right;padding-right: 0.5rem;;">
+                    <img alt="" src="../images/resourcesDashboard/people3.svg" class="personnel" style="width: 24px !important;height: 20px;margin-right: 1rem;cursor:pointer;" alt="" draggable="false"/>
+                    <img alt="" src="../images/resourcesDashboard/bus3.svg" class="bus" style="width: 30px !important;height: 20px;cursor:pointer;" alt="" draggable="false"/>
+                </div>
+            </div>
+
+            <div class="row busAndPersonnelTotal-div" style="padding-right: 0;display: none;">
+                <div class="row">
+                    <div class="col-2"><img alt="" src="../images/resourcesDashboard/return.svg" class="div-page-return-node" style="height: 26px;margin-right: 1rem;cursor:pointer;" alt="" draggable="false"></div>
+                    
+                </div>
+                <div class="row busAndPersonnelTotal-div-node"></div>
+            </div>
+            <div class="row busAndPersonnelTotal-div-hub" style="padding-right: 0;">
+                
+            </div>
+        </div>
+
+        <div class="row px-4 py-2 busTotal-div" style="display: none;">
+            <div>
+                <img alt="" src="../images/resourcesDashboard/return.svg" class="div-page-return" style="height: 26px;margin-right: 1rem;cursor:pointer;" alt="" draggable="false"/>
+            </div>
+            
+            <div class="row busTotal-div-page-hub" style="margin: 0;"></div>
+            <div class="row busTotal-div-page-node" style="margin: 0;"></div>
+        </div>
+
+        <div class="row px-4 py-2 peopleTotal-div" style="display: none;">
+            <div>
+                <img alt="" src="../images/resourcesDashboard/return.svg" class="div-page-return" style="height: 26px;margin-right: 1rem;cursor:pointer;" alt="" draggable="false"/>
+            </div>
+            <div class="row peopleTotal-div-page-hub" style="margin: 0;"></div>
+            <div class="row peopleTotal-div-page-node" style="margin: 0;"></div>
+        </div>
+    </div>
+
+
+</body>
+</html>

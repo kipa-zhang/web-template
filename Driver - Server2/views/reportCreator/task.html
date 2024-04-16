@@ -1,0 +1,360 @@
+<%- include('../common/common-html-base.html') -%>
+    <title>Report Creator</title>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/drag-arrange.css">
+    <link rel="stylesheet" href="../multiple-select/multiple-select.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/reportCreator.css">
+
+    <script type="text/javascript" src="../layui/layui.js"></script>
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/drag-arrange.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/task.js"></script>
+    <script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+        .form-check {
+            line-height: 2.3rem;
+        }
+        .form-check-input {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+        .form-check-label {
+            padding-left: 0.3rem;
+        }
+    </style>
+
+    <body style="background-color: white !important;">
+        <div class="col-12 report-form">
+            <div class="row">
+                <div class="mb-3 row">
+                    <label class="col-sm-3 col-form-label">Date Range (Indent Start Date)</label>
+                    <div class="col-sm-3">
+                        <input type="text" readonly class="form-control" value="" id="reportDateRange">
+                    </div>
+                </div>
+                <div class="col-6 mt-3">
+                    <div><label class="label-1">Report Data Group Selection</label></div>
+                    <div><label class="label-2">Choose the data to be included in the report</label></div>
+                </div>
+                <div class="col-6 mt-3">
+                    <div><label class="label-1">Selected Data Group</label></div>
+                </div>
+                <div class="col-6">
+                    <div class="row">
+                        <div class="col-5">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="select-all-checkbox">
+                                <label class="form-check-label fw-bold" for="select-all-checkbox">Select All</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row report-data-group">
+                        <div class="col-5">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Task Type"
+                                    name="taskType" id="task-type-checkbox">
+                                <label class="form-check-label" for="task-type-checkbox">Task Type</label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Task ID" name="taskID"
+                                    id="task-id-checkbox">
+                                <label class="form-check-label" for="task-id-checkbox">Task ID</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Task Status"
+                                    name="taskStatus" id="task-status-checkbox">
+                                <label class="form-check-label" for="task-status-checkbox">Task Status</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Driver Name" name="driverName"
+                                    id="driverName-checkbox">
+                                <label class="form-check-label" for="driverName-checkbox">Driver Name</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Driver Nric" name="driverNric"
+                                    id="driverNric-checkbox">
+                                <label class="form-check-label" for="driverNric-checkbox">Driver Nric</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Mobile Number" name="mobileNumber"
+                                    id="mobileNumber-checkbox">
+                                <label class="form-check-label" for="mobileNumber-checkbox">Mobile Number</label>
+                            </div>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Activity" name="activity"
+                                    id="activity-checkbox">
+                                <label class="form-check-label" for="activity-checkbox">Activity</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Purpose" name="purpose"
+                                    id="purpose-checkbox">
+                                <label class="form-check-label" for="purpose-checkbox">Purpose</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Supported Unit"
+                                    name="supportedUnit" id="supported-unit-checkbox">
+                                <label class="form-check-label" for="supported-unit-checkbox">Supported
+                                    Unit</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Odometer" name="odometer"
+                                    id="odometer-checkbox">
+                                <label class="form-check-label" for="odometer-checkbox">Odometer</label>
+                            </div>
+                        </div>
+                        <div class="col-5">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Hub/Node" name="hubNode"
+                                    id="hub-checkbox">
+                                <label class="form-check-label" for="hub-checkbox">Hub/Node</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Indent ID"
+                                    name="indentID" id="indent-id-checkbox">
+                                <label class="form-check-label" for="indent-id-checkbox">Indent ID</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Vehicle Type" name="vehicleType"
+                                    id="vehicleType-checkbox">
+                                <label class="form-check-label" for="vehicleType-checkbox">Vehicle Type</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Vehicle Number" name="vehicleNumber"
+                                    id="vehicleNumber-checkbox">
+                                <label class="form-check-label" for="vehicleNumber-checkbox">Vehicle Number</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Remarks" name="remarks"
+                                    id="remarks-checkbox">
+                                <label class="form-check-label" for="remarks-checkbox">Remarks</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Execution Time"
+                                    name="executionTime" id="execution-time-checkbox">
+                                <label class="form-check-label" for="execution-time-checkbox">Execution
+                                    Time</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Actual Time"
+                                    name="actualTime" id="actual-time-checkbox">
+                                <label class="form-check-label" for="actual-time-checkbox">Actual Time</label>
+                            </div>
+                            
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Mileage Captured"
+                                    name="mileageCaptured" id="mileage-captured-checkbox">
+                                <label class="form-check-label" for="mileage-captured-checkbox">Mileage
+                                    Captured</label>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-3 row div-report-group-list">
+                        <ul class="drag-list">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 mt-3">
+                    <div><label class="label-1">Report Data Filter</label></div>
+                </div>
+                <div class="row mt-3 div-report-data-filter">
+                    <div class="mb-2 col-4" data-filter="taskType">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Task Type</label>
+                            <div class="col-8">
+                                <select class="form-select" id="taskTypeFilter">
+                                    <option value="">All</option>
+                                    <option value="MT-Admin">MT-Admin</option>
+                                    <option value="ATMS">ATMS</option>
+                                    <option value="Sys Task">Sys Task</option>
+                                    <option value="Mobile">Mobile</option>
+                                    <option value="Urgent Indent">Urgent Indent</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="hubNode">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Hub</label>
+                            <!-- <div class="col-8 position-relative">
+                                <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                            </div> -->
+                            <div class="col-8">
+                                <select class="form-select" id="hubFilter" onchange="changeHub()">
+                                    <option value="">All</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="hubNode">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Node</label>
+                            <!-- <div class="col-8 position-relative">
+                                <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                            </div> -->
+                            <div class="col-8">
+                                <select class="form-select" id="nodeFilter">
+                                    <option value="">All</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="taskID">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Task ID</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="taskIDFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="taskStatus">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Task Status</label>
+                            <div class="col-8 position-relative">
+                                <input type="text" class="form-control" id="taskStatusFilter" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="indentID">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Indent ID</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="indentIDFilter">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2 col-4" data-filter="vehicle">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Vehicle Type</label>
+                            <div class="col-8">
+                                <!-- <input type="text" class="form-control" value="" id="vehicleTypeFilter"> -->
+                                <select class="form-select" id="vehicleTypeFilter">
+                                    <option value="">All</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="vehicle">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Vehicle Number</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="vehicleNumberFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="driver">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Driver Name</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="driverNameFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="driver">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Mobile Number</label>
+                            <div class="col-8">
+                                <div class="input-group">
+                                    <span class="input-group-text">+65</span>
+                                    <input type="number" class="form-control" value="" id="mobileNumberFilter" autocomplete="off"
+                                        onKeypress="return (/[\d]/.test(String.fromCharCode(event.keyCode)))">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="activity">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Activity</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="activityFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="purpose">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Purpose</label>
+                            <div class="col-8">
+                                <!-- <input type="text" class="form-control" value="" id="purposeFilter"> -->
+                                <select class="form-select" id="purposeFilter">
+                                    <option value="">All</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- <div class="mb-3 col-4" data-filter="remarks">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Remarks</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" id="remarksFilter">
+                            </div>
+                        </div>
+                    </div> -->
+                    <!-- <div class="mb-3 col-4" data-filter="executionTime">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Execution Time</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" readonly id="executionTimeFilter">
+                            </div>
+                        </div>
+                    </div> -->
+                    <div class="mb-2 col-4" data-filter="actualTime">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Actual Date</label>
+                            <div class="col-8">
+                                <input type="text" class="form-control" value="" readonly id="actualTimeFilter">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2 col-4" data-filter="supportedUnit">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Supported Unit</label>
+                            <div class="col-8">
+                                <select class="form-select" id="supportedUnitFilter">
+                                    <option value="">All</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <!-- <div class="mb-3 col-4" data-filter="odometer">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Odometer</label>
+                            <div class="col-8">
+                                <div class="input-group mb-3">
+                                    <input type="number" class="form-control" value="" id="startOdometerFilter">
+                                    <span class="input-group-text">-</span>
+                                    <input type="number" class="form-control" value="" id="endOdometerFilter">
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
+                    <div class="mb-2 col-8" data-filter="mileageCaptured">
+                        <div class="row">
+                            <label class="col-4 col-form-label p-0 custom-line">Minimum Mileage Captured</label>
+                            <div class="col-4">
+                                <input type="number" class="form-control" value="" id="mileageCapturedFilter">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-auto">
+                    <button class="btn custom-btn-gray modal-footer-bunton-cancel-bg ms-3" onclick="window.location.reload()">Reset</button>
+                    <button class="btn btn-success modal-footer-bunton-confirm-bg" id="task-report-create">Create</button>
+                </div>
+            </div>
+        </div>
+    </body>

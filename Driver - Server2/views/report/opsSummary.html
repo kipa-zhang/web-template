@@ -1,0 +1,154 @@
+<%- include('../common/common-html-base.html') -%>
+<link rel="stylesheet" href="../layui/css/layui.css">
+<script type="text/javascript" src="../layui/layui.js"></script>
+
+<link rel="stylesheet" href="../DataTables-bootstrap4/dataTables.bootstrap4.min.css">
+<script src="../DataTables-bootstrap4/jquery.dataTables.min.js"></script>
+<script src="../DataTables-bootstrap4/dataTables.bootstrap4.min.js"></script>
+
+<style>
+    body {
+        overflow-y: auto;
+        /* min-width: 1200px; */
+    }
+    .report-title {
+        background: #399062;
+        color: white;
+        /* display: flex; */
+        align-items: center;
+        width: 100%;
+        height: 60px;
+        font-size: 20px;
+        padding-left: 20px;
+    }
+    .top-container {
+        background-color: rgb(252, 252, 252);
+        border-radius: 5px;
+        text-align: center;
+        box-shadow: 1px 1px 3px rgb(180, 180, 180);
+    }
+    .icon {
+        margin-bottom: 3px;
+    }
+    .label-green {
+        background-color: #05A805;
+        border-radius: 3px;
+        color: white;
+        line-height: normal;
+        padding: 2px 5px;
+    }
+    .label-gray {
+        background-color: #BCBCBC;
+        border-radius: 3px;
+        color: white;
+        line-height: normal;
+        padding: 2px 5px;
+    }
+    .label-red {
+        background-color: #CB542D;
+        border-radius: 3px;
+        color: white;
+        line-height: normal;
+        padding: 2px 5px;
+    }
+
+    .content-top {
+        color: white;
+        text-align: center;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        height: 40px;
+        line-height: 40px;
+        font-weight: 600 !important;
+    }
+    .content-detail {
+        background-color: rgb(252, 252, 252);
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+    }
+    .content-detail .data-range {
+        font-size: small;
+    }
+    .content-detail .label-green, .content-detail .label-gray, .content-detail .label-red {
+        padding: 0 5px;
+    }
+    .content-total, .content-data {
+        line-height: 35px;
+    }
+
+    .bg-1 {
+        background-color: #D9D9D9;
+        border-radius: 3px;
+    }
+    .bg-2 {
+        background-color: #f0f0f0;
+        border-radius: 3px;
+    }
+
+    .row>* {
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+</style>
+<title>OPS Summary</title>
+<body>
+    <div class="report-title row justify-content-between m-0 px-3">
+        <div class="col-2 col-sm-6">
+            <label>OPS Summary</label>
+        </div>
+        <div class="col-3 col-sm-6" style="position: relative;">
+            <div style="float: right;">
+                <img alt="" src="../images/driver/calendar.png" style="width: 20px; height: 20px; position: absolute; margin-top: 2px; margin-left: 0.6rem;"/>
+                <input placeholder="DD/MM/YYYY - DD/MM/YYYY" class="form-control selectedDate" style="padding: 0 1rem 0 2.5rem !important;background-color: white !important; width: 290px;" readonly></input>
+            </div>
+        </div>
+    </div>
+    <div class="row top-container mt-3 mx-3 px-0 py-2">
+        <div class="col-12 col-sm-12 col-md-12 col-lg-4">
+            <div class="row">
+                <div class="col-4 mx-0 px-0"><label>Ops</label>&nbsp;<label class="fs-6 fw-bold total-ops">0</label></div>
+                <div class="col-4 mx-0 px-0"><label>Trg</label>&nbsp;<label class="fs-6 fw-bold total-trg">0</label></div>
+                <div class="col-4 mx-0 px-0"><label>Adm</label>&nbsp;<label class="fs-6 fw-bold total-adm">0</label></div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-12 col-md-12 col-lg-8">
+            <div class="row">
+                <div class="col-4 col-md-4 col-lg-3 mx-0 px-0">
+                    <label>Total</label>&nbsp;
+                    <label class="fs-6 fw-bold total">0</label>&nbsp;
+                    <label class="label-gray">
+                        <svg t="1709172731639" class="icon" viewBox="0 0 2048 1024" version="1.1" p-id="2090" width="12" height="5">
+                            <path d="M0 0h2048v1024H0z" fill="#FFFFFF" p-id="2091"></path>
+                        </svg>
+                        <label class="total-range">0.0%</label>
+                    </label>
+                </div>
+                <div class="col-4 col-md-4 col-lg-4 mx-0 px-0">
+                    <label>TO Unit</label>&nbsp;
+                    <label class="fs-6 fw-bold toUnit">0%</label>&nbsp;
+                    <label class="label-gray">
+                        <svg t="1709172731639" class="icon" viewBox="0 0 2048 1024" version="1.1" p-id="2090" width="12" height="5">
+                            <path d="M0 0h2048v1024H0z" fill="#FFFFFF" p-id="2091"></path>
+                        </svg>
+                        <label class="toUnit-range">0.0%</label>
+                    </label>
+                </div>
+                <div class="col-12 col-sm-12 col-md-4 col-lg-5 mx-0 px-0">
+                    <label>Veh(Avail/Holding)</label>&nbsp;
+                    <label class="fs-6 fw-bold total-vel">0/0</label>&nbsp;
+                    <label class="label-gray">
+                        <svg t="1709172731639" class="icon" viewBox="0 0 2048 1024" version="1.1" p-id="2090" width="12" height="5">
+                            <path d="M0 0h2048v1024H0z" fill="#FFFFFF" p-id="2091"></path>
+                        </svg>
+                        <label class="total-vel-range">0.0%</label>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row hub-container mt-2 mx-2 p-0">
+        
+    </div>
+    
+</body>
+<script type="module" src="../scripts/report/opsSummary.js"></script>

@@ -1,0 +1,70 @@
+<style>
+    .layui-laydate {
+        line-height: 1rem;
+    }
+</style>
+<div class="modal fade" id="create-incident" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Create Incident</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row">
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Incident Name : &nbsp;</label>
+                        <div class="col-sm-8">
+                            <input class="form-control form-control-sm incidentName" />
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Incident Type : &nbsp;</label>
+                        <div class="col-sm-8">
+                            <select class="form-select form-select-sm incidentType">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Incident Time : &nbsp;</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control form-control-sm incidentTime">
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Block Period : &nbsp;</label>
+                        <div class="col-sm-4">
+                            <input type="number" min="1" value="0" class="form-control form-control-sm blockTime"/> 
+                        </div>
+                        <div class="col-sm-2 px-0">
+                             &nbsp;Min
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Incident Position : &nbsp;</label>
+                        <div class="col-sm-8">
+                            <input type="text" readonly disabled class="form-control form-control-sm incidentPosition">
+                        </div>
+                    </div>
+                    <div class="mb-2 row">
+                        <label class="col-sm-4 col-form-label text-end">Description : &nbsp;</label>
+                        <div class="col-sm-8">
+                            <textarea class="form-control form-control-sm description"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div class="row">
+                    <div class="col-sm-5" style="text-align: right;">
+                        <div class="btn btn-secondary btn-sm custom-btn cancel-create-incident" data-bs-dismiss="modal">Cancel</div>
+                    </div>
+                    <div class="col-sm-2" style="text-align: right;"></div>
+                    <div class="col-sm-5" style="text-align: left;">
+                        <div class="btn btn-primary btn-sm custom-btn create-incident">Confirm</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

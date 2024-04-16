@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Military Vehicles
+    </title>
+    <style>
+        table thead th {
+            border-style: none;
+        }
+
+        table.dataTable tbody tr td {
+            text-align: center;
+            border-top: 1px solid var(--bs-table-border-color);
+            border-bottom: 1px solid var(--bs-table-border-color);
+            display: table-cell; 
+            vertical-align: middle;
+            line-height: 22px;
+        }
+/*         
+        table.dataTable tbody tr td:first-child {
+            border-left: 1px solid var(--bs-table-border-color);
+            border-radius: 10px 0 0 10px;
+        }
+
+        table.dataTable tbody tr td:last-child {
+            border-right: 1px solid var(--bs-table-border-color);
+            border-radius: 0px 10px 10px 0px;
+        } */
+
+        table.dataTable tbody tr {
+            background-color: white;
+            border: solid 10px #F3F3F3;
+            border-radius: 10px;
+        }
+
+        table.dataTable tbody tr td:first-child {
+            border-bottom-left-radius: 25px;
+            border-top-left-radius: 25px;
+        }
+        table.dataTable tbody tr td:last-child {
+            border-bottom-right-radius: 25px;
+            border-top-right-radius: 25px;
+        }
+
+        .table-shadow {
+            box-shadow: none;
+        }
+        .table-common {
+            border: none;
+            border-radius: 0px;
+            background-color: #F3F3F3;
+        }
+
+        .jobTask-table {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+
+        .nav-item {
+            font-size: large;
+            color: #6c757d;
+        }
+        .nav-item.active {
+            font-size: large;
+            color: black;
+        }
+        .filter-div {
+            display: flex;
+            margin-left: 1rem;
+            margin-right: 1rem;
+            width: calc(100% - 30px);
+        }
+        .filter-item {
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        .div-table {
+            display: table; 
+            height: 100%;
+        }
+        .div-table-cell {
+            display: table-cell; 
+            text-align: center; 
+            vertical-align: middle;
+        }
+        .circle-status {
+            width: fit-content;
+            padding: 0 20px;
+            border-radius: 5px;
+            border: solid 1px rgb(232, 232, 232);
+            margin: auto;
+        }
+        .circle-status label {
+            line-height: 15px;
+            font-size: 15px;
+            color: rgb(153, 153, 153);
+        }
+        .div-circle {
+            width: 10px; 
+            height: 10px; 
+            border-radius: 5px; 
+            margin: 0 5px;
+        }
+        .filter-div .form-control {
+            background-color: #F9EED8 !important;
+            border: 1px solid #EBDE99 !important;
+            cursor: pointer;
+        }
+        .paginate_button.page-item {
+            line-height: 1.5em;
+        }
+        
+        .dataTables_length {
+            padding-top: 10px;
+        }
+    </style>
+    <style>
+        .view-driver-info {
+            font-weight: bolder;
+            font-size: 16px;
+        }
+
+        .driver-add-div {
+            text-align: right;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            width: 20%;
+        }
+
+        .driver-add-img {
+            height: 100%;
+            width: 30px;
+            background-image: url(../images/vehicle/add.svg);
+            background-size: 24px;
+            background-repeat: no-repeat;
+            background-position: center center;
+        }
+
+        .driver-add-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 1rem;
+            border: 1px solid #1B9063;
+            border-radius: 5px;
+            background-color: #1B9063;
+            height: 36px;
+            width: fit-content;
+            min-width: 150px;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid h-100 p-3 m-0" style="overflow: auto;">
+        <div class="body-bottom">
+            <div class="col-12" id="driver-filter">
+                <div class="filter-div">
+                    <div id="unit-select-div" class="col-2 align-items-center filter-item d-none">
+                        <select class="form-select form-control" name="unit" id="unit">
+                            <option value="">Hub: All</option>
+                        </select>
+                    </div>
+                    <div id="subunit-select-div" class="col-2 align-items-center filter-item d-none">
+                        <select class="form-select form-control" name="subunit" id="subunit">
+                            <option value="">Node: All</option>
+                        </select>
+                    </div>
+                    <div class="col-2 align-items-center filter-item">
+                        <select class="form-select form-control driverORDStatus">
+                            <option value="">ORD Status: All</option>
+                            <option value="effective">ORD Status: Effective</option>
+                            <option value="expired">ORD Status: Expired</option>
+                        </select>
+                    </div>
+                    <div class="col-2 align-items-center filter-item driverDataTypeDiv">
+                        <select class="form-select form-control driverDataType" name="driverDataType">
+                            <option value="activate">Data Type: Activate</option>
+                            <option value="deactivate">Data Type: Deactivate</option>
+                        </select>
+                    </div>
+                    <div class="col-2 align-items-center filter-item position-relative">
+                        <input class="form-control" name="driverStatus" id="driverStatus" autocomplete="off" placeholder="Status: All" />
+                            <!-- <option value="">Status: All</option>
+                            <option value="waitcheck">Status: Pending</option>
+                            <option value="ready">Status: Ready</option>
+                            <option value="arrived">Status: Arrived</option>
+                            <option value="completed">Status: Completed</option> -->
+                        <!-- </select> -->
+                    </div>
+                    <div class="col-2 align-items-center filter-item position-relative">
+                        <input class="form-control" name="permitType" id="permitType" autocomplete="off" placeholder="Permit Type: All" />
+                        <!-- <select class="form-select form-control" name="permitType" id="permitType">
+                            <option value="">Permit Type: All</option>
+                        </select> -->
+                    </div>
+                    <div class="col-2">
+                        <div class="search-input-div">
+                            <div class="search-img-div"></div>
+                            <input class="search-input" placeholder="Search by driver name, nric, hub, node ..."/>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-clear" name="clean-all">Clear all</button>
+                    </div>
+                    <div class="col-2 driver-add-div">
+                        <% if (pageList.find(item => item.page == 'TO List' && item.action == 'New' )) { %>
+                        <div class="driver-add-btn">
+                            <div class="driver-add-img"></div>
+                            <label class="driver-add-label fs-6">New Driver</label>
+                        </div>
+                        <% } %>
+                    </div>
+                    <!-- <div class="col-2 ms-md-auto ms-sm-auto ms-lg-auto ms-xl-auto">
+                        <div class="view-live-location" style="text-align: right; margin-top: 5px; margin-right: 10px;">
+                            <img alt="" style="width: 20px; cursor: pointer; margin-top: -4px;" src="../scripts/driverTo/icons/map.svg">
+                            <label class="user-select-none" style="color: #3899ED; font-weight: 600;margin-left: 6px; cursor: pointer;">View Live Location</label>
+                        </div>
+                    </div> -->
+                </div>
+            </div>
+            <div class="row m-0" style="padding: 10px;">
+                <div class="table-common table-shadow" style="border-radius: 1em;">
+                    <table aria-hidden="true" class="table saf-driver-table pb-2 w-100" style="white-space: nowrap; border-collapse:collapse !important;">
+                        
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="../axios/axios.min.js"></script>
+    <script type="text/javascript" src="../moment/moment.min.js"></script>
+    <script type="text/javascript" src="../jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+    <script type="text/javascript" src="../jquery/jquery.form.min.js"></script>
+
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+    <script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="../DataTables-bootstrap4/dataTables.bootstrap4.min.css">
+    <script src="../DataTables-bootstrap4/jquery.dataTables.min.js"></script>
+    <script src="../DataTables-bootstrap4/dataTables.bootstrap4.min.js"></script>
+
+    
+    <link rel="stylesheet" href="../multiple-select/multiple-select.css">
+    
+    <link rel="stylesheet" href="../css/common-style.css">
+    <link rel="stylesheet" href="../css/common-bootstrap.css">
+    <link rel="stylesheet" href="../css/common-datatables.css">
+    <script type="module" src="../scripts/common-script.js"></script>
+
+    <script type="text/javascript" src="../numeral/numeral.min.js"></script>
+    
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <script type="text/javascript" src="../layui/layui.js"></script>
+
+    <script type="text/javascript" src="../scripts/content.js"></script>
+    <script type="text/javascript" src="../pagehelper/pageHelper.js"></script>
+
+    
+    <script type="text/javascript" src="../lodash/lodash.min.js"></script>
+    
+    <%- include('driver-markAsUnavailable.html') -%>
+
+    <script type="text/javascript" src="../scripts/driverTo/driver-create-edit.js"></script>
+    <script type="text/javascript" src="../scripts/driverTO/driver.js"></script>
+
+    <script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+    <%- include('live-location.html') -%>
+    <%- include('./driver-create.html') -%>
+    <%- include('./driver-task-info.html') -%>
+</body>
+
+</html>
+

@@ -1,0 +1,89 @@
+<!doctype html>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<meta>
+
+<script type="text/javascript" src="../axios/axios.min.js"></script>
+<script type="text/javascript" src="../moment/moment.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+<script type="text/javascript" src="../jquery/jquery.form.min.js"></script>
+<script type="text/javascript" src="../socket.io/socket.io.min.js"></script>
+<script type="text/javascript" src="../numeral/numeral.min.js"></script>
+
+<script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+<link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+
+<link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+<link rel="stylesheet" href="../bootstrap-table/bootstrap-table.min.css">
+<script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript" src="../bootstrap-table/bootstrap-table.min.js"></script>
+
+<script type="text/javascript" src="../DataTables-1.10.21/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="../DataTables-1.10.21/css/jquery.dataTables.min.css" media="all">
+
+<link rel="stylesheet" href="../transfer/transfer.css">
+<script type="text/javascript" src="../transfer/transfer.js"></script>
+
+<link rel="stylesheet" href="../css/common-style.css">
+<link rel="stylesheet" href="../css/common-bootstrap.css">
+<link rel="stylesheet" href="../css/common-datatables.css">
+
+<script type="text/javascript" src="../lodash/lodash.min.js"></script>
+
+<link rel="stylesheet" href="../layui/css/layui.css">
+<script type="text/javascript" src="../layui/layui.js"></script>
+
+<script type="text/javascript" src="../scripts/hqDashboard.js"></script>
+
+<style>
+	.container-fluid {
+		background-color: white;
+	}
+
+	.container-fluid .tab-label {
+		font-weight: 600;
+		font-size: 19px;
+		line-height: 40px;
+		cursor: pointer;
+		color: #CACACA;
+	}
+	.active {
+		color: black !important;
+		border-bottom: 5px solid #1B9063 !important;
+	}
+	.view-calender {
+		line-height: 20px;
+		border-radius: 5px;
+		background-color: #1B9063;
+		color: white;
+		font-size: 15px;
+		height: 35px;
+		cursor: pointer;
+	}
+	.view-calender img {
+		width: 20px; 
+		margin-top: -5px; 
+		margin-right: 10px;
+		cursor: pointer;
+	}
+</style>
+
+<div class="container-fluid" style="height: 100px;display: none;">
+	<div class="row m-0 mx-4" style="text-align: center; margin-top: 5px !important;">
+		<div class="col-auto px-0"> 
+			<div class="tab-label user-select-none active" data-tab="1" style="color: #515050 !important;padding-left: 1.5rem!important;padding-right: 1.5rem!important;">
+				Overview
+			</div>
+		</div>
+		<% if (userType == 'CUSTOMER => Hide Now') { %>
+		<div class="col-auto px-0"> 
+			<div class="tab-label user-select-none" data-tab="2" style="color: #515050 !important;padding-left: 1.5rem!important;padding-right: 1.5rem!important;">
+				Credit
+			</div>
+		</div>
+		<% } %>
+	</div>
+	
+</div>
+<iframe id="resource-iframe" style="height: calc(100% - 50px);overflow: auto;" src="./dashboard/overview" title=""></iframe>

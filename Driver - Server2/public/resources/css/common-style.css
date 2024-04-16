@@ -1,0 +1,478 @@
+html {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0;
+    margin: 0;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url(../font/Inter/Inter-Regular.ttf)
+}
+
+* {
+    font-family: 'Inter'
+}
+
+body{
+    width: 100% !important;
+    height: 100% !important;
+    line-height: 2.2 !important;
+    font-size: 13px;
+    color: #363636 !important;
+    margin: 0 !important;
+    background-color: #ebe7e7 !important;
+}
+
+table.dataTable  {
+    width: 100% !important;
+}
+
+table.dataTable tbody tr:hover {
+    background-color: #e0e0e0;
+}
+
+iframe {
+    border-width: 0 !important;
+    width: 100%;
+    height: 100%;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-button {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+    border: none;
+    /* box-shadow: 0px 0px 3px #dfdfdf inset; */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1B9063;
+    border: none;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #1B9063;
+}
+
+.btn-mobius {
+    background-color: #E0B325;
+    border-color: #E0B325;
+    /* box-shadow: #5a5a5a 0 0 1px; */
+}
+
+.btn-mobius:hover {
+    background-color: #E0B325;
+    border-color: #E0B325;
+}
+
+.custom-btn {
+    /* background-color: #337ab7; */
+    border-color: #1B9063;
+    color: white;
+    border: 1px solid transparent;
+    padding: 1px 12px 0 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+    width: 80px;
+}
+.custom-btn.btn-primary {
+    background-color: #1B9063;
+}
+.custom-btn.btn-primary:hover {
+    background-color: #1B9063 !important;
+    border: 0;
+}
+.custom-btn:hover {
+    color: white;
+}
+
+.custom-select {
+    /* min-width: 120px;
+    padding: 5px;
+    font-size: 9pt;
+    line-height: 9pt;
+    border: solid 1px rgb(163, 163, 163);
+    border-radius: 5px;
+    height: 31px;
+    color: #fff;    
+    background: url(/images/select-down-arrow-yellow.png) no-repeat right #333;
+    -webkit-appearance: none;
+    background-position-x: 95%;
+    text-transform: uppercase;
+    background-size: 12px;
+    padding-left: 10px;
+    outline: none; */
+}
+
+
+.position-names {
+    position: absolute;
+    width: 250px;
+    max-height: 300px;
+    margin-left: -15px;
+    margin-top: -5px;
+    background-color: rgba(0,0,0,0.8);
+    overflow-y: auto;
+    border: 1px solid #5a6268;
+    border-radius: 5px;
+    padding: 5px;
+    display: none;
+    z-index: 1000;
+}
+.position-names-item {
+    padding-top: 2px;
+    padding-bottom: 2px;
+    cursor: pointer;
+    border-radius: 5px;
+    padding-left: 3px;
+}
+.position-names-item:hover {
+    background-color: gray;
+}
+
+.custom-search {
+    padding-left: 30px;
+    background-image: url('../images/btn-search.svg');
+    background-repeat: no-repeat;
+    background-size: 15px;
+    background-position: 8px center;
+    min-width: 150px;
+    max-width: 200px;
+    margin-left: 20px;
+}
+
+/**
+    Custom leaflet marker
+*/
+.leaflet-div-icon{
+    background: none !important;
+    border: none !important;
+}
+.speed-marker-div{
+    width: 32px;
+    height: 32px;
+    position: relative;
+}
+.speed-marker-icon{
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+.speed-marker-number{
+    position: absolute;
+    top: 7px;
+    z-index: 201;
+    width: 32px;
+    height: 32px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 12px;
+}
+.vehicle-status-view-container {
+    position: absolute;
+    top: calc(50% - 281px);
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+}
+
+.cursor_pointer {
+    cursor: pointer;
+}
+
+.layui-transfer-search .layui-icon-search {
+    top: unset;
+    margin-top: unset;
+}
+
+.layui-layer-title {
+    border-radius: 8px 8px 0 0 !important;
+}
+.layui-layer {
+    border-radius: 10px !important;
+}
+
+.layui-btn {
+    background-color: #1B9063 !important
+}
+
+.layui-layer .layui-layer-title {
+    background-color: #1B9063;
+    color: white;
+}
+
+.layui-layer-btn a {
+    height: 28px;
+    line-height: 28px;
+    margin: 5px 5px 0;
+    padding: 0 15px;
+    border: 1px solid #dedede !important;
+    background-color: #dedede !important;
+    color: #333 !important;
+    border-radius: 2px;
+    font-weight: 400;
+    cursor: pointer;
+    text-decoration: none;
+}
+.layui-layer-btn a:last-child {
+    height: 28px;
+    line-height: 28px;
+    margin: 5px 5px 0;
+    padding: 0 15px;
+    border: 1px solid #1B9063 !important;
+    background-color: #1B9063 !important;
+    color: #fff !important;
+    border-radius: 2px;
+    font-weight: 400;
+    cursor: pointer;
+    text-decoration: none;
+}
+.layui-laydate .layui-this, .layui-laydate .layui-this>div {
+    background-color: #1B9063 !important
+}
+
+.layui-layer-setwin .layui-layer-close {
+    color: white !important
+}
+
+/* .jconfirm .jconfirm-box div.jconfirm-title-c {
+    background-color: #1B9063 !important;
+} */
+
+.div-table {
+    display: table; 
+    height: 100%;
+    width: 100%;
+}
+.div-table-cell {
+    display: table-cell; 
+    text-align: center; 
+    vertical-align: middle;
+}
+
+.custom-input {
+    color: white;
+    background-color: rgba(0,0,0,0.2);
+    min-width: 100px;
+    display: block;
+    padding: 3px 12px;
+    line-height: 1.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
+}
+
+.layui-layer-wrap table {
+    width: 100% !important;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+    table-layout: fixed;
+}
+
+.layui-layer-content {
+    padding: 1em 2em !important;
+    font-size: medium !important;
+    color: #373737 !important;
+}
+
+.layui-layer-wrap table tr td:last-child {
+    text-align: left;
+}
+
+.layui-layer {
+    border-radius: 10px !important;
+}
+
+.layui-layer-page, .layui-layer-dialog {
+    border-radius: 11px !important;
+    /* background-color: rgba(0, 0, 0, 0.7) !important; */
+}
+
+.search-input {
+    line-height: 2;
+    border: none;
+    width: calc(100% - 70px);
+    height: 30px;
+}
+.search-input-div {
+    display: flex;
+    justify-content: left;
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    background-color: white;
+}
+.search-img-div {
+    background-image: url(../images/btn-search.svg);
+    width: 30px;
+    background-repeat: no-repeat;
+    background-size: 15px;
+    background-position: 8px center;
+}
+
+/* JQuery Confirm */
+.jconfirm .jconfirm-box {
+    padding: 0;
+}
+
+.jconfirm-content {
+    text-indent: 20px;
+}
+.jconfirm-title-c {
+    background-color: #1B9063;
+    padding-left: 10px;
+    padding-top: 10px;
+    color: white;
+    font-size: large !important;
+}
+.jconfirm-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+.jconfirm-buttons>button {
+    text-transform: capitalize !important;
+}
+.jconfirm-buttons>button:last-child {
+    margin-left: 30px !important;
+}
+.jconfirm-buttons .btn-default {
+    background-color: #cccccc !important;
+}
+
+.jconfirm .jconfirm-box div.jconfirm-content-pane {
+    padding: 10px;
+    margin-bottom: 0;
+}
+
+.jconfirm .jconfirm-box div.jconfirm-content-pane::-webkit-scrollbar-thumb {
+    background: #1B9063 !important;
+}
+.jconfirm .jconfirm-box.jconfirm-type-green {
+    border-color: #1B9063 !important
+}
+.jconfirm .jconfirm-box .jconfirm-buttons button.btn-green {
+    background-color: #1B9063 !important
+}
+
+.custom-btn-green {
+    background-color: #1B9063 !important;
+    color: white !important;
+    border: 0;
+    border-radius: 5px !important;
+}
+
+.custom-btn-gray {
+    background-color: #cccccc !important;
+    color: #313131 !important;
+    border: 0;
+    border-radius: 5px !important;
+}
+
+.custom-btn-danger {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+    border: 0;
+    border-radius: 5px !important;
+}
+
+.custom-btn-blue {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    border: 0;
+    border-radius: 5px !important;
+}
+
+.custom-btn-yellow {
+    background-color: #afaf0c !important;
+    color: #ffffff !important;
+    border: 0;
+    border-radius: 5px !important;
+}
+
+.custom-assign {
+    background-color: #1485C6 !important;
+    color: #ffffff !important;
+    border: 1px solid #1485C6;
+}
+
+.custom-Reassign {
+    background-color: #231CCE !important;
+    color: #ffffff !important;
+    border: 1px solid #231CCE;
+}
+
+.custom-Reject {
+    background-color: #D0750D !important;
+    color: #ffffff !important;
+    border: 1px solid #D0750D;
+}
+
+
+
+/* Data tables page link  color */
+.page-link {
+    color: #1B9063;
+}
+.active>.page-link, .page-link.active {
+    background-color: #1B9063 !important;
+    color: white !important;
+    border-color: #1B9063 !important;
+}
+
+input.form-control:focus, select.form-select:focus, textarea.form-control:focus {
+    border: solid 1px #1B9063 !important;
+    box-shadow: 0 0 5px #0a8d5b !important;
+}
+
+/* input[type=checkbox]:after {
+    background-color: #1B9063 !important;
+} */
+
+.list-group-item.user-select-none {
+    border-width: 0;
+}
+
+.view-driver-nric, .view-user-nric {
+    min-width: 80px !important;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: center;
+}
+
+.modal-footer-bunton-cancel-sm {
+    margin-right: 3rem !important;
+}
+
+.modal-footer-bunton-confirm-sm {
+    margin-left: 3rem !important;
+}
+
+.modal-footer-bunton-cancel-lg {
+    margin-right: 4.5rem !important;
+}
+
+.modal-footer-bunton-confirm-lg {
+    margin-left: 4.5rem !important;
+}
+
+.modal-footer-bunton-cancel-bg {
+    margin-right: 5rem !important;
+}
+
+.modal-footer-bunton-confirm-bg {
+    margin-left: 5rem !important;
+}

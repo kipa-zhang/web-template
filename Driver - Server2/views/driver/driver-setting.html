@@ -1,0 +1,35 @@
+<script type="module" src="../scripts/driver/driver-setting.js"></script>
+
+<div class="modal fade" id="view-driver-setting" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Driver Setting</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label>Driver Settings</label><br>
+                <div class="row">
+                    <div class="col-sm-4 text-end">
+                        <label>L Time :</label>
+                    </div>
+                    <div class="col-sm-8">
+                        <label class="layui-icon layui-icon-date leave-time" style="border-radius: 3px;background-color: rgba(0, 0, 0, 0.7);color: white;border: 0px;padding: 5px 2px 5px 10px;cursor: pointer;font-size: 13px;">&nbsp;&nbsp;</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4 text-end">
+                        <label>Speed :</label>
+                    </div>
+                    <div class="col-sm-8">
+                        <input type="number" class="speed" step="10" min="10" max="1000" style="border-radius: 5px;background-color: rgba(0, 0, 0, 0.7);color: white;border: 0px;padding: 5px 2px 5px 10px;width: 50px;"/>&nbsp;Km/h
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary custom-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary custom-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>

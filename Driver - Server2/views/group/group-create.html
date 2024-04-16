@@ -1,0 +1,47 @@
+<style>
+    .layui-transfer-data {
+        height: 270px !important;
+    }
+</style>
+<script type="module" src="../scripts/group/group-create.js"></script>
+<div class="modal modal-lg fade" id="edit-userGroup" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Create Group</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table aria-hidden="true" class="tb-create-group" style="margin: 0 auto;border-collapse:separate; border-spacing:0px 10px;">
+                    <tr>
+                        <td>Group Name: </td>
+                        <td>
+                            <input type="text" class="form-control" id="group_name" autocomplete="off">
+                            <div class="group_name_list">
+                                <label class="layui-icon layui-icon-down" style="color: rgb(246, 188, 18);font-size: 13px;line-height: 20px;display: none;"></label>
+                            </div>
+                            <div class="group-name-items">
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>User: </td>
+                        <td><div id="acecom-select"></div></td>
+                    </tr>
+                </table> 
+    
+            </div>
+            <div class="modal-footer">
+                <div class="row">
+                    <div class="col-sm-6" style="text-align: right;">
+                        <div class="btn btn-secondary btn-sm custom-btn cancel-create-user" data-bs-dismiss="modal">Cancel</div>
+                    </div>
+                    <div class="col-sm-6" style="text-align: left;">
+                        <div class="btn btn-primary btn-sm custom-btn create-user" id="submit-create-group">Confirm</div>
+                        <div class="btn btn-primary btn-sm custom-btn create-user" style="display: none;">Update</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

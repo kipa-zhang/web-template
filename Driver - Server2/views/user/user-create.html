@@ -1,0 +1,164 @@
+<script type="module" src="../scripts/user/user-create.js"></script>
+<style>
+    .leftimg{
+        float: left;
+        width: 20px;
+        height: 20px;
+        position: absolute;
+        top: 10px;
+        left: 5px;
+    }
+        
+    .search-select, .unit-search-select {
+        position: absolute;
+        z-index: 999;
+        display: none;
+        background-color: #fff;
+        border: 1px solid #ced4da;
+    }
+    .form-search-select {
+        max-height: 200px !important;
+        min-height: 200px !important;
+        position: absolute;
+        top: -200px;
+        background-color: white;
+    }
+    .form-search-select {
+        width: 100%;
+        -moz-padding-start: calc(0.75rem - 3px);
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.5;
+        color: #212529;
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 0rem;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        cursor: pointer;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .form-search-select li {
+        padding: 0 10px;
+    }
+
+    .input-group:not(.has-validation)>:not(:last-child):not(.dropdown-toggle):not(.dropdown-menu):not(.form-floating) {
+        border-top-right-radius: 6px !important;
+        border-bottom-right-radius: 6px !important;
+    }
+</style>
+<div class="modal fade" id="edit-user" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Create User</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row was-validated" id="userFrom" action="" method="post">
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end" for="userName">Full Name :</label>
+                        <div class="col-sm-8">
+                            <input type="text"  class="form-control form-control-sm username" name="userName" required autocomplete="off"
+                            id="user-userName">
+                            <div class="invalid-feedback" id="userName-feedback">
+                                * The user name cannot be empty.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end" for="nric">Nric :</label>
+                        <div class="col-sm-8">
+                            <input type="text"  class="form-control form-control-sm nric" name="nric" required autocomplete="off" id="user-nric">
+                            <div class="invalid-feedback" id="nric-feedback">
+                                * The user nric cannot be empty.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end">Type :</label>
+                        <!-- <div class="col-sm-8" id="userType">
+                            
+                        </div> -->
+                        <div class="col-sm-8">
+                            <select class="form-select" id="userType"></select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row unit">
+                        <label class="col-sm-4 col-form-label text-end">Hub :</label>
+                        <div class="col-sm-8">
+                            <select class="form-select" id="unitType">
+                               
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row subUnit">
+                        <label class="col-sm-4 col-form-label text-end">Node :</label>
+                        <div class="col-sm-8">
+                            <select class="form-select" id="subUnitType">
+
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row unitGroup-row">
+                        <label class="col-sm-4 col-form-label text-end">Unit :</label>
+                        <div class="col-sm-8">
+                            <!-- <select class="form-select unitGroup-select">
+                               
+                            </select> -->
+                            <div class="position-relative">
+                                <div class="input-group">
+                                    <input type="text" class="form-select" id="unitGroup-input" name="unitGroup" autocomplete="off" readonly>
+                                    <div class="search-select shadow"  id="unitGroup-shadow"  style="max-width: 100%;">
+                                      <img alt="" src="../images/hq/search.png" class="leftimg" alt="" draggable="false"/>
+                                        <input type="text" class="form-control" autocomplete="off" id="search2" placeholder="Search" style="padding: 0.375rem 2rem !important;">
+                                        <div class="form-search-select">
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 row role-row">
+                        <label class="col-sm-4 col-form-label text-end">Role :</label>
+                        <div class="col-sm-8">
+                            <select class="form-select" id="userRole">
+
+                            </select>
+                        </div>
+                    </div>
+                    <!-- <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end">Password :</label>
+                        <div class="col-sm-8">
+                            <input type="password" class="form-control form-control-sm password" name="password" required  autocomplete="off"
+                              id="user-password">
+                            <div class="invalid-feedback" id="password-feedback">
+                                * The password cannot be empty.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-4 col-form-label text-end" style="white-space:nowrap;">Confirm Password :</label>
+                        <div class="col-sm-8">
+                            <input type="password" class="form-control form-control-sm checkPassword" name="confirmPassword" required  autocomplete="off"
+                             id="user-checkPassword">
+                            <div class="invalid-feedback" id="confirmPassword-feedback">
+                                * The password cannot be empty.
+                            </div>
+                        </div>
+                    </div> -->
+                    <div class="row" style="padding-bottom: 1rem;">
+                        <div style="text-align: right;">
+                            <button type="button" class="btn btn-secondary btn-sm custom-btn-gray cancel-create-user" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                            <button type="button" class="btn btn-primary btn-sm custom-btn-green create-user">Confirm</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

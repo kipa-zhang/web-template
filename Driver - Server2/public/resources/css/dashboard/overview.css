@@ -1,0 +1,419 @@
+
+html {
+    overflow-y: hidden;
+    overflow-x: hidden;
+}
+
+body {
+    font-size: 0.70vw !important;
+    
+    /* line-height: 1 !important; */
+}
+
+.container-fluid {
+    padding-top: 10px;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.shadow {
+    background-color: white;
+}
+
+.img-top {
+    width: 20px;
+    height: 20px;
+}
+
+.top-title {
+    font-weight: 700;
+}
+
+.btn-top {
+    font-size: 15px;
+    border-radius: 15px;
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+    line-height: 25px;
+    color: #9f9d9d;
+    background-color: #FFFFFF;
+    border: 1px solid #BFBFBF;
+}
+
+.btn-button {
+    border-radius: 15px;
+    width: 5vw;
+    line-height: 25px;
+    color: black;
+    background-color: #E1E1E1;
+    /* border: 1px solid #BFBFBF; */
+    border: none;
+}
+
+.active {
+    color: white !important;
+    background-color: #008F5B !important;
+}
+
+.overview-div {
+    border: 1px solid #BFBFBF;
+    border-radius: 15px;
+    text-align: center;
+    /* width: 10vw; */
+    line-height: 30px;
+    background-color: white;
+    color: #003333;
+}
+
+.overview-div button{
+    /* border: 1px solid #BFBFBF; */
+    /* border-radius: 15px; */
+    text-align: center;
+    /* width: 10vw; */
+    /* line-height: 30px; */
+    background-color: white;
+    color: #003333;
+    border: none;
+}
+
+.overview-div img {
+    width: 20px;
+    height: 20px;
+}
+
+.dashboard-trucks {
+    background-color: #F2F8F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius:10px 10px 10px 10px;
+    width: 40px !important;
+    height: 40px;
+}
+
+.dashboard-trucks img {
+    height: 20px;
+    width: 20px;
+}
+
+.dashboard-assigned {
+    background-color: #F2F8F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius:10px 10px 10px 10px;
+    width: 40px;
+    height: 4rem;
+}
+
+.dashboard-assigned img {
+    height: 30px;
+    width: 30px;
+}
+
+.dashboard-Pending {
+    background-color: #F7DFC9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius:10px 10px 10px 10px;
+    width: 40px;
+    height: 4rem;
+}
+
+.dashboard-Pending img {
+    height: 30px;
+    width: 30px;
+}
+
+.dashboard-approval {
+    background-color: #DCE7F8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius:10px 10px 10px 10px;
+    width: 40px;
+    height: 4rem;
+}
+
+.dashboard-approval img {
+    height: 33px;
+    width: 33px;
+}
+
+.tpt-number {
+    /* border: 1px solid #A6A6A6; */
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    margin-left: 0.2px;
+}
+
+.indent-color {
+    border-radius: 15px;
+    width: 150px;
+    /* height: 10rem; */
+    border: 1px solid #A6A6A6;
+    color: #A6A6A6;
+}
+
+.state-name {
+    font-size: 15px;
+    color: #A6A6A6;
+}
+
+.layui-laydate-range {
+    border-radius: 15px;
+    line-height: normal;
+}
+.layui-laydate .layui-this, .layui-laydate .layui-this>div {
+    background-color: #198754!important;
+    color: #fff!important;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+}
+.layui-laydate-content td > div {
+    padding: 8px 0px;
+}
+.layui-select-btn {
+    padding: 3px 10px;
+}
+.layui-date-input {
+    width: 250px;
+}
+
+.tpt-number {
+    /* border: 1px solid #A6A6A6;
+    border-top: none;
+    border-left: none;
+    border-right: none; */
+}
+
+.vehicle-search-select {
+    position: relative;
+    z-index: 100; 
+    background-color: white;
+    border-radius: 10px;
+    margin-top: 0.2rem;
+    border: 1px solid #e0e0e0;
+    display: grid;
+    justify-content: center;
+    /* align-items:center; */
+}
+
+.card-header {
+    height: 60px;
+}
+
+.card-header, .card-footer {
+    background-color: white !important;
+}
+
+.card-header .leftimg{
+    float: left;
+    width: 16px;
+    height: 17px;
+    margin: 8px 10px;
+    position: relative;
+    bottom: 36px;
+    right: 3%;
+    z-index: 10
+    /* z-index: -1; */
+}
+
+.form-search-select1 li:hover {
+    background-color: #1E90FF;
+    color: white;
+}
+
+/* .form-search-select2 li:hover {
+    background-color: #1E90FF;
+    color: white;
+} */
+.form-search-select {
+    width: 100%;
+    -moz-padding-start: calc(0.75rem - 3px);
+    font-size: 0.8vw;
+    font-weight: 400;
+    /* line-height: 1.5; */
+    color: #212529;
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    /* border: 1px solid #ced4da; */
+    border-radius: 0rem;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    cursor: pointer;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* .form-search-select li {
+    padding: 0 10px;
+} */
+
+.tpt-number::after {
+    content: '';
+    width: 36vw;
+    height: 1px;
+    background-color: #cccccc;
+    box-sizing: border-box;
+}
+
+#indents-date::after {
+    content: '';
+    width: 6vw;
+    height: 1px;
+    background-color: #cccccc;
+    box-sizing: border-box;
+} 
+
+.layui-laydate-header .laydate-prev-y {
+    display: none !important;
+} 
+
+.layui-laydate-header .laydate-next-y {
+    display: none !important;
+}
+
+.laydate-main-list-0 .laydate-next-m {
+    display: none !important;
+}
+
+.laydate-main-list-1 .laydate-prev-m {
+    display: none !important;
+}
+
+.layui-laydate-header {
+    border: none !important;
+}
+
+.layui-laydate-footer {
+    border: none !important;
+}
+
+#layui-laydate1 {
+    border-radius: 15px;
+}
+
+.laydate-main-list-0 .laydate-prev-m {
+    margin-left: -2rem;
+}
+
+.laydate-main-list-1 .laydate-next-m {
+    margin-right: -2rem;
+}
+
+.laydate-btns-clear {
+    border-radius: 15px !important;
+    margin-right: 1.5rem !important;
+    color: #487272;
+    width: 80px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+    text-align: center !important;
+}
+
+.laydate-btns-confirm {
+    border-radius: 15px !important;
+    background-color: #003333 !important;
+    color: white !important;
+    width: 80px !important;
+    height: 30px !important;
+    line-height: 30px !important;
+    text-align: center !important;
+}
+
+.layui-laydate-main {
+    width: 100% !important;
+}
+
+.layui-laydate-range {
+    width: 650px !important;
+} 
+
+.layui-select-btn {
+    font-size: 13px !important;
+    background-color: #dfdddd !important;
+    color: #5b5959 !important;
+    border: none !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+.btn-success-number {
+    background-color: #008F5B !important;
+    color: white !important;
+}
+
+.datepickerContainer {
+    background-color: white !important;
+}
+/* .datepickerGoNext {
+    display: none !important;
+} */
+
+.datepickerMonth a {
+    color: #A6A6A6 !important;
+}
+
+div.datepicker tbody th {
+    color: #A6A6A6 !important;
+}
+/* 
+.datepickerViewMonths {
+    width: 200px !important;
+    height: 200px !important;
+} */
+
+.datepickerMonths {
+    height: 220px !important;
+}
+
+.datepickerYears {
+    height: 220px !important;
+}
+
+.executionDate-input {
+    padding-left: 2rem !important;
+}
+
+#executionDate-image {
+    float: left;
+    width: 16px;
+    height: 17px;
+    margin: 8px 10px;
+    position: relative;
+    bottom: 35px;
+    /* right: 1%; */
+    z-index: 10
+}
+
+.form-select {
+    font-size: 13px !important;
+    background-image: url('../../images/dashboard/downward.png') !important
+}
+
+.form-select:focus {
+    border-color: #137405 !important;
+    box-shadow: 0 0 0 0.25rem #c4f0de !important;
+}
+
+.form-control:focus {
+    border-color: #137405 !important;
+    box-shadow: 0 0 0 0.25rem #c4f0de !important;
+}
+
+.form-control {
+    font-size: 13px !important;
+}
+
+.btn-button {
+    font-size: 14px !important;
+}
+
+.div-col-ps {
+    padding-left: 0.5rem !important;
+}

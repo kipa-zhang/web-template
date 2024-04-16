@@ -1,0 +1,69 @@
+<%- include('../user/user-create.html') -%>
+<%- include('../user/user-view.html') -%>
+<%- include('../unit/unit-edit.html') -%>
+<%- include('../unit/unit-view.html') -%>
+<%- include('../group/group-create.html') -%>
+<%- include('../group/group-view.html') -%>
+<%- include('../mobile/mobile-user.html') -%>
+<%- include('../mobile/mobile-user-edit.html') -%>
+<script type="module" src="../scripts/user/user-menu.js"></script>
+    
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight-User">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Manage User</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <% if (pageList && pageList.find(item => item.module == 'User Management' && ['Create User', 'View User'].includes(item.page))) { %>
+            <div>
+                <span class="layui-icon layui-icon-note" style="margin-right: 10px;"></span>
+                <label class="user-select-none">User Management</label>
+            </div>
+            <ul class="list-group">
+                <% if (pageList && pageList.find(item => item.page == 'Create User')) { %>
+                    <!-- <li class="list-group-item user-select-none" data-action="user-create">Create User</li> -->
+                <% } %>
+                <% if (pageList && pageList.find(item => item.page == 'View User')) { %>
+                    <li class="list-group-item user-select-none" data-action="user-view">View User</li>
+                <% } %>
+            </ul>
+            <hr>
+        <% } %>    
+        <% if (pageList && pageList.find(item => item.module == 'Unit' && ['Create Unit', 'View Unit'].includes(item.page))) { %>
+            <div>
+                <span class="layui-icon layui-icon-note" style="margin-right: 10px;"></span>
+                <label class="user-select-none">Unit Management</label>
+            </div>
+            <ul class="list-group">
+                <% if (pageList && pageList.find(item => item.page == 'Create Unit')) { %>
+                    <li class="list-group-item user-select-none" data-action="unit-create">Create Unit</li>
+                <% } %>
+                <% if (pageList && pageList.find(item => item.page == 'View Unit')) { %>
+                <li class="list-group-item user-select-none" data-action="unit-view">View Unit</li>
+                <% } %>
+            </ul>
+            <hr>
+        <% } %>    
+        <% if (pageList.find(item => item.module == 'User Management' && ['View Mobile User'].includes(item.page))) { %>
+            <div>
+                <span class="layui-icon layui-icon-user" style="margin-right: 10px;"></span>
+                <label class="user-select-none">Mobile User Management</label>
+            </div>
+            <ul class="list-group">
+                <li class="list-group-item user-select-none" data-action="mobileUser-view">View Mobile User</li>
+            </ul>
+        <% } %>    
+        <!-- <% if (userType == 'HQ' || userType == 'ADMINISTRATOR') { %>
+            <hr>
+            <div>
+                <span class="layui-icon layui-icon-note" style="margin-right: 10px;"></span>
+                <label class="user-select-none">Group Management</label>
+            </div>
+            <ul class="list-group">
+                <li class="list-group-item user-select-none" data-action="group-view">View Group</li>
+                <li class="list-group-item user-select-none" data-action="group-create">Create Group</li>
+            </ul>
+        <% } %> -->
+        
+    </div>
+</div>

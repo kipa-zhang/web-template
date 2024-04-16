@@ -1,0 +1,260 @@
+<%- include('../common/common-html-base.html') -%>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+    <link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/drag-arrange.css">
+    <link rel="stylesheet" href="../multiple-select/multiple-select.css">
+    <link rel="stylesheet" href="../scripts/reportCreator/reportCreator.css">
+
+    <script type="text/javascript" src="../layui/layui.js"></script>
+    <script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+    <script type="text/javascript" src="../scripts/reportCreator/drag-arrange.js"></script>
+    <script type="text/javascript" src="../multiple-select/multiple-select.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="text/javascript" src="../scripts/reportCreator/vehicle-creator.js"></script>
+    <style>
+        .form-check label {
+            white-space: nowrap;
+        }
+        .form-check {
+            line-height: 2.3rem;
+        }
+        .form-check-input {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+        .form-check-label {
+            padding-left: 0.3rem;
+        }
+    </style>
+<body style="background-color: white !important;">
+    <div class="container-full report-form">
+        <div class="row">
+            <!-- <div class="mb-2 row">
+                <label class="col-sm-2 col-form-label">Report Date Range</label>
+                <div class="col-sm-3">
+                    <input type="text" readonly class="form-control" value="" id="reportDateRange">
+                </div>
+            </div> -->
+            <div class="col-7 mt-3">
+                <div><label class="label-1">Report Data Group Selection</label></div>
+                <div><label class="label-2">Choose the data to be included in the report</label></div>
+            </div>
+            <div class="col-5 mt-3">
+                <div><label class="label-1">Selected Data Group</label></div>
+            </div>
+            <div class="col-7">
+                <div class="row">
+                    <div class="col-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="select-all-checkbox">
+                            <label class="form-check-label fw-bold" for="select-all-checkbox">Select All</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row report-data-group">
+                    <div class="col-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Vehicle Category"
+                                name="vehicleCategory" id="vehicle-category-checkbox">
+                            <label class="form-check-label" for="vehicle-category-checkbox">Vehicle Category</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Vehicle Number"
+                                name="vehicleNumber" id="vehicle-number-checkbox">
+                            <label class="form-check-label" for="vehicle-number-checkbox">Vehicle Number</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Vehicle Type"
+                                name="vehicleType" id="vehicle-type-checkbox">
+                            <label class="form-check-label" for="vehicle-type-checkbox">Vehicle Type</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Odometer"
+                                name="odometer" id="odometer-checkbox">
+                            <label class="form-check-label" for="odometer-checkbox">Odometer</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Description"
+                                name="description" id="description-checkbox">
+                            <label class="form-check-label" for="description-checkbox">Description</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Speed Limit"
+                                name="speedLimit" id="speed-limit-checkbox">
+                            <label class="form-check-label" for="speed-limit-checkbox">Speed Limit</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Permit Type"
+                                name="permitType" id="permit-type-checkbox">
+                            <label class="form-check-label" for="permit-type-checkbox">Permit Type</label>
+                        </div>
+                    </div>
+                    <div class="col-5">
+                        <div class="form-check hub-node-check">
+                            <input class="form-check-input" type="checkbox" value="Hub/Node" name="hubNode"
+                                id="hub-checkbox">
+                            <label class="form-check-label" for="hub-checkbox">Hub/Node</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="Status"
+                                name="status" id="status-checkbox">
+                            <label class="form-check-label" for="status-checkbox">Status</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="WPT completion date and due date"
+                                name="WPT completion date and due date" id="WPT-lapse-record-and-due-date-checkbox">
+                            <label class="form-check-label" for="WPT-lapse-record-and-due-date-checkbox">
+                                WPT completion date, due date and lapsed days(if any)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="MPT completion date and due date"
+                                name="MPT completion date and due date" id="MPT-lapse-record-and-due-date-checkbox">
+                            <label class="form-check-label" for="MPT-lapse-record-and-due-date-checkbox">
+                                MPT completion date, due date and lapsed days(if any)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="PM completion date and due date"
+                                name="PM completion date and due date" id="PM-lapse-record-and-due-date-checkbox">
+                            <label class="form-check-label" for="PM-lapse-record-and-due-date-checkbox">
+                                PM completion date, due date and lapsed days(if any)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="AVI completion date and due date"
+                                name="AVI completion date and due date" id="AVI-lapse-record-and-due-date-checkbox">
+                            <label class="form-check-label" for="AVI-lapse-record-and-due-date-checkbox">
+                                AVI completion date, due date and lapsed days(if any)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-5">
+                <div class="mb-2 row div-report-group-list">
+                    <ul class="drag-list">
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 mt-3">
+                <div><label class="label-1">Report Data Filter</label></div>
+            </div>
+            <div class="row mt-3 div-report-data-filter">
+                <div class="mb-2 col-3 hub-node-div">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Hub</label>
+                        <!-- <div class="col-8 position-relative">
+                            <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                        </div> -->
+                        <div class="col-8">
+                            <select class="form-select" id="hubFilter">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3 hub-node-div">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Node</label>
+                        <!-- <div class="col-8 position-relative">
+                            <input type="text" class="form-control" id="hubNodeFilter" autocomplete="off">
+                        </div> -->
+                        <div class="col-8">
+                            <select class="form-select" id="nodeFilter">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Permit Type</label>
+                        <div class="col-8">
+                            <select class="form-select" id="permitType">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-3">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Status</label>
+                        <div class="col-8">
+                            <select class="form-select" id="vehicleStatus">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">Vehicle Category</label>
+                        <div class="col-8">
+                            <select class="form-select" id="vehicleCategory">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">PM completion date range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="PM-Date-Range">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">WPT1 completion date range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="WPT1-Date-Range">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">WPT2 completion date range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="WPT2-Date-Range">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">WPT3 completion date range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="WPT3-Date-Range">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">MPT completion date range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="MPT-Date-Range">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-2 col-6">
+                    <div class="row">
+                        <label class="col-4 col-form-label p-0 custom-line">AVI completion date range</label>
+                        <div class="col-8">
+                            <input type="text" class="form-control" value="" readonly id="AVI-Date-Range">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-auto">
+                <button class="btn custom-btn-gray modal-footer-bunton-cancel-bg ms-3" onclick="window.location.reload()">Reset</button>
+                <button class="btn btn-success modal-footer-bunton-confirm-bg" id="task-report-create">Create</button>
+            </div>
+        </div>
+    </div>
+</body>

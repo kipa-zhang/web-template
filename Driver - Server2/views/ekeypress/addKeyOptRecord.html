@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title></title>
+    
+	<link rel="stylesheet" href="../jquery-confirm/jquery-confirm.min.css">
+	<link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="../DataTables-bootstrap4/dataTables.bootstrap4.min.css">
+	<link rel="stylesheet" href="../css/common-style.css">
+	<link rel="stylesheet" href="../css/common-bootstrap.css">
+	<link rel="stylesheet" href="../layui/css/layui.css">
+
+	<script type="text/javascript" src="../axios/axios.min.js"></script>
+	<script type="text/javascript" src="../moment/moment.min.js"></script>
+	<script type="text/javascript" src="../jquery/jquery.min.js"></script>
+	<script type="text/javascript" src="../js-cookie/js.cookie.min.js"></script>
+	<script type="text/javascript" src="../jquery/jquery.form.min.js"></script>
+	
+	<script type="text/javascript" src="../jquery-confirm/jquery-confirm.min.js"></script>
+	<script type="text/javascript" src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+	<script type="text/javascript" src="../layui/layui.js"></script>
+
+    <script src="../scripts/Keypress/addKeyOptRecord.js"></script> 
+
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            font-family: 'Inter'
+        }
+
+        .row {
+            --bs-gutter-x: 0;
+            --bs-gutter-y: 0;
+        }
+    </style>
+    <style>
+        .mobile-top-head {
+            height: 45px;
+            margin: 0;
+            background: url(../images/bg-top.svg);
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .div-table {
+            display: table;
+            height: fit-content;
+        }
+
+        .div-table-cell {
+            display: table-cell;
+            text-align: left;
+            vertical-align: middle;
+            min-width: 1em;
+        }
+
+        .tab-div {
+            width: 3em;
+            height: 6px;
+            border-radius: 6px;
+            background-color: #c5c5c5;
+        }
+
+        .tab-div.active {
+            background-color: #A3051C;
+        }
+
+        .tab-div-content {
+            display: none;
+        }
+
+        .tab-div-content.active {
+            display: block;
+        }
+
+        .rounded {
+            background-color: #f5f5f5;
+        }
+
+        .rounded .item-padding {
+            padding-top: 0.9rem !important;
+            padding-bottom: 0.9rem !important;
+        }
+
+        input[type=radio] {
+            transform: scale(1.4);
+            margin-left: 5px;
+        }
+
+        input[type=checkbox] {
+            transform: scale(1.4);
+            margin-left: 5px;
+        }
+
+        .order-title {
+            font-weight: 600;
+            font-size: 0.8em;
+            color: #585858;
+        }
+
+        .order-content {
+            font-weight: 400;
+            font-size: 0.8em;
+            color: #808080;
+            background-color: white;
+            margin-bottom: 0.4em;
+        }
+
+        .order-content:first-child {
+            border-top-left-radius: 0.8em;
+            border-top-right-radius: 0.8em;
+        }
+
+        .order-content:last-child {
+            border-bottom-left-radius: 0.8em;
+            border-bottom-right-radius: 0.8em;
+        }
+
+        .circle-div {
+            width: 0.5em;
+            height: 0.5em;
+            border-radius: 0.5em;
+            background-color: rgb(88 88 88);
+            margin-right: 1em;
+        }
+
+        .custom-btn {
+            background-color: #1d6348;
+            color: white;
+            font-weight: bold;
+            border-radius: 0.5em;
+            width: 100%;
+            margin-top: 2em;
+        }
+
+        .custom-btn.disabled {
+            color: gray;
+        }
+
+        .custom-btn-div,
+        .custom-btn-div2 {
+            border-top-right-radius: 2em;
+            border-top-left-radius: 2em;
+            box-shadow: 0 0 5px grey;
+        }
+
+        .show-popup {
+            color: #2bb982 !important;
+        }
+    </style>
+    <style>
+        .custom-input {
+            border-width: 0;
+            border-bottom-width: 1px;
+            border-radius: 0;
+            background-color: white !important;
+            color: black;
+			box-shadow: none;
+        }
+
+        .custom-input-img {
+            position: relative;
+            top: -2em;
+            float: right;
+            right: 0.6em;
+        }
+
+        .custom-input-label {
+            position: relative;
+            top: -1.5em;
+            float: right;
+            right: 1em;
+        }
+
+        .disable-field {
+            background: #d8d5d5 !important;
+            border-radius: 5px;
+        }
+
+        .form-control {
+            padding: 0.2em !important;
+        }
+
+        .search-select {
+            position: absolute;
+            z-index: 999;
+            display: none;
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            width: 100%;
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .form-search-select {
+            height: 150px;
+            overflow-y: auto;
+        }
+
+        .form-search-select li {
+            min-height: 35px;
+            margin: 5px;
+            border-bottom: 1px #cccccc dashed;
+            display: flex;
+            align-items: center;
+            word-break: break-word!important;
+        }
+        .laydate-time-list>li:last-child {
+            display: none;
+        }
+        .laydate-time-list>li{
+            width: 50% !important;
+        }
+        .layui-laydate-list ol {
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+
+<div class="mobile-top-head row">
+    <div class="row" style="width: 100%; margin: 0;">
+        <div class="col-3 ps-2" style="display: flex; justify-content: left; align-items: center;">
+        </div>
+        <div class="col-6" style="display: flex;justify-content: center;align-items: center;">
+            <label class="page-title-label" style="color: white;font-weight:bolder;font-size: large;">Record Manually</label>
+        </div>
+        <div class="col-3" style="display: flex;justify-content: flex-end;align-items: center; right: 0px;">
+            <div class="download-div" style="width: 32px; height: 32px; border-radius: 16px; margin-right: 10px; display: flex;justify-content: center;align-items: center;">
+                <img alt="" src="../images/download-white.svg" style="width: 18px; height: 18px;">
+            </div>
+        </div>
+    </div>
+</div>
+<div class="content-div pb-5" style="overflow-y: auto; height: calc(100% - 45px)">
+    <div class="container-fluid px-3 mt-3">
+        <div class="key-info-div" style="background-color: white; box-shadow: 2px 2px 5px #8b8b8b; border-radius: 8px; border-top: 12px solid #1d6348;"
+            class="pt-2 pb-1">
+            <div class="px-3 pb-3">
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Driver NRIC / Name *</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="position-relative" id="driver-select">
+                            <img alt="" class="custom-input-img" style="width: 1em; top: 1.6em; right: 1em;"
+                                src="../images/down-arrow.svg">
+                            <input type="text" class="form-control custom-input" id="driverId" name="driverId"
+                                autocomplete="off" readonly>
+                            <div class="search-select shadow">
+                                <input type="text" class="form-control" autocomplete="off" id="search-driver"
+                                    placeholder="Search">
+                                <div class="form-search-select">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Box Name *</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="position-relative" id="siteId-select">
+                            <img alt="" class="custom-input-img" style="width: 1em; top: 1.6em; right: 1em;"
+                                src="../images/down-arrow.svg">
+                            <input type="text" class="form-control custom-input" id="siteId" name="siteId"
+                                autocomplete="off" readonly>
+                            <div class="search-select shadow">
+                                <input type="text" class="form-control" autocomplete="off" id="search-site"
+                                    placeholder="Search">
+                                <div class="form-search-select">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Vehicle Number*</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="position-relative" id="vehicle-select">
+                            <img alt="" class="custom-input-img" style="width: 1em; top: 1.6em; right: 1em;"
+                                src="../images/down-arrow.svg">
+                            <input type="text" class="form-control custom-input" id="vehicleNo"
+                                name="vehicleNo" autocomplete="off" readonly>
+                            <div class="search-select shadow">
+                                <input type="text" class="form-control" autocomplete="off" id="search-vehicle"
+                                    placeholder="Search">
+                                <div class="form-search-select">
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+				<div class="row mt-2">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Key Slot No. *</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+						<input type="number" class="form-control custom-input" id="slotNo" name="slotNo">
+                    </div>
+                </div>
+				<div class="row mt-2">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Option Type *</label>
+                    </div>
+                </div>
+				<div class="row" id="optionTypeRadio" style="display: flex; align-items: center; justify-content: flex-start;">
+                    <input type="radio" style="width: 30px;" checked name="optionType" value="withdraw">&nbsp;&nbsp;Withdraw</input>
+              		<input style="margin-left: 10px; width: 30px;" type="radio" name="optionType" value="return">&nbsp;&nbsp;Return</input>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Transact Date Time *</label>
+                    </div>
+                </div>
+                <div class="row" id="optTimeCalender">
+                    <div class="col-12 optTimeCalender">
+                        <input class="form-control custom-input px-1" id="optDatetime" name="optDatetime" readonly>
+                        <img alt="" class="custom-input-img" style="width: 1.6em;" src="../images/calender.svg">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <label class="custom-size3 custom-color1 py-1">Reason *</label>
+                    </div>
+                </div>
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <textarea class="form-control" id="key-reason" name="Reason" placeholder="Reason" autocomplete="off"></textarea>
+                    </div>
+                </div>
+                <div class="row pb-2">
+                    <div class="col-4" style="display: flex; justify-content: center; align-items: center;">
+                        <button class="w-75 btn btn-success custom-size2 custom-weight custom-color3 cancel-btn custom-btn-gray"
+                            onclick="backToMainPage()">Cancel</button>
+                    </div>
+                    <div class="col-4" style="display: flex; justify-content: center; align-items: center;">
+                        <button class="w-75 btn btn-success custom-size2 custom-weight custom-color3 upload-btn custom-btn-blue">Upload</button>
+                    </div>
+                    <div class="col-4" style="display: flex; justify-content: center; align-items: center;">
+                        <button class="w-75 btn btn-success custom-size2 custom-weight custom-color3 submit-btn"
+                            onclick="submitKeyOptionRecord();">Submit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="keyOptConfirmQRCodeDiv" style="height: fit-content; display: none; background-color: white; box-shadow: 2px 2px 5px #8b8b8b; border-radius: 8px; border-top: 12px solid #1d6348;">
+            <div class="qrcode-img-div" style="display: flex; width: 100%; height: 100%; justify-content: center; align-items: center;">
+                <img alt="" class="key-confirm-qrcode" src="" style="width: 300px; height: 300px;" />
+            </div>
+            <div class="qrcode-content-div" style="width: 100%; height: fit-content; padding-left: 40px; font-weight: 900;">
+                <div class="row">
+                    <div class="col-6" style="display: flex; justify-content: flex-start; align-items: center;">
+                        <label>Site Id:</label>&nbsp;&nbsp;<label class="keySiteIdLabel" style="font-weight: 300;"></label>
+                    </div>
+                    <div class="col-6" style="display: flex; justify-content: flex-start; align-items: center;">
+                        <label>Slot No.:</label>&nbsp;&nbsp;<label class="keySlotIdLabel" style="font-weight: 300;"></label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6" style="display: flex; justify-content: flex-start; align-items: center;">
+                        <label>Tag Id:</label>&nbsp;&nbsp;<label class="keyTagIdLabel" style="font-weight: 300;"></label>
+                    </div>
+                    <div class="col-6" style="display: flex; justify-content: flex-start; align-items: center;">
+                        <label>Type:</label>&nbsp;&nbsp;<label class="optTypeLabel" style="font-weight: 300;"></label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6" style="display: flex; justify-content: flex-start; align-items: center;">
+                        <label>Reason:</label>&nbsp;&nbsp;<label class="keyReason" style="font-weight: 300;"></label>
+                    </div>
+                    <div class="col-6" style="display: flex; justify-content: flex-start; align-items: center;">
+                        <label>Transaction Time:</label>&nbsp;&nbsp;<label class="keyTransTimeLabel" style="font-weight: 300;"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="key-confirm-opt-div row py-3" style="display: flex;">
+                <div class="col-6" style="display: flex; justify-content: center; align-items: center;">
+                    <button class="btn btn-success cancel-btn" style="width: 100px;"
+                        onclick="backToRecordPage()">Back</button>
+                </div>
+                <div class="col-6" style="display: flex; justify-content: center; align-items: center;">
+                    <button class="btn btn-success submit-btn" style="width: 100px;"
+                        onclick="confirmSubmit();">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

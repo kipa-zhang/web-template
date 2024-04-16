@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32.613" height="26.729" viewBox="0 0 32.613 26.729">
+  <defs>
+    <clipPath id="clip-path">
+      <path id="role_9651" data-name="role 9651" d="M8904.917,2268.483l-2.157,3.716,6.546,4.513,2.539-3.943Z" transform="translate(-8902.76 -2268.483)" fill="none" stroke="#457ab6" stroke-width="1"/>
+    </clipPath>
+  </defs>
+  <g id="View_History" data-name="View History" transform="translate(-8874 -2247)">
+    <g id="a" transform="translate(8874 2247)">
+      <path id="a-2" data-name="a" d="M77.365,64A13.365,13.365,0,1,0,90.729,77.365,13.365,13.365,0,0,0,77.365,64ZM87.92,81.822a11.413,11.413,0,1,1,.666-2.148,11.413,11.413,0,0,1-.666,2.148Z" transform="translate(-64 -64)" fill="#457ab6"/>
+      <path id="a-3" data-name="a" d="M481.2,232v-6.941a.915.915,0,1,0-1.83,0v7.7l5.766,5.766a.915.915,0,1,0,1.294-1.294Z" transform="translate(-467.941 -218.871)" fill="#457ab6"/>
+    </g>
+    <g id="a-4" data-name="a" transform="translate(8897.528 2265.01)" clip-path="url(#clip-path)">
+      <path id="role_9650" data-name="role 9650" d="M1.907,0A17.8,17.8,0,0,0,0,.791L6.011,6.8A.954.954,0,1,0,7.359,5.453Z" transform="translate(-1.971 0.24) rotate(-11)" fill="#457ab6" stroke="#457ab6" stroke-width="1"/>
+    </g>
+  </g>
+</svg>

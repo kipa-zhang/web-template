@@ -1,0 +1,111 @@
+<style>
+    .download-div {
+        width: 300px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 40px;
+        border: 1px solid #c8c5c5;
+        border-radius: 30px;
+    }
+    .download-img {
+        height: 100%;
+        width: 30px;
+        background-image: url('../images/vehicle/download.svg');
+        background-size: 24px;
+        background-repeat: no-repeat;
+        background-position: center center;
+    }
+    .download-label {
+        color: #064220;
+    }
+    .upload-file-div {
+        width: 60%;
+        height: 220px;
+        border: 1px dashed #c8c5c5;
+        border-radius: 10px;
+    }
+    .excel-img-div {
+        width: 50px;
+        height: 50px; 
+        border-radius: 50px; 
+        border: 1px solid #dddcdc;
+        background-color: #dddcdc;
+        background-image: url('../images/vehicle/excel.svg');
+        background-size: 32px;
+        background-repeat: no-repeat;
+        background-position: center center;
+    }
+    .upload-label-div {
+        width: 50%;
+        margin-left: 25%;
+        height: fit-content;
+        display: flex;
+        justify-content: center;
+    }
+    .opt-btn-div {
+        width: 120px;
+        height: 40px;
+        border: 1px solid #c8c5c5;
+        border-radius: 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #064220;
+        font-weight: 600;
+    }
+</style>
+
+<div class="modal fade" id="view-vehicle-resource-upload" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-title p-3 ps-4" style="background-color: #1B9063 !important; color: white;border-radius: 8px 8px 0 0;">
+                <h5 class="fs-5" style="font-weight: 900;">Upload Vehicles</h5>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="mt-1">
+                        <label class="fs-6">Download our EXCEL template and fill in the required fields.</label>
+                    </div>
+                    <div class="mt-1">
+                        <div class="download-div">
+                            <div class="download-img"></div>
+                            <label class="download-label fs-6" style="font-weight: 600;">Download EXCEL Template</label>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="fs-6">Upload filled EXCEL</label>
+                        <div id="upload-file-div" class="upload-file-div">
+                            <div style="width: 100%;display: flex;justify-content: center;align-items: center;margin-top: 40px;">
+                                <div style="width: 80px;height: 80px; border-radius: 80px; border: 1px solid #f4f4f4;background-color: #f4f4f4;
+                                    display: flex;justify-content: center;align-items: center;">
+                                    <div class="excel-img-div"></div>
+                                </div>
+                            </div>
+                            <div class="width: 100%;">
+                                <div class="upload-label-div">
+                                    Drag & drop files to upload or click here to browse
+                                </div>
+                                <input type="file" id="click-upload-file" accept="application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-3" style="display: flex;">
+                    <div class="mt-1" style="width: 50%;display: flex;justify-content: flex-end;">
+                        <div class="opt-btn-div opt-btn-div-cancel">
+                            <label class="opt-btn-label fs-6">Cancel</label>
+                        </div>
+                    </div>
+                    <div class="mt-1" style="width: 50%;display: flex;justify-content: flex-start;">
+                        <% if (pageList.find(item => (item.action).toUpperCase() == 'UPLOAD' )) { %>
+                            <div class="opt-btn-div opt-btn-div-upload" style="background-color: #1B9063;">
+                                <label style="color: white;" class="opt-btn-label fs-6">Upload</label>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
