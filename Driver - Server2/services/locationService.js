@@ -1,7 +1,5 @@
 const log = require('../log/winston').logger('Location Service');
 const utils = require('../util/utils');
-const conf = require('../conf/conf');
-const CONTENT = require('../util/content');
 
 const moment = require('moment');
 
@@ -13,14 +11,8 @@ const { MtAdmin } = require('../model/mtAdmin');
 const { Task } = require('../model/task');
 const { UrgentIndent } = require('../model/urgent/urgentIndent.js');
 
-const _SystemDriver = require('../model/system/driver');
-const _SystemVehicle = require('../model/system/vehicle');
 const _SystemLocation = require('../model/system/location');
 const _SystemTask = require('../model/system/task');
-const _SystemJob = require('../model/system/job2');
-const _SystemRequest = require('../model/system/request');
-const _SystemGroup = require('../model/system/group');
-const _SystemPurposeOrder = require('../model/system/purchaseOrder');
 const { OperationRecord } = require('../model/operationRecord.js');
 
 const userService = require('../services/userService');
@@ -42,19 +34,22 @@ module.exports = {
 
         let limitSql = []
         let replacements = []
-        if (location) {
-            if (location.locationId) {
-                limitSql.push(` l.id = ? `)
-                replacements.push(location.locationId)
-            } else if (location.locationName) {
-                limitSql.push(` l.locationName LIKE `+ sequelizeSystemObj.escape("%" + location.locationName +"%"))
-            }
-
-            if (location.belongTo) {
-                limitSql.push(` l.belongTo = ? `)
-                replacements.push(location.belongTo)
+        const initLocation = function () {
+            if (location) {
+                if (location.locationId) {
+                    limitSql.push(` l.id = ? `)
+                    replacements.push(location.locationId)
+                } else if (location.locationName) {
+                    limitSql.push(` l.locationName LIKE `+ sequelizeSystemObj.escape("%" + location.locationName +"%"))
+                }
+    
+                if (location.belongTo) {
+                    limitSql.push(` l.belongTo = ? `)
+                    replacements.push(location.belongTo)
+                }
             }
         }
+        initLocation()
 
         if (limitSql.length) {
             sql += ` WHERE ${ limitSql.join(' AND ') } `
@@ -69,9 +64,10 @@ module.exports = {
 
         let pageList = await userService.getUserPageList(req.cookies.userId, 'Driver Control', 'Location')
         let operationList = pageList.map(item => `${ item.action }`).join(',')
-
-        for (let location of locationList) {
-            for (let group of locationGroupList) {
+        
+        locationList = locationList.map(location => {
+            location.operation = operationList
+            locationGroupList.forEach(group => {
                 if (group.reportingLocation == location.locationName) {
                     if (location.pickupCount) location.pickupCount++;
                     else location.pickupCount = 1;
@@ -80,10 +76,10 @@ module.exports = {
                     if (location.dropoffCount) location.dropoffCount++;
                     else location.dropoffCount = 1;
                 }
-            }
+            })
 
-            location.operation = operationList
-        }
+            return location
+        })
         
         return res.json(utils.response(1, locationList));
     },

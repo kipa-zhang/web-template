@@ -1074,39 +1074,48 @@ module.exports = {
                                 })
                             }
     
-                            if (driverOffence.violationType == CONTENT.ViolationType.HardBraking) {
-                                data.hardBraking = {
-                                    count: driverOffence.total,
-                                    occTime: driverOffence.lastOccTime,
+                            switch (driverOffence.violationType) {
+                                case CONTENT.ViolationType.HardBraking: {
+                                    data.hardBraking = {
+                                        count: driverOffence.total,
+                                        occTime: driverOffence.lastOccTime,
+                                    }
+                                    result.hardBraking += driverOffence.total
+                                    break;
                                 }
-                                result.hardBraking += driverOffence.total
-                            } else if (driverOffence.violationType == CONTENT.ViolationType.RapidAcc) {
-                                data.rapidAcc = {
-                                    count: driverOffence.total,
-                                    occTime: driverOffence.lastOccTime,
+                                case CONTENT.ViolationType.RapidAcc: {
+                                    data.rapidAcc = {
+                                        count: driverOffence.total,
+                                        occTime: driverOffence.lastOccTime,
+                                    }
+                                    result.rapidAcc += driverOffence.total
+                                    break;
                                 }
-                                result.rapidAcc += driverOffence.total
-                            } else if (driverOffence.violationType == CONTENT.ViolationType.Speeding) {
-                                data.speeding = {
-                                    count: driverOffence.total,
-                                    occTime: driverOffence.lastOccTime,
+                                case CONTENT.ViolationType.Speeding: {
+                                    data.speeding = {
+                                        count: driverOffence.total,
+                                        occTime: driverOffence.lastOccTime,
+                                    }
+                                    result.speeding += driverOffence.total
+                                    break;
                                 }
-                                result.speeding += driverOffence.total
-                            } else if (driverOffence.violationType == CONTENT.ViolationType.Missing) {
-                                data.missing = {
-                                    count: driverOffence.total,
-                                    occTime: driverOffence.lastOccTime,
+                                case CONTENT.ViolationType.Missing: {
+                                    data.missing = {
+                                        count: driverOffence.total,
+                                        occTime: driverOffence.lastOccTime,
+                                    }
+                                    result.missing += driverOffence.total
+                                    break;
                                 }
-                                result.missing += driverOffence.total
-                            } else if (driverOffence.violationType == CONTENT.ViolationType.NoGoZoneAlert) {
-                                data.noGoAlert = {
-                                    count: driverOffence.total,
-                                    occTime: driverOffence.lastOccTime,
+                                case CONTENT.ViolationType.NoGoZoneAlert: {
+                                    data.noGoAlert = {
+                                        count: driverOffence.total,
+                                        occTime: driverOffence.lastOccTime,
+                                    }
+                                    result.noGoAlert += driverOffence.total
+                                    break;
                                 }
-                                result.noGoAlert += driverOffence.total
                             }
-                        } else {
-                            continue;
                         }
                     }
                     result.list.push(data)
@@ -1154,44 +1163,53 @@ module.exports = {
                                     if (item.id == data.groupId) {
                                         data.groupName = item.groupName
                                         return true;
-                                        
                                     }
                                 })
                             }
-    
-                            if (deviceOffence.violationType == CONTENT.ViolationType.HardBraking) {
-                                data.hardBraking = {
-                                    count: deviceOffence.total,
-                                    occTime: deviceOffence.lastOccTime,
+
+                            switch (deviceOffence.violationType) {
+                                case CONTENT.ViolationType.HardBraking: {
+                                    data.hardBraking = {
+                                        count: deviceOffence.total,
+                                        occTime: deviceOffence.lastOccTime,
+                                    }
+                                    result.hardBraking += deviceOffence.total
+                                    break;
                                 }
-                                result.hardBraking += deviceOffence.total
-                            } else if (deviceOffence.violationType == CONTENT.ViolationType.RapidAcc) {
-                                data.rapidAcc = {
-                                    count: deviceOffence.total,
-                                    occTime: deviceOffence.lastOccTime,
+                                case CONTENT.ViolationType.RapidAcc: {
+                                    data.rapidAcc = {
+                                        count: deviceOffence.total,
+                                        occTime: deviceOffence.lastOccTime,
+                                    }
+                                    result.rapidAcc += deviceOffence.total
+                                    break;
                                 }
-                                result.rapidAcc += deviceOffence.total
-                            } else if (deviceOffence.violationType == CONTENT.ViolationType.Speeding) {
-                                data.speeding = {
-                                    count: deviceOffence.total,
-                                    occTime: deviceOffence.lastOccTime,
+                                case CONTENT.ViolationType.Speeding: {
+                                    data.speeding = {
+                                        count: deviceOffence.total,
+                                        occTime: deviceOffence.lastOccTime,
+                                    }
+                                    result.speeding += deviceOffence.total
+                                    break;
                                 }
-                                result.speeding += deviceOffence.total
-                            } else if (deviceOffence.violationType == CONTENT.ViolationType.Missing) {
-                                data.missing = {
-                                    count: deviceOffence.total,
-                                    occTime: deviceOffence.lastOccTime,
+                                case CONTENT.ViolationType.Missing: {
+                                    data.missing = {
+                                        count: deviceOffence.total,
+                                        occTime: deviceOffence.lastOccTime,
+                                    }
+                                    result.missing += deviceOffence.total
+                                    break;
                                 }
-                                result.missing += deviceOffence.total
-                            } else if (deviceOffence.violationType == CONTENT.ViolationType.NoGoZoneAlert) {
-                                data.noGoAlert = {
-                                    count: deviceOffence.total,
-                                    occTime: deviceOffence.lastOccTime,
+                                case CONTENT.ViolationType.NoGoZoneAlert: {
+                                    data.noGoAlert = {
+                                        count: deviceOffence.total,
+                                        occTime: deviceOffence.lastOccTime,
+                                    }
+                                    result.noGoAlert += deviceOffence.total
+                                    break;
                                 }
-                                result.noGoAlert += deviceOffence.total
                             }
-                        } else {
-                            continue;
+
                         }
                     }
                     result.list.push(data)

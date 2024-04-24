@@ -583,7 +583,7 @@ let TaskUtils = {
         }
         if(excludeDriver.length > 0){
             driverListSql += ` and dd.driverId not in (?)`
-            driverListByReplacements.push(excludeDriver.join(","))
+            driverListByReplacements.push(excludeDriver)
         }
         driverListSql += ` GROUP BY dd.driverId `
         if(dataType){
@@ -681,14 +681,17 @@ let TaskUtils = {
                 let option = { taskId: job_taskId, driver, vehicle, status: false, systemStatus: systemStatus ?? null }
                 let result = await TaskUtils.assignTaskBySystem(option)
                 if (result.code != 1)  throw result.message;
-                if(taskObj?.driverId != driverId) {
-                    await FirebaseService.createFirebaseNotification2([{
-                        taskId: serverTaskId,
-                        token: '',
-                        driverId: taskObj.driverId,
-                        vehicleNo: taskObj.vehicleNumber
-                    }], 'INFO', 'Task cancelled.')
+                if(taskObj){
+                    if(taskObj.driverId != driverId) {
+                        await FirebaseService.createFirebaseNotification2([{
+                            taskId: serverTaskId,
+                            token: '',
+                            driverId: taskObj.driverId,
+                            vehicleNo: taskObj.vehicleNumber
+                        }], 'INFO', 'Task cancelled.')
+                    }
                 }
+
             }
             await systemJobTask()
 
@@ -1349,136 +1352,6 @@ module.exports = {
             return res.json(utils.response(0, error));
         } 
     },
-    cancalTaskByMb: async function (req, res) {
-        try {
-            let mtAdminID = req.body.mtAdminId;
-            let cancelledCause = req.body.cancelledCause;
-            let taskObj = await Task.findOne({where: { indentId: mtAdminID }})
-            let taskId = null;
-            if(taskObj){
-                taskId = taskObj.taskId;
-                if(taskObj.mobileStartTime || (taskObj.vehicleStatus).toLowerCase() == 'cancelled') return res.json(utils.response(0, `The operation failed because the state of the data has changed.`));
-            }
-            let loanObjStatus = await loan.findOne({where: { taskId: 'AT-'+mtAdminID }});
-            let loanObj2Status = await loanRecord.findOne({where: { taskId: 'AT-'+mtAdminID }});
-            if(loanObjStatus || loanObj2Status) {
-                if(loanObjStatus) {
-                    if(loanObjStatus.actualStartTime || loanObjStatus.actualEndTime) {
-                        return res.json(utils.response(0, 'The operation failed because the current data status has changed.'));
-                    }
-                }
-                if(loanObj2Status) {
-                    return res.json(utils.response(0, 'The operation failed because the current data status has changed.'));
-                }
-            }
-
-            const adddFirebse = async function (){
-                if(taskObj) {
-                    if(taskObj.driverId){
-                        await FirebaseService.createFirebaseNotification2([{
-                            taskId: taskId,
-                            token: '',
-                            driverId: taskObj.driverId,
-                            vehicleNo: taskObj.vehicleNumber
-                        }], 'INFO', 'Task cancelled!')
-                    }
-                }
-            }
-            await adddFirebse()
-            await sequelizeObj.transaction(async transaction => {
-                let mtAdminObj = await MtAdmin.findOne({ where: { id: mtAdminID } })
-                const updateTaskByCancel = async function (){
-                    await MtAdmin.update({ cancelledDateTime: moment().format('YYYY-MM-DD HH:mm:ss'), cancelledCause: cancelledCause, amendedBy: req.cookies.userId }, { where: { id: mtAdminID  } });
-                    if(taskObj) {
-                        await Task.update({ vehicleStatus: 'Cancelled', driverStatus: 'Cancelled' }, { where: { indentId: (mtAdminID).toString() } });
-                        await OperationRecord.create({
-                            id: null,
-                            operatorId: req.cookies.userId,
-                            businessType: 'atms task assign',
-                            businessId: taskId,
-                            optType: 'Cancel',
-                            beforeData: `${ JSON.stringify([{driverStatus: taskObj.driverStatus, vehicleStatus: taskObj.vehicleStatus},{cancelledDateTime: mtAdminObj.cancelledDateTime, cancelledCause: mtAdminObj.cancelledCause, amendedBy: mtAdminObj.amendedBy}]) }`,
-                            afterData: `${ JSON.stringify([{driverStatus: 'Cancelled', vehicleStatus: 'Cancelled'},{cancelledDateTime: moment().format('YYYY-MM-DD HH:mm:ss'), cancelledCause: cancelledCause, amendedBy: req.cookies.userId}]) }`,
-                            optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                            remarks: 'cancel atms task'
-                        })
-                    }
-                }
-                await updateTaskByCancel()
-
-                const addLoan = async function (){
-                    if(mtAdminObj.needVehicle == 0 || mtAdminObj.driverNum == 0){
-                        let loanOut = await loan.findOne({ where: { taskId: 'AT-'+mtAdminID } })
-                        if(loanOut) {
-                            await loanRecord.create({
-                                driverId: loanOut.driverId,
-                                vehicleNo: loanOut.vehicleNo,
-                                indentId: loanOut.indentId, 
-                                taskId: loanOut.taskId,
-                                startDate: loanOut.startDate,
-                                endDate: loanOut.endDate, 
-                                groupId: loanOut.groupId,
-                                returnDate: moment().format('YYYY-MM-DD HH:mm:ss'),
-                                returnBy: req.cookies.userId,
-                                creator: loanOut.creator,
-                                returnRemark: cancelledCause,
-                                actualStartTime: loanOut.actualStartTime,
-                                actualEndTime: loanOut.actualEndTime,
-                                unitId: loanOut.unitId,
-                                activity: loanOut.activity,
-                                purpose: loanOut.purpose,
-                                createdAt: loanOut.createdAt
-                            });
-                            await loan.destroy({ where: { taskId: 'AT-'+mtAdminID } });
-                            await OperationRecord.create({
-                                id: null,
-                                operatorId: req.cookies.userId,
-                                businessType: 'atms task assign',
-                                businessId: 'AT-'+mtAdminID,
-                                optType: 'cancel loan',
-                                beforeData: `driverId:${ loanOut.driverId }, vehicleNo:${ loanOut.vehicleNo }`,
-                                afterData: `driverId:${ loanOut.driverId }, vehicleNo:${ loanOut.vehicleNo }`,
-                                optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                                remarks: `cancel loan ${ loanOut.driverId ? 'driver' : '' }${ loanOut.vehicleNo ? 'vehicle' : '' }` 
-                            })
-                        }
-                    } 
-                }
-                await addLoan()
-            }).catch(error => {
-                throw error
-            })
-            return res.json(utils.response(1, true));
-        } catch (error) {
-            log.error(error)
-            return res.json(utils.response(0, error));
-        }
-    },
-    getMBTaskById: async function (req, res) {
-        try {
-            let mtAdminId = req.body.mtAdminId;
-            let taskMtAdmin = await sequelizeObj.query(
-                `
-                    SELECT m.id, m.purpose, m.activityName, m.remarks, t.taskId, m.vehicleType, m.destination,  
-                    m.driverNum, m.needVehicle,
-                    DATE_FORMAT(m.startDate, '%Y-%m-%d %H:%i:%s') as startDate, 
-                    DATE_FORMAT(m.endDate, '%Y-%m-%d %H:%i:%s') as endDate,
-                    m.driverId, d.driverName,d.contactNumber, m.unitId, m.vehicleNumber, m.reportingLocation,
-                    IF(t.hub IS NULL, u.unit, t.hub) AS hub,
-                    IF(t.node IS NULL, u.subUnit, t.node) AS node
-                    FROM mt_admin m
-                    LEFT JOIN unit u ON u.id = m.unitId 
-                    LEFT JOIN task t ON t.indentId = m.id
-                    LEFT JOIN driver d ON d.driverId = m.driverId
-                    WHERE m.id = ? AND m.cancelledDateTime IS NULL
-                `, { type: QueryTypes.SELECT, replacements: [mtAdminId] }
-            );
-            return res.json(utils.response(1, taskMtAdmin[0]));
-        } catch (error) {
-            log.error(error)
-            return res.json(utils.response(0, error));
-        } 
-    },
     TaskUtils,
     initSystemTaskByTripId: async function(req, res){
         try{
@@ -1509,47 +1382,52 @@ module.exports = {
             
             let newRequestList = []
             if(bothNum > 0) {
-                let requestList = []
-                for(let item of unitIdList){
-                    let newVehicleList = vehicleList.filter(itemObj => itemObj.unitId == item)
-                    let newDriverList = driverList.filter(itemObj => itemObj.unitId == item)
-                    if(newVehicleList.length <= 0 || newDriverList.length <= 0){
-                        continue;
-                    }
-                    let maxList = null;
-                    let minList = null;
-                    const initMaxMinList = function (){
-                        if(newVehicleList.length >=  newDriverList.length){
-                            maxList = newVehicleList.slice(0, newDriverList.length)
-                            minList = newDriverList;
-                        } else {
-                            maxList = newDriverList.slice(0, newVehicleList.length)
-                            minList = newVehicleList;
+                const initRequestListByUnitId = function (){
+                    let requestList = []
+                    for(let item of unitIdList){
+                        let newVehicleList = vehicleList.filter(itemObj => itemObj.unitId == item)
+                        let newDriverList = driverList.filter(itemObj => itemObj.unitId == item)
+                        if(newVehicleList.length <= 0 || newDriverList.length <= 0){
+                            continue;
                         }
-                    }
-                    initMaxMinList()
-
-                    const initRequestList = function (){
-                        // Take the arrays corresponding to driver and vehicle
-                        for (let index = 0; index < maxList.length; index++) {
-                            for(let index2 = 0; index2 < minList.length; index2++){
-                                if(index == index2){
-                                    let obj = {
-                                        hub: maxList[index].hub,
-                                        node: maxList[index].node,
-                                        unitId: item,
-                                        vehicleNo: maxList[index].vehicleNo ?? minList[index].vehicleNo,
-                                        driverId: maxList[index].driverId ?? minList[index].driverId
+                        let maxList = null;
+                        let minList = null;
+                        const initMaxMinList = function (){
+                            if(newVehicleList.length >=  newDriverList.length){
+                                maxList = newVehicleList.slice(0, newDriverList.length)
+                                minList = newDriverList;
+                            } else {
+                                maxList = newDriverList.slice(0, newVehicleList.length)
+                                minList = newVehicleList;
+                            }
+                        }
+                        initMaxMinList()
+    
+                        const initRequestList = function (){
+                            // Take the arrays corresponding to driver and vehicle
+                            for (let index = 0; index < maxList.length; index++) {
+                                for(let index2 = 0; index2 < minList.length; index2++){
+                                    if(index == index2){
+                                        let obj = {
+                                            hub: maxList[index].hub,
+                                            node: maxList[index].node,
+                                            unitId: item,
+                                            vehicleNo: maxList[index].vehicleNo ?? minList[index].vehicleNo,
+                                            driverId: maxList[index].driverId ?? minList[index].driverId
+                                        }
+                                        requestList.push(obj)
+                                    } else {
+                                        continue;
                                     }
-                                    requestList.push(obj)
-                                } else {
-                                    continue;
                                 }
                             }
                         }
+                        initRequestList()
                     }
-                    initRequestList()
+                    return requestList;
                 }
+                let requestList = initRequestListByUnitId()
+
                 const initNewRequestList = function(){
                     let __NewRequestList = requestList.slice(0, bothNum)
                     if(__NewRequestList.length <= 0) __NewRequestList = requestList
@@ -1564,8 +1442,9 @@ module.exports = {
                     }
                 }
                 initNewRequestList()
-            } else {
-                const initRequest = async function (){
+            }
+            const initRequest = async function (){
+                if(bothNum <= 0){
                     //Intercept a specified number of cars and drivers
                     if(toOnlyNum > 0){
                         newRequestList = driverList.slice(0, toOnlyNum)
@@ -1576,8 +1455,8 @@ module.exports = {
                         if(newRequestList.length <= 0) newRequestList = vehicleList
                     }
                 }
-                await initRequest()
             }
+            await initRequest()
             log.warn(`newRequestList =>${ JSON.stringify(newRequestList) }`)
             if(newRequestList.length < 1) return res.json(utils.response(1, true));
             for (let index = 0; index < taskData.length; index++) {
@@ -1590,6 +1469,7 @@ module.exports = {
                         if(taskData[index].referenceId) {
                             preMvTaskId = `AT-${ taskData[index].id }`
                         }
+                        let __userId = req.cookies ? req.cookies.userId : null
                         if(taskData[index].taskType == 'both'){
                             if(newRequestList[index2].driverId && newRequestList[index2].vehicleNo){
                                 //job_taskId, driverId, vehicleNo, hub, node, unitId, userId, systemStatus, serverTaskId
@@ -1604,14 +1484,14 @@ module.exports = {
                                     );
                                 if (result.code == 0)  return res.json(utils.response(0, result.message));
                                 // 2024-02-20 atms indent resp
-                                await TaskUtils.initAtmsIndentResp(taskData[index].id, req.cookies ? req.cookies.userId : null)
+                                await TaskUtils.initAtmsIndentResp(taskData[index].id, __userId)
                             }
                         } else if(newRequestList[index2].driverId || newRequestList[index2].vehicleNo){
                             //job_taskId, driverId, vehicleNo, hub, node, unitId, userId, systemStatus, serverTaskId
                             let result = await TaskUtils.assignTaskByTaskId({
                                 job_taskId: taskData[index].id, 
-                                driverId: newRequestList[index2].driverId || null, 
-                                vehicleNo: newRequestList[index2].vehicleNo || null, 
+                                driverId: newRequestList[index2].driverId ?? null, 
+                                vehicleNo: newRequestList[index2].vehicleNo ?? null, 
                                 hub: newRequestList[index2].hub, 
                                 node: newRequestList[index2].node,
                                 unitId: newRequestList[index2].unitId,
@@ -1619,7 +1499,7 @@ module.exports = {
                             });
                             if (result.code == 0)  return res.json(utils.response(0, result.message));
                             // 2024-02-20 atms indent resp
-                            await TaskUtils.initAtmsIndentResp(taskData[index].id, req.cookies ? req.cookies.userId : null)
+                            await TaskUtils.initAtmsIndentResp(taskData[index].id, __userId)
                         }
                     }
                     await initAssignTask()

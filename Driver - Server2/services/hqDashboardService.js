@@ -843,7 +843,7 @@ const getVehicleDeployable = async function (userType, date, unitIdList, type, v
         sqlVehicleStatusOrDeployed += `
             and vv.currentUnitId in(?)
         `
-        vehicleStatusOrDeployedreplacements.push(unitIdList.join(","))
+        vehicleStatusOrDeployedreplacements.push(unitIdList)
     }
     sqlVehicleStatusOrDeployed += ` group by vv.currentStatus`
     let vehicleStatusOrDeployed = await sequelizeObj.query(sqlVehicleStatusOrDeployed, { type: QueryTypes.SELECT, replacements: vehicleStatusOrDeployedreplacements });
@@ -1063,7 +1063,7 @@ const getDriverDeployable = async function (userType, date, unitIdList, type, ve
         sqlDriverDeployable += `
             and d.driverId in (?)
         `
-        driverDeployablereplacements.push(driverByGroup.join(","))
+        driverDeployablereplacements.push(driverByGroup)
     }
     if(vehicle){
         sqlDriverDeployable += ` and dc.vehicleType = ?`
@@ -1077,7 +1077,7 @@ const getDriverDeployable = async function (userType, date, unitIdList, type, ve
         sqlDriverDeployable += `
             and dd.currentUnitId in(?)
         `
-        driverDeployablereplacements.push(unitIdList.join(","))
+        driverDeployablereplacements.push(unitIdList)
     }
     sqlDriverDeployable += ` group by dd.currentStatus`
     let driverDeployable = await sequelizeObj.query(sqlDriverDeployable, { type: QueryTypes.SELECT, replacements: driverDeployablereplacements });

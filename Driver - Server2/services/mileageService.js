@@ -2,14 +2,11 @@ const log = require('../log/winston').logger('Mileage Service');
 const utils = require('../util/utils');
 const CONTENT = require('../util/content');
 
-const { Mileage } = require('../model/mileage');
-const { Device } = require('../model/device');
 const { Vehicle } = require('../model/vehicle');
 
 const { Sequelize, Op, QueryTypes } = require('sequelize');
 const { sequelizeObj } = require('../db/dbConf')
 
-const groupService = require('../services/groupService');
 const userService = require('../services/userService');
 const unitService = require('../services/unitService');
 const { Driver } = require('../model/driver.js');

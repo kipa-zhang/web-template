@@ -1,12 +1,10 @@
 const log = require('../log/winston').logger('SOS Service');
 
 const utils = require('../util/utils');
-const conf = require('../conf/conf');
 
 const { MT_RAC } = require('../model/mtRac.js');
 const { SOS } = require('../model/sos.js');
 
-const { TaskUtils } = require('./driverService')
 const { UserUtils } = require('./userService')
 const { UnitUtils } = require('./unitService');
 const { getDriverCategory } = require('./driverService');
@@ -16,7 +14,6 @@ const userService = require('./userService');
 const { sequelizeObj } = require('../db/dbConf');
 const { sequelizeSystemObj } = require('../db/dbConf_system');
 const { QueryTypes, Op } = require('sequelize');
-const moment = require('moment');
 
 const getPastSOS = async function (driverId, id) {
     try {
@@ -102,7 +99,7 @@ module.exports = {
      * Search by task, will use task's hub/node !!!
      */
     getSOSList: async function (req, res) {
-        try {   
+        try {
             let { hub, node, group, selectedDate, sosType, vehicleNo, driverName, pageNum, pageLength, sortBy, sort } = req.body;
 
             group = group ? Number.parseInt(group) : null
@@ -179,32 +176,66 @@ module.exports = {
             `
             let sql = ` SELECT * FROM ( ${ baseSql } ) ss WHERE 1=1 `
             let replacements = []
-            if (selectedDate) {
-                sql += ` AND Date(ss.createdAt) = ? `
-                replacements.push(selectedDate)
-            }
 
-            if (sosType) {
-                sql += ` AND ss.type = ? `
-                replacements.push(sosType)
+            const getLimitSql = function () {
+                if (selectedDate) {
+                    sql += ` AND Date(ss.createdAt) = ? `
+                    replacements.push(selectedDate)
+                }
+    
+                if (sosType) {
+                    sql += ` AND ss.type = ? `
+                    replacements.push(sosType)
+                }
+                if (vehicleNo) {
+                    sql += ` AND ss.vehicleNumber = ? `
+                    replacements.push(vehicleNo)
+                }
+                if (driverName) {
+                    sql += ` AND ss.driverName LIKE ? `
+                    replacements.push(`%${ driverName }%`)
+                }
             }
-            if (vehicleNo) {
-                sql += ` AND ss.vehicleNumber = ? `
-                replacements.push(vehicleNo)
-            }
-            if (driverName) {
-                sql += ` AND ss.driverName LIKE ? `
-                replacements.push(`%${ driverName }%`)
-            }
+            getLimitSql()
 
-            if (user.userType.toLowerCase() == 'customer') {
-                sql += ` AND ss.groupId = ? `;
-                replacements.push(user.unitId)
-            } else if (user.userType.toLowerCase() == 'hq') {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+            const getPermitSql = async function () {
+                if (user.userType.toLowerCase() == 'customer') {
+                    sql += ` AND ss.groupId = ? `;
+                    replacements.push(user.unitId)
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+    
+                    const getLimit2Sql = function () {
+                        // HQ user has group permission
+                        if (user.group?.length) {
+                            if (group) {
+                                sql += ` AND ss.groupId = ? `
+                                replacements.push(group);
+                            } else if (group == 0) {
+                                sql += ` AND ss.groupId IS NOT NULL `
+                            } else {
+                                sql += ` AND ss.groupId IS NULL `
+                            }
+                        }
 
-                // HQ user has group permission
-                if (user.group?.length) {
+                        let tempSqlList = []
+                        if (unitIdList.length) {
+                            tempSqlList.push(` (ss.unitId IN (?) AND ss.groupId IS NULL) `)
+                            replacements.push(unitIdList);
+                        }
+                        if (groupIdList.length) {
+                            tempSqlList.push(` ss.groupId in (?) `)
+                            replacements.push(groupIdList);
+                        }
+                        
+                        if (tempSqlList.length) {
+                            sql += ` AND (${ tempSqlList.join(' OR ') }) `
+                        } else {
+                            sql += ` AND 1=2 `
+                        }
+                    }
+                    getLimit2Sql()
+                } else if (user.userType.toLowerCase() == 'administrator') {
                     if (group) {
                         sql += ` AND ss.groupId = ? `
                         replacements.push(group);
@@ -213,40 +244,16 @@ module.exports = {
                     } else {
                         sql += ` AND ss.groupId IS NULL `
                     }
-                }
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` (ss.unitId IN (?) AND ss.groupId IS NULL) `)
-                    replacements.push(unitIdList);
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` ss.groupId in (?) `)
-                    replacements.push(groupIdList);
-                }
-                
-                if (tempSqlList.length) {
-                    sql += ` AND (${ tempSqlList.join(' OR ') }) `
-                } else {
-                    sql += ` AND 1=2 `
-                }
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                if (group) {
-                    sql += ` AND ss.groupId = ? `
-                    replacements.push(group);
-                } else if (group == 0) {
-                    sql += ` AND ss.groupId IS NOT NULL `
-                } else {
-                    sql += ` AND ss.groupId IS NULL `
-                }
-            } else if (user.userType.toLowerCase() == 'unit') {
-                let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
-                if (hubNodeIdList.length) {
-                    // Maybe not more than 1000 node in one hub
-                    sql += ` AND ( ss.unitId IN (?) AND ss.groupId IS NULL ) `
-                    replacements.push(hubNodeIdList);
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
+                    if (hubNodeIdList.length) {
+                        // Maybe not more than 1000 node in one hub
+                        sql += ` AND ( ss.unitId IN (?) AND ss.groupId IS NULL ) `
+                        replacements.push(hubNodeIdList);
+                    }
                 }
             }
+            await getPermitSql()
             
             if (node && hub) {
                 // Maybe not more than 1000 drivers

@@ -201,42 +201,46 @@ module.exports.getNogoZoneList = async function (req, res) {
             `
             let replacements = []
 
-            let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId)
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                sql += ` AND (u.unitId = ? AND u.userType = ?) `
-                replacements.push(user.unitId)
-                replacements.push(CONTENT.USER_TYPE.CUSTOMER)
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR ].includes(user.userType)) {
-                sql += ` AND 1=1 `
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` (u.unitId in ( ? ) AND u.userType != ?) `)
-                    replacements.push(unitIdList)
+            const getPermitSql = async function () {
+                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId)
+                if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
+                    sql += ` AND (u.unitId = ? AND u.userType = ?) `
+                    replacements.push(user.unitId)
                     replacements.push(CONTENT.USER_TYPE.CUSTOMER)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` (u.unitId in ( ? ) AND u.userType = ? ) `)
-                    replacements.push(groupIdList)
+                } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR ].includes(user.userType)) {
+                    sql += ` AND 1=1 `
+                } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
+                    let tempSqlList = []
+                    if (unitIdList.length) {
+                        tempSqlList.push(` (u.unitId in ( ? ) AND u.userType != ?) `)
+                        replacements.push(unitIdList)
+                        replacements.push(CONTENT.USER_TYPE.CUSTOMER)
+                    }
+                    if (groupIdList.length) {
+                        tempSqlList.push(` (u.unitId in ( ? ) AND u.userType = ? ) `)
+                        replacements.push(groupIdList)
+                        replacements.push(CONTENT.USER_TYPE.CUSTOMER)
+                    }
+                    // hq create no go zone
+                    tempSqlList.push(` u.hq = ? `)
+                    replacements.push(user.hq)
+                    
+                    if (tempSqlList.length) {
+                        sql += ` and (${ tempSqlList.join(' OR ') }) `
+                    } else {
+                        sql += ` and 1=2 `
+                    }
+                } else if (user.userType == CONTENT.USER_TYPE.UNIT) {
+                    let permitUnitIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(user.unit, user.subUnit);
+                    sql += ` AND (u.unitId IN (?) AND u.userType != ? ) `
+                    replacements.push(permitUnitIdList)
                     replacements.push(CONTENT.USER_TYPE.CUSTOMER)
-                }
-                // hq create no go zone
-                tempSqlList.push(` u.hq = ? `)
-                replacements.push(user.hq)
-                
-                if (tempSqlList.length) {
-                    sql += ` and (${ tempSqlList.join(' OR ') }) `
                 } else {
-                    sql += ` and 1=2 `
+                    sql += ` AND 1=2 `
                 }
-            } else if (user.userType == CONTENT.USER_TYPE.UNIT) {
-                let permitUnitIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(user.unit, user.subUnit);
-                sql += ` AND (u.unitId IN (?) AND u.userType != ? ) `
-                replacements.push(permitUnitIdList)
-                replacements.push(CONTENT.USER_TYPE.CUSTOMER)
-            } else {
-                sql += ` AND 1=2 `
             }
+
+            await getPermitSql()
 
             sql += ` GROUP BY nz.id `
 

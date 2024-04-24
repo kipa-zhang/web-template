@@ -768,81 +768,99 @@ const parseKeyOptRecordData = async function(excelDataList) {
 }
 
 const checkKeyOptRecord = async function (keyOptRecordList) {
-    if (keyOptRecordList && keyOptRecordList.length > 0) {
-        for (let keyOptRecord of keyOptRecordList) {
-            let nric = keyOptRecord.driverNric;
+    for (let keyOptRecord of keyOptRecordList) {
+        let nric = keyOptRecord.driverNric;
+        function checkNric() {
             if (!nric) {
-                keyOptRecord.errorMsg += "Driver Nric is empty; " ; continue;
+                keyOptRecord.errorMsg += "Driver Nric is empty; " ;
             } else if (nric.toString().length < 5) {
-                keyOptRecord.errorMsg += `Driver Nric length is ${nric.toString().length}; ` ; continue;
+                keyOptRecord.errorMsg += `Driver Nric length is ${nric.toString().length}; ` ;
             }
+        }
+        checkNric();
+        if (keyOptRecord.errorMsg) continue;
+
+        async function checkDriver() {
             let driverName = keyOptRecord.driverName;
             if (!driverName) {
-                keyOptRecord.errorMsg += "Driver Name is empty; " ; continue;
+                keyOptRecord.errorMsg += "Driver Name is empty; " ;
+                return;
             }
             //check driver exist
             let existDriver = await Driver.findOne({where: {driverName}});
             if (!existDriver) {
-                keyOptRecord.errorMsg += `Non-existent driver, driverName: ${driverName}; ` ; continue;
+                keyOptRecord.errorMsg += `Non-existent driver, driverName: ${driverName}; ` ;
+                return;
             }
             let newNric = (nric.toString()).substr(0, 1)+(nric.toString()).substr(((nric).toString()).length-4, 4);
             let loginName = newNric + ((driverName.toString()).replace(/\s*/g,"").toUpperCase()).substr(0, 3);
 
             let driver = await Driver.findOne({where: {loginName}});
             if (!driver) {
-                keyOptRecord.errorMsg += `Non-existent driver, loginName: ${loginName}; ` ; continue;
+                keyOptRecord.errorMsg += `Non-existent driver, loginName: ${loginName}; `;
             } else {
                 keyOptRecord.driverId = driver.driverId;
             }
+        }
+        await checkDriver();
+        if (keyOptRecord.errorMsg) continue;
 
+        async function checkSiteInfo() {
             if (!keyOptRecord.boxName) {
-                keyOptRecord.errorMsg += "Box Name is empty; "; continue;
+                keyOptRecord.errorMsg += "Box Name is empty; ";
             } else {
                 let siteInfoList = await KeypressSiteinfo.findAll({where: { boxName: keyOptRecord.boxName }})
                 if (!siteInfoList || siteInfoList.length == 0) {
-                    keyOptRecord.errorMsg += `Box Name: ${keyOptRecord.boxName} not exist; `; continue;
+                    keyOptRecord.errorMsg += `Box Name: ${keyOptRecord.boxName} not exist; `;
                 } else if (siteInfoList.length > 1) {
-                    keyOptRecord.errorMsg += `Box Name: ${keyOptRecord.boxName} has ${siteInfoList.length} data; `; continue;
+                    keyOptRecord.errorMsg += `Box Name: ${keyOptRecord.boxName} has ${siteInfoList.length} data; `;
                 } else {
                     keyOptRecord.siteId = siteInfoList[0].siteId;
                 }
             }
+        }
+        await checkSiteInfo();
+        if (keyOptRecord.errorMsg) continue;
+
+        async function checkOthers() {
             if (!keyOptRecord.vehicleNumber) {
-                keyOptRecord.errorMsg += "VehicleNumber is empty; "; continue;
+                keyOptRecord.errorMsg += "VehicleNumber is empty; "; return;
             } else {
                 let vehicle = await Vehicle.findOne({where: { vehicleNo: keyOptRecord.vehicleNumber }});
                 if (!vehicle) {
-                    keyOptRecord.errorMsg += `Vehicle: ${keyOptRecord.vehicleNumber} not exist; `; continue;
+                    keyOptRecord.errorMsg += `Vehicle: ${keyOptRecord.vehicleNumber} not exist; `; return;
                 } else if (!vehicle.keyTagId) {
-                    keyOptRecord.errorMsg += `Vehicle: ${keyOptRecord.vehicleNumber} not config keyTagId; `; continue;
+                    keyOptRecord.errorMsg += `Vehicle: ${keyOptRecord.vehicleNumber} not config keyTagId; `; return;
                 }
             }
             if (!keyOptRecord.keySlotNo) {
-                keyOptRecord.errorMsg += "Key Slot No. is empty; "; continue;
+                keyOptRecord.errorMsg += "Key Slot No. is empty; "; return;
             }
             if (!keyOptRecord.optType) {
-                keyOptRecord.errorMsg += "Operation Type is empty; "; continue;
+                keyOptRecord.errorMsg += "Operation Type is empty; "; return;
             } else if (keyOptRecord.optType.toLowerCase() != 'withdraw' && keyOptRecord.optType.toLowerCase() != 'return') {
-                keyOptRecord.errorMsg += `Operation Type: ${keyOptRecord.optType} unsupport; `; continue;
+                keyOptRecord.errorMsg += `Operation Type: ${keyOptRecord.optType} unsupport; `; return;
             }
             if (!keyOptRecord.transactDate) {
-                keyOptRecord.errorMsg += "Transact Date is empty; "; continue;
+                keyOptRecord.errorMsg += "Transact Date is empty; "; return;
             }
             if (!keyOptRecord.transactTime) {
-                keyOptRecord.errorMsg += "Transact Time is empty; "; continue;
+                keyOptRecord.errorMsg += "Transact Time is empty; "; return;
             }
             if(!keyOptRecord.reason){
-                keyOptRecord.errorMsg += "Reason is empty; "; continue;
+                keyOptRecord.errorMsg += "Reason is empty; ";
             }
-
-            //check startTime  endTime
-            let transactDateTime = moment(keyOptRecord.transactDate.trim() + ' ' + keyOptRecord.transactTime.trim(), 'YYYY-MM-DD HH:mm:ss');
-            let transactDateTimeStr = transactDateTime.format('YYYY-MM-DD HH:mm:ss');
-            if (transactDateTimeStr && transactDateTimeStr.toLowerCase() == 'invalid date') {
-                keyOptRecord.errorMsg += `TransactDateTime ${keyOptRecord.transactDate.trim() + ' ' + keyOptRecord.transactTime.trim()} format error; `; continue;
-            }
-            keyOptRecord.transactDateTime = transactDateTimeStr;
         }
+        await checkOthers();
+        if (keyOptRecord.errorMsg) continue;
+
+        //check startTime  endTime
+        let transactDateTime = moment(keyOptRecord.transactDate.trim() + ' ' + keyOptRecord.transactTime.trim(), 'YYYY-MM-DD HH:mm:ss');
+        let transactDateTimeStr = transactDateTime.format('YYYY-MM-DD HH:mm:ss');
+        if (transactDateTimeStr && transactDateTimeStr.toLowerCase() == 'invalid date') {
+            keyOptRecord.errorMsg += `TransactDateTime ${keyOptRecord.transactDate.trim() + ' ' + keyOptRecord.transactTime.trim()} format error; `; continue;
+        }
+        keyOptRecord.transactDateTime = transactDateTimeStr;
     }
     return keyOptRecordList;
 }

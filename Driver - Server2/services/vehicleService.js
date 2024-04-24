@@ -720,7 +720,8 @@ module.exports.getVehicleTasks = async function (req, res) {
         let replacements = [];
         //2023-07-05 CUSTOMER UNIT 
         let customerGroupId = '';
-        if(user.userType.toUpperCase() == CONTENT.USER_TYPE.CUSTOMER) {
+        let userType = user.userType.toUpperCase();
+        if(userType == CONTENT.USER_TYPE.CUSTOMER) {
             customerGroupId = user.unitId;
             unit = null;
             subUnit = null;
@@ -742,7 +743,7 @@ module.exports.getVehicleTasks = async function (req, res) {
             } else {
                 return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
             }
-        } else if (user.userType == CONTENT.USER_TYPE.HQ) {
+        } else if (userType == CONTENT.USER_TYPE.HQ) {
             async function buildHQParams() {
                 if (selectGroup == '1') {
                     unit = null;
@@ -768,7 +769,7 @@ module.exports.getVehicleTasks = async function (req, res) {
             if (!buildResult) {
                 return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
             }
-        } else if (user.userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
+        } else if (userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
             function buildAdminParams() {
                 if (selectGroup == '1') {
                     unit = null;

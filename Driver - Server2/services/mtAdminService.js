@@ -7,27 +7,17 @@ const { Sequelize, Op, QueryTypes } = require('sequelize');
 const { sequelizeObj } = require('../db/dbConf')
 const { sequelizeSystemObj } = require('../db/dbConf_system')
 
-const { CheckList } = require('../model/checkList');
 const { MtAdmin } = require('../model/mtAdmin');
-const { Vehicle } = require('../model/vehicle.js');
-const { Driver } = require('../model/driver');
-const { PermitType } = require('../model/permitType');
 const { Unit } = require('../model/unit.js');
 const { Task } = require('../model/task.js');
 const { lowerCase } = require('lodash');
 const { User } = require('../model/user.js');
-const { ServiceMode } = require('../model/serviceMode');
 const { PurposeMode } = require('../model/purposeMode');
 
-const { VehicleRelation } = require('../model/vehicleRelation.js');
 const { OperationRecord } = require('../model/operationRecord');
 const vehicleService = require('../services/vehicleService.js');
-const { loan } = require('../model/loan');
-
 
 const userService = require('../services/userService');
-const { loanRecord } = require('../model/loanRecord');
-
 const unitService = require('../services/unitService');
 
 const purposeList = ['avi', 'wpt', 'mpt', 'pm']
@@ -207,7 +197,7 @@ let TaskUtils = {
             if(groupId){
                 if(groupId.length > 0){
                     sql += ` and vv.unitId in(?)`
-                    replacements.push(groupId.join(","))
+                    replacements.push(groupId)
                 } else {
                     sql += ` and vv.unitId = ?`
                     replacements.push(groupId)
@@ -394,7 +384,7 @@ let TaskUtils = {
             if(unitId){
                 if(unitId.length > 0){
                     sql +=  ` and d.groupId in(?)  `
-                    replacements.push(unitId.join(","))
+                    replacements.push(unitId)
                 } else {
                     sql += ` and d.groupId = ?`
                     replacements.push(unitId)
@@ -491,7 +481,7 @@ let TaskUtils = {
             if(unitId){
                 if(unitId.length > 0){
                     sql2 += ` and dd.unitId in(?)`
-                    replacements2.push(unitId.join(","))
+                    replacements2.push(unitId)
                 } else {
                     sql2 += ` and dd.unitId = ?`
                     replacements2.push(unitId)

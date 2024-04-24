@@ -66,7 +66,7 @@ let TaskUtils = {
             sql += `
                 and t.driverId in(?)
             `
-            replacements.push(driverByGroup.join(","))
+            replacements.push(driverByGroup)
         }
         sql += ` AND r.riskLevel = 'high'`
         let mtRacByRiskLevel = await sequelizeObj.query(sql, { type: QueryTypes.SELECT, replacements: replacements });
@@ -118,7 +118,7 @@ let TaskUtils = {
         let replacements = [];
         if(driverByGroup.length > 0){
             sql += ` and d.driverId in (?)`
-            replacements.push(driverByGroup.join(","))
+            replacements.push(driverByGroup)
         }
         sql += ` AND d.state LIKE '%sos%' GROUP BY d.driverId`
         let driverByState = await sequelizeObj.query(sql, { type: QueryTypes.SELECT, replacements: replacements });
@@ -190,7 +190,7 @@ let TaskUtils = {
         if(driverData){
             if(driverData.length > 0){
                 sql += ` and d.driverId in (?)`
-                replacements.push(driverData.join(","))
+                replacements.push(driverData)
             } else {
                 sql += ` and 1=2`
             }
@@ -291,7 +291,7 @@ let TaskUtils = {
                 sql += ` 
                     and d.driverId in (?)
                 `
-                replacements.push(driverData.join(","))
+                replacements.push(driverData)
             } else {
                 sql += ` and 1=2`
             }
@@ -528,7 +528,7 @@ let TaskUtils = {
                 if(unitId){
                     if(unitId.length > 0){
                         sql += ` and ll.groupId in(?)`
-                        replacements.push(unitId.join(","))
+                        replacements.push(unitId)
                     } else {
                         sql += ` and ll.groupId = ?`
                         replacements.push(unitId)
@@ -548,10 +548,10 @@ let TaskUtils = {
                 `
                 if(unitId){
                     if(unitId.length > 0){
-                        sql += ` and l.groupId in(${ unitId.join(",") })`
-                        replacements.push(unitId.join(","))
+                        sql += ` and l.groupId in(?)`
+                        replacements.push(unitId)
                     } else {
-                        sql += ` and l.groupId = ${ unitId }`
+                        sql += ` and l.groupId = ?`
                         replacements.push(unitId)
                     }
                 }
@@ -729,7 +729,7 @@ module.exports.getDriverByRoleByHub = async function (req, res) {
             if(driverByGroup){
                 if(driverByGroup.length > 0){
                     taskDriverTotal2Sql += ` and d.driverId in(?)`
-                    replacements.push(driverByGroup.join(","))
+                    replacements.push(driverByGroup)
                 }
             }
             
@@ -862,7 +862,7 @@ module.exports.getDriverByRoleByNode = async function (req, res) {
             if(driverByGroup){
                 if(driverByGroup.length > 0){
                     sql += ` and d.driverId in (?)`
-                    replacements.push(driverByGroup.join(","))
+                    replacements.push(driverByGroup)
                 }
             }
             
@@ -1111,7 +1111,7 @@ module.exports.getVehicleByPurposeByNode = async function (req, res) {
             if(vehicleData){
                 if(vehicleData.length > 0){
                     sql += ` where veh.vehicleNo in (?)`
-                    replacements.push(`'${ vehicleData.join("','") }'`)
+                    replacements.push(vehicleData)
                 } else {
                     sql += ' and 1=2'
                 }
@@ -1641,12 +1641,7 @@ module.exports.getDriverAndVehicleDeployedTotalByHub = async function (req, res)
         let unitList = await TaskUtils.initUnitListByUnitHub(unitHub, userUnit)
         
         // data by unit
-        const initDataByUnit = async function (item, date){
-            let driverByDeployable = null
-            let vehicleByDeployable = null
-            let obj
-            driverByDeployable = await TaskUtils.getDriverStatusOrDeployed(null, date, '', '-1')
-            vehicleByDeployable = await TaskUtils.getVehicleStatusOrDeployed(null, date, '', req.cookies.userType)
+        const initDataByUnit = async function (item, date, driverByDeployable, vehicleByDeployable){
             let assignedDriverNumber = 0
             let assignedVehicleNumber = 0
             driverByDeployable.forEach((obj)=>{
@@ -1670,7 +1665,7 @@ module.exports.getDriverAndVehicleDeployedTotalByHub = async function (req, res)
             if(!modulePage.vehicleShow){
                 assignedVehicleNumber = 0;
             }
-            obj = {
+            let obj = {
                 weekDate: date,
                 unit: item.unit,
                 assignedDriverNumber: assignedDriverNumber,
@@ -1679,26 +1674,17 @@ module.exports.getDriverAndVehicleDeployedTotalByHub = async function (req, res)
             return obj
         }
         
+        let groupId = userUnit.groupIdList?.length > 0 ? userUnit.groupIdList : null;
         // data by group
-        const initDataByGroup = async function (date){
-            let groupId = userUnit.groupIdList?.length > 0 ? userUnit.groupIdList : null;
-            let driverByDeployable = null
-            let vehicleByDeployable = null
-            let obj
-            let vehicleData = await TaskUtils.getVehicleByGroup(groupId, date);
-            vehicleData = vehicleData.map(item => item.vehicleNo)
-            let driverData = await TaskUtils.getDriverByGroup(groupId, date)
-            driverData = driverData.map(item => item.driverId)
-            driverByDeployable = await TaskUtils.getDriverStatusOrDeployed(null, date, '', groupId ?? '0', driverData)
-            vehicleByDeployable = await TaskUtils.getVehicleStatusOrDeployed(null, date, '', req.cookies.userType, vehicleData)
+        const initDataByGroup = async function (date, driverByDeployableByGroup, vehicleByDeployableByGroup){
             let assignedDriverNumber = 0
             let assignedVehicleNumber = 0
-            driverByDeployable.forEach((obj)=>{
-                    assignedDriverNumber = obj.statusSum
+            driverByDeployableByGroup.forEach((obj)=>{
+                assignedDriverNumber = obj.statusSum
             })
     
-            vehicleByDeployable.forEach((obj)=>{
-                    assignedVehicleNumber = obj.statusSum
+            vehicleByDeployableByGroup.forEach((obj)=>{
+                assignedVehicleNumber = obj.statusSum
             })
             if(!modulePage.driverShow){
                 assignedDriverNumber = 0;
@@ -1706,7 +1692,7 @@ module.exports.getDriverAndVehicleDeployedTotalByHub = async function (req, res)
             if(!modulePage.vehicleShow){
                 assignedVehicleNumber = 0;
             }
-            obj = {
+            let obj = {
                 weekDate: date,
                 unit: 'DV_LOA',
                 subunit: 'DV_LOA',
@@ -1717,12 +1703,24 @@ module.exports.getDriverAndVehicleDeployedTotalByHub = async function (req, res)
         }
         let data = []
         for(let date of weekDate){
+            // unit by data
+            let driverByDeployable = await TaskUtils.getDriverStatusOrDeployed(null, date, '', '-1')
+            let vehicleByDeployable = await TaskUtils.getVehicleStatusOrDeployed(null, date, '', req.cookies.userType)
+
+            // group by data
+            let vehicleData = await TaskUtils.getVehicleByGroup(groupId, date);
+            vehicleData = vehicleData.map(item => item.vehicleNo)
+            let driverData = await TaskUtils.getDriverByGroup(groupId, date)
+            driverData = driverData.map(item => item.driverId)
+            let driverByDeployableByGroup = await TaskUtils.getDriverStatusOrDeployed(null, date, '', groupId ?? '0', driverData)
+            let vehicleByDeployableByGroup = await TaskUtils.getVehicleStatusOrDeployed(null, date, '', req.cookies.userType, vehicleData)
+
             for(let item of unitList){
                 let obj
                 if(item.unit){
-                    obj = await initDataByUnit(item, date)
+                    obj = await initDataByUnit(item, date, driverByDeployable, vehicleByDeployable)
                 } else {
-                    obj = await initDataByGroup(date)
+                    obj = await initDataByGroup(date, driverByDeployableByGroup, vehicleByDeployableByGroup)
                 }
                 data.push(obj)
             }
@@ -2183,7 +2181,7 @@ module.exports.getDriverTotalByRoleByHub = async function (req, res) {
             if(groupId){
                 if(groupId.length > 0){
                     sql += ` and dd.groupId in (?)`
-                    replacements.push(groupId.join(","))
+                    replacements.push(groupId)
                 } else {
                     sql += ` and dd.groupId = ?`
                     replacements.push(groupId)
@@ -2302,7 +2300,7 @@ module.exports.getDriverTotalByRoleByNode = async function (req, res) {
             if(groupId){
                 if(groupId.length > 0){
                     sql += ` and dd.groupId in (?)`
-                    replacements.push(groupId.join(","))
+                    replacements.push(groupId)
                 } else {
                     sql += ` and dd.groupId = ?`
                     replacements.push(groupId)
@@ -2403,7 +2401,7 @@ module.exports.getTaskTotalByPurposeByHub = async function (req, res) {
             if(driverByGroup){
                 if(driverByGroup.length > 0){
                     sql += ` and tt.driverId in (?)`
-                    replacements.push(driverByGroup.join(","))
+                    replacements.push(driverByGroup)
                 } else {
                     sql += ' and 1=2'
                 }
@@ -2504,7 +2502,7 @@ module.exports.getTaskTotalByPurposeByNode = async function (req, res) {
             if(driverByGroup){
                 if(driverByGroup.length > 0){
                     sql += ` and tt.driverId in (?)`
-                    replacements.push(driverByGroup.join(","))
+                    replacements.push(driverByGroup)
                 } else {
                     sql += ' and 1=2'
                 }

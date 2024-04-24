@@ -276,8 +276,6 @@ module.exports.getPointDistance = function (point1, point2) {
     return s; // return km
 }
 
-// const points = [ { lat: 1.3837995, lng: 103.7950087 }, { lat: 1.3789943, lng: 103.7923479 } ]
-// console.log(calculateAngle(points));
 module.exports.getDirection = function (points) {
     let lastPrePoi = points[0];
     let lastPoi = points[1];
@@ -287,18 +285,16 @@ module.exports.getDirection = function (points) {
         } else { 
             return lastPoi.lat > lastPrePoi.lat ? 0 : 180;
         }
-    } else {
-        if (lastPoi.lat == lastPrePoi.lat) { 
-            return lastPoi.lng > lastPrePoi.lng ? 90 : 270;
-        } else { 
-            let first_side_length = lastPoi.lng - lastPrePoi.lng;
-            let second_side_length = lastPoi.lat - lastPrePoi.lat;
-            let third_side_length = Math.sqrt(Math.pow(first_side_length, 2) + Math.pow(second_side_length, 2));
-            let cosine_value = first_side_length / third_side_length;
-            let radian_value = Math.acos(cosine_value);
-            let angle_value = radian_value * 180 / Math.PI;
-            return second_side_length > 0 ? 90 - angle_value : 90 + angle_value;
-        }
+    } else if (lastPoi.lat == lastPrePoi.lat) { 
+        return lastPoi.lng > lastPrePoi.lng ? 90 : 270;
+    } else { 
+        let first_side_length = lastPoi.lng - lastPrePoi.lng;
+        let second_side_length = lastPoi.lat - lastPrePoi.lat;
+        let third_side_length = Math.sqrt(Math.pow(first_side_length, 2) + Math.pow(second_side_length, 2));
+        let cosine_value = first_side_length / third_side_length;
+        let radian_value = Math.acos(cosine_value);
+        let angle_value = radian_value * 180 / Math.PI;
+        return second_side_length > 0 ? 90 - angle_value : 90 + angle_value;
     }
 }
 
@@ -320,6 +316,7 @@ module.exports.getDateRangeRestdays = async function(startDate, endDate) {
 }
 
 module.exports.getSafePath = function (p) {
+    p = p || '';
     p = p.replace(/%2e/ig, '.')
     p = p.replace(/%2f/ig, '/')
     p = p.replace(/%5c/ig, '\\')

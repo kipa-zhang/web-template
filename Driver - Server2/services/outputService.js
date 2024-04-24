@@ -135,8 +135,8 @@ module.exports = {
     },
     readFromFile: async function (deviceId, vehicleNo, timezone) {
         try {
-            if (deviceId) deviceId = utils.getSafePath(deviceId);
-            if (vehicleNo) vehicleNo = utils.getSafePath(vehicleNo);
+            deviceId = utils.getSafePath(deviceId);
+            vehicleNo = utils.getSafePath(vehicleNo);
             let dateLength = utils.getDateLength(timezone[0], timezone[1]);
             log.warn(`Prepare read deviceId => ${ deviceId }, timezone => ${ JSON.stringify(timezone) }, dateLength => ${ dateLength } `)
             let dateList = []

@@ -656,6 +656,7 @@ module.exports.UserUtils = {
                     groupResult.map(item => {
                         let groupList = item.group.split(',').map(item2 => item2.trim())
                         user.group = user.group.concat(groupList)
+                        return item.group;
                     })
                     user.group = Array.from(new Set(user.group))
                 } else {
@@ -718,22 +719,25 @@ module.exports.login = async function (req, res) {
         })
         let userBase = null;
         if (user) {
-            if (user.enable == 0) {
-                log.warn(`User ${ username } is disabled to login now!`);
-                return res.json(utils.response(0, `Account [${ username }] is deactivated, please contact administrator.`));
+            function checkUserStatus() {
+                if (user.enable == 0) {
+                    log.warn(`User ${ username } is disabled to login now!`);
+                    throw new Error(`Account [${ username }] is deactivated, please contact administrator.`);
+                }
+                //check user lock out
+                let pwdErrorTimes = user.pwdErrorTimes;
+                if (pwdErrorTimes > 2) {
+                    throw new Error(`User [${ username }] is locked, please contact administrator.!`);
+                }
+                let userStatus = utils.CheckUserStatus(user.unLockTime, user.lastLoginTime, user.createdAt);
+                if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_90) {
+                    throw new Error(`User [${ username }] is locked, last login date passed 90 days!`);
+                }
+                if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_180) {
+                    throw new Error(`User [${ username }] is locked, last login date passed 180 days!`);
+                }
             }
-            //check user lock out
-            let pwdErrorTimes = user.pwdErrorTimes;
-            if (pwdErrorTimes > 2) {
-                return res.json(utils.response(0, `User [${ username }] is locked, please contact administrator.!`));
-            }
-            let userStatus = utils.CheckUserStatus(user.unLockTime, user.lastLoginTime, user.createdAt);
-            if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_90) {
-                return res.json(utils.response(0, `User [${ username }] is locked, last login date passed 90 days!`));
-            }
-            if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_180) {
-                return res.json(utils.response(0, `User [${ username }] is locked, last login date passed 180 days!`));
-            }
+            checkUserStatus();
             userBase = await UserBase.findOne({where: {mvUserId: user.userId}});
         } else {
             //check password error
@@ -745,29 +749,31 @@ module.exports.login = async function (req, res) {
                     },
                 }
             });
-            if (userLoginNameExist) {
-                // password is error
-                let pwdErrorTimes = userLoginNameExist.pwdErrorTimes + 1;
-                await User.update({pwdErrorTimes: pwdErrorTimes}, {where: { userId: userLoginNameExist.userId }});
-                
-                userBase = await UserBase.findOne({where: {mvUserId: userLoginNameExist.userId}});
-                if (userBase?.cvUserId) {
-                    await _SysUser.USER.update({
-                        times: pwdErrorTimes
-                    }, { where: {id: userBase.cvUserId}});
-                }
-            } else {
-                // check wait approve or has been rejected
-                let userApplyExist = await UserBase.findOne({where: { loginName: username, mvUserType: { [Op.not]: null, } }});
-                if (userApplyExist) {
-                    if (userApplyExist.rejectBy) {
-                        return res.json(utils.response(0, 'Account Registration Rejected.'));
-                    } else if (userApplyExist.status == 'Pending Approval') {
-                        return res.json(utils.response(0, 'Account Registration Pending Approval.'));
+            async function checkLoginName() {
+                if (userLoginNameExist) {
+                    // password is error
+                    let pwdErrorTimes = userLoginNameExist.pwdErrorTimes + 1;
+                    await User.update({pwdErrorTimes: pwdErrorTimes}, {where: { userId: userLoginNameExist.userId }});
+                    
+                    userBase = await UserBase.findOne({where: {mvUserId: userLoginNameExist.userId}});
+                    if (userBase?.cvUserId) {
+                        await _SysUser.USER.update({
+                            times: pwdErrorTimes
+                        }, { where: {id: userBase.cvUserId}});
+                    }
+                } else {
+                    // check wait approve or has been rejected
+                    let userApplyExist = await UserBase.findOne({where: { loginName: username, mvUserType: { [Op.not]: null, } }});
+                    if (userApplyExist) {
+                        if (userApplyExist.rejectBy) {
+                            throw new Error('Account Registration Rejected.');
+                        } else if (userApplyExist.status == 'Pending Approval') {
+                            throw new Error('Account Registration Pending Approval.');
+                        }
                     }
                 }
             }
-
+            await checkLoginName();
             log.warn(`User(username: ${ username }, password: ${ password } does not exist`);
             return res.json(utils.response(0, 'User Account does not exist.'));
         }
@@ -858,23 +864,26 @@ module.exports.loginUseSingpass = async function (req, res) {
         })
 
         if (user) {
-            if (!user.enable) {
-                log.warn(`User ${ userName } is disabled to login now!`);
-                return res.json(utils.response(0, `Account [${ userName }] is deactivated, please contact administrator.`));
+            function checkUserStatus() {
+                if (!user.enable) {
+                    log.warn(`User ${ userName } is disabled to login now!`);
+                    throw new Error(`Account [${ userName }] is deactivated, please contact administrator.`);
+                }
+    
+                //check user lock out
+                let pwdErrorTimes = user.pwdErrorTimes;
+                if (pwdErrorTimes > 2) {
+                    throw new Error(`User [${ userName }] is locked, please contact administrator.!`);
+                }
+                let userStatus = utils.CheckUserStatus(user.unLockTime, user.lastLoginTime, user.createdAt);
+                if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_90) {
+                    throw new Error(`User [${ userName }] is locked, last login date passed 90 days!`);
+                }
+                if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_180) {
+                    throw new Error(`User [${ userName }] is locked, last login date passed 180 days!`);
+                }
             }
-
-            //check user lock out
-            let pwdErrorTimes = user.pwdErrorTimes;
-            if (pwdErrorTimes > 2) {
-                return res.json(utils.response(0, `User [${ userName }] is locked, please contact administrator.!`));
-            }
-            let userStatus = utils.CheckUserStatus(user.unLockTime, user.lastLoginTime, user.createdAt);
-            if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_90) {
-                return res.json(utils.response(0, `User [${ userName }] is locked, last login date passed 90 days!`));
-            }
-            if (userStatus == CONTENT.USER_STATUS.LOCK_OUT_180) {
-                return res.json(utils.response(0, `User [${ userName }] is locked, last login date passed 180 days!`));
-            }
+            checkUserStatus();
         } else {
             log.warn(`User(username: ${ nric }}) does not exist`);
             return res.json(utils.response(0, 'User does not exist'));
@@ -1248,19 +1257,25 @@ module.exports.approveUserRegistApply = async function (req, res) {
         let { applyId, optType, reason } = req.body;
         let userId = req.cookies.userId;
         let userBase = await UserBase.findByPk(applyId);
-        if (!userBase) {
-            return res.json(utils.response(0, 'User does not exist!'));
+        function checkParams() {
+            if (!userBase) {
+                throw new Error('User does not exist!');
+            }
+    
+            if (!userBase.mvUserType) {
+                throw new Error('User cannot approve cv user regist apply!');
+            }
         }
-
-        if (!userBase.mvUserType) {
-            return res.json(utils.response(0, 'User cannot approve cv user regist apply!'));
-        }
+        checkParams();
 
         let updateObj = {};
         if (optType == 'reject') {
-            if (userBase.status == 'Rejected' && userBase.rejectDate) {
-                return res.json(utils.response(1, 'User is Rejected, please refresh page!'));
+            function checkStatus() {
+                if (userBase.status == 'Rejected' && userBase.rejectDate) {
+                    throw new Error('User is Rejected, please refresh page!');
+                }
             }
+            checkStatus();
 
             updateObj.status = 'Rejected';
             updateObj.rejectReason = reason;
@@ -1621,26 +1636,32 @@ module.exports.getLaptopUserList = async function (req, res) {
             }
             userList = await User.findAll({ where: selectOption })
         } else if(user.userType === CONTENT.USER_TYPE.CUSTOMER){
-            let option = [];
-            if (user.unitId) option.push({ unitId: user.unitId })
-            if (option.length) {
-                let selectOption = { [Op.or]: option, userType: [CONTENT.USER_TYPE.CUSTOMER] }
-                if (fullName) {
-                    selectOption.fullName = { [Op.substring]: fullName }
+            async function getCustomerData() {
+                let option = [];
+                if (user.unitId) option.push({ unitId: user.unitId })
+                if (option.length) {
+                    let selectOption = { [Op.or]: option, userType: [CONTENT.USER_TYPE.CUSTOMER] }
+                    if (fullName) {
+                        selectOption.fullName = { [Op.substring]: fullName }
+                    }
+                    userList = await User.findAll({ where: selectOption })
                 }
-                userList = await User.findAll({ where: selectOption })
             }
+            await getCustomerData();
         } else {
-            let unitIdList = await unitService.getUnitPermissionIdList(user);
-            let option = [];
-            if (unitIdList.length) option.push({ unitId: unitIdList })
-            if (option.length) {
-                let selectOption = { [Op.or]: option, userType: [CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.UNIT, CONTENT.USER_TYPE.LICENSING_OFFICER] }
-                if (fullName) {
-                    selectOption.fullName = { [Op.substring]: fullName }
+            async function getUnitData() {
+                let unitIdList = await unitService.getUnitPermissionIdList(user);
+                let option = [];
+                if (unitIdList.length) option.push({ unitId: unitIdList })
+                if (option.length) {
+                    let selectOption = { [Op.or]: option, userType: [CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.UNIT, CONTENT.USER_TYPE.LICENSING_OFFICER] }
+                    if (fullName) {
+                        selectOption.fullName = { [Op.substring]: fullName }
+                    }
+                    userList = await User.findAll({ where: selectOption })
                 }
-                userList = await User.findAll({ where: selectOption })
             }
+            getUnitData();
         }
 
         for (let user of userList) {
@@ -2555,13 +2576,16 @@ module.exports.resetUserPassword = async function (req, res) {
         let userBaseId = req.body.applyId;
         let loginUser = await User.findByPk(userId);
         if (!loginUser) {
-            return res.json(utils.response(0, 'Login User does not exist'));
+            return res.json(utils.response(0, 'Login User does not exist.'));
         }
         let loginUserBase = await UserBase.findOne({ where: { mvUserId: req.cookies.userId } });
 
         let userBase = await UserBase.findByPk(userBaseId);
         if (!userBase) {
-            return res.json(utils.response(0, 'Current edit user does not exist'));
+            return res.json(utils.response(0, 'Current edit user does not exist.'));
+        }
+        if (!userBase.contactNumber) {
+            return res.json(utils.response(0, 'Current user contact number is empty.'));
         }
 
         let mvUserId = userBase.mvUserId;

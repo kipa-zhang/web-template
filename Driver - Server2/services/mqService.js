@@ -1,8 +1,4 @@
 const log = require('../log/winston').logger('MQ Service');
-const utils = require('../util/utils');
-const conf = require('../conf/conf');
-const CONTENT = require('../util/content');
-const SOCKET = require('../socket/socket');
 
 const ActiveMQ = require('../activemq/activemq');
 

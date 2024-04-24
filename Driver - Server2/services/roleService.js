@@ -65,61 +65,61 @@ const RoleUtils = {
             // If has no pages, init real id and checked result
             if (!page.pages) {
                 result1.id = page.ids
-                result1.checked = (alreadyPageList.length > 0 && alreadyPageList.includes('' + page.ids))
-            }
-
-            // page is not empty, means has children
-            if (page.pages) {
+                result1.checked = alreadyPageList.includes('' + page.ids)
+            } else if (page.pages) {
+                // page is not empty, means has children
                 // Level2
                 let children = [], index1 = -1;
-                for (let p of page.pages.split(',')) {
-                    index1 ++;
-                    // Level 2
-                    let actionList = await sequelizeObj.query(`
-                        SELECT * FROM module_page WHERE module = ? AND PAGE = ?
-                    `, { type: QueryTypes.SELECT, replacements: [ page.module, p ] })
-
-                    let children2 = []
-                    let index2 = 0
-                    for (let item of actionList) {
-                        if (!item.action) {
-                            // Column action is null
-                            children.push({
+                const getResult2 = async function () {
+                    for (let p of page.pages.split(',')) {
+                        index1 ++;
+                        // Level 2
+                        let actionList = await sequelizeObj.query(`
+                            SELECT * FROM module_page WHERE module = ? AND PAGE = ?
+                        `, { type: QueryTypes.SELECT, replacements: [ page.module, p ] })
+    
+                        let children2 = []
+                        let index2 = 0
+                        for (let item of actionList) {
+                            if (!item.action) {
+                                // Column action is null
+                                children.push({
+                                    id: item.id,
+                                    title: p,
+                                    isNode: true,
+                                    checked: (alreadyPageList.length > 0 && alreadyPageList.includes('' + item.id))
+                                })
+                                continue;
+                            }
+                            index2++
+                            children2.push({
                                 id: item.id,
-                                title: p,
+                                title: item.action,
                                 isNode: true,
                                 checked: (alreadyPageList.length > 0 && alreadyPageList.includes('' + item.id))
                             })
-                            continue;
+    
+                            if (item.id == 520 || item.id == 530) {
+                                let brotherNodeList = await this.generatePageTree(roleId, item.id)
+                                children.push(brotherNodeList[0])
+                            } else if (item.id == 1100) {
+                                let brotherNodeList = await this.generatePageTree(roleId, item.id)
+                                children2.push(...brotherNodeList[0].children)
+                            }
                         }
-                        index2++
-                        children2.push({
-                            id: item.id,
-                            title: item.action,
-                            isNode: true,
-                            checked: (alreadyPageList.length > 0 && alreadyPageList.includes('' + item.id))
-                        })
-
-                        if (item.id == 520 || item.id == 530) {
-                            let brotherNodeList = await this.generatePageTree(roleId, item.id)
-                            children.push(brotherNodeList[0])
+    
+                        if (children2.length) {
+                            children.push({
+                                id: `${ parentIndex }-${ index1 }`,
+                                title: p,
+                                spread: true,
+                                children: children2
+                            })
                         }
-
-                        if (item.id == 1100) {
-                            let brotherNodeList = await this.generatePageTree(roleId, item.id)
-                            children2.push(...brotherNodeList[0].children)
-                        }
-                    }
-
-                    if (children2.length) {
-                        children.push({
-                            id: `${ parentIndex }-${ index1 }`,
-                            title: p,
-                            spread: true,
-                            children: children2
-                        })
                     }
                 }
+                await getResult2()
+                
                 result1.children = children
                 result1.spread = true
                 result1.isNode = false
@@ -132,13 +132,6 @@ const RoleUtils = {
         return result
     },
 }
-
-const test = async function () {
-    let result = await RoleUtils.generatePageTree()
-    console.log(JSON.stringify(result, null, 4))
-    
-}
-// console.log(test())
 
 module.exports = {
     RoleUtils,
