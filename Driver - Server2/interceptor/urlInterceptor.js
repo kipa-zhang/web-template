@@ -18,41 +18,33 @@ router.use(async (req, res, next) => {
     log.info('HTTP Request UserId : ', req.cookies.userId);
     log.info('HTTP Request Body: ', JSON.stringify(req.body));
 
-    if (whitePageList.indexOf(req.url) != -1) {
+    if ((whitePageList.indexOf(req.url) != -1 || req.url == '/login') 
+        || (req.url.startsWith('/') && req.query.token)) {
         next();
         return;
     }
 
-    if (req.url.startsWith('/') && req.query.token) {
-        next();
-        return;
-    }
-
-    if (req.url != '/login' && req.method.toLowerCase() == 'get') {
-        if (!req.cookies.userId) {
+    let userId = req.cookies.userId;
+    if (req.method.toLowerCase() == 'get') {
+        if (!userId) {
             return res.redirect('/login')
-        } else {
-            let userId = req.cookies.userId;
-            let user = await User.findByPk(userId);
-            if (!user || !user.jwtToken) {
-                log.warn(`UserId ${ userId } does not exist!`);
-                return res.redirect('/login')
-            }
         }
-    }
-
-    if (req.url != '/login' && req.method.toLowerCase() == 'post') {
-        if (!req.cookies.userId) {
-            // return res.redirect('/login')
+        let user = await User.findByPk(userId);
+        if (user?.jwtToken) {
+            next();
+            return;
+        }
+        log.warn(`UserId ${ userId } does not exist!`);
+        return res.redirect('/login')
+    } else if (req.method.toLowerCase() == 'post') {
+        if (!userId) {
             return res.json(utils.response(-100, `UserId does not exist!`));
-        } else {
-            let userId = req.cookies.userId;
-            let user = await User.findByPk(userId);
-            if (!user) {
-                log.warn(`UserId ${ userId } does not exist!`);
-                // return res.redirect('/login')
-                return res.json(utils.response(-100, `UserId ${ userId } does not exist!`));
-            }
+        }
+        
+        let user = await User.findByPk(userId);
+        if (!user) {
+            log.warn(`UserId ${ userId } does not exist!`);
+            return res.json(utils.response(-100, `UserId ${ userId } does not exist!`));
         }
     }    
     next();
