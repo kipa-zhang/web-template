@@ -35,33 +35,38 @@ const UrgentUtil = {
         let startDateTime = `${ moment(urgentConfig.indentStartDate).format('DD MMM') }`
         let endDateTime = `${ moment(urgentConfig.indentEndDate).format('DD MMM') }`
         
+        let __timeTitle = startDateTime == endDateTime ? `on ${ startDateTime }` : `from ${ startDateTime } to ${ endDateTime }`
         await createFirebaseNotification2([{
             driverId: urgentConfig.driverId,
             vehicleNo: urgentConfig.vehicleNo,
             type: urgentConfig.purpose,
             taskId: `Config-${ configId }`
-        }], 'Urgent Notification', `You have been assigned an Urgent Duty ${ startDateTime == endDateTime ? `on ${ startDateTime }` : `from ${ startDateTime } to ${ endDateTime }` } for Vehicle ${ urgentConfig.vehicleNo }.`)
+        }], 'Urgent Notification', `You have been assigned an Urgent Duty ${ __timeTitle } for Vehicle ${ urgentConfig.vehicleNo }.`)
     },
     updateDutyNotice: async function (oldConfig, newConfig) {
         // old notice
         let startDateTime = `${ moment(oldConfig.indentStartDate).format('DD MMM') }`
         let endDateTime = `${ moment(oldConfig.indentEndDate).format('DD MMM') }`
+
+        let __timeTitle2 = startDateTime == endDateTime ? `on ${ startDateTime }` : `from ${ startDateTime } to ${ endDateTime }`
         await createFirebaseNotification2([{
             driverId: oldConfig.driverId,
             vehicleNo: oldConfig.vehicleNo,
             type: oldConfig.purpose,
             taskId: `Config-${ oldConfig.id }`
-        }], 'Urgent Notification', `Urgent Duty ${ startDateTime == endDateTime ? `on ${ startDateTime }` : `from ${ startDateTime } to ${ endDateTime }` } for Vehicle ${ oldConfig.vehicleNo } has been cancelled.`)
+        }], 'Urgent Notification', `Urgent Duty ${ __timeTitle2 } for Vehicle ${ oldConfig.vehicleNo } has been cancelled.`)
 
         // new notice
         let startDateTime2 = `${ moment(newConfig.indentStartDate).format('DD MMM') }`
         let endDateTime2 = `${ moment(newConfig.indentEndDate).format('DD MMM') }`
+
+        let __timeTitle3 = startDateTime2 == endDateTime2 ? `on ${ startDateTime2 }` : `from ${ startDateTime2 } to ${ endDateTime2 }`
         await createFirebaseNotification2([{
             driverId: newConfig.driverId,
             vehicleNo: newConfig.vehicleNo,
             type: newConfig.purpose,
             taskId: `Config-${ newConfig.id }`
-        }], 'Urgent Notification', `You have been assigned an Urgent Duty ${ startDateTime2 == endDateTime2 ? `on ${ startDateTime2 }` : `from ${ startDateTime2 } to ${ endDateTime2 }` } for Vehicle ${ newConfig.vehicleNo }.`)
+        }], 'Urgent Notification', `You have been assigned an Urgent Duty ${ __timeTitle3 } for Vehicle ${ newConfig.vehicleNo }.`)
     },
     cancelDutyNotice: async function (configId) {
         // Cancel
@@ -69,12 +74,14 @@ const UrgentUtil = {
         let urgentConfig = await UrgentConfig.findByPk(configId)
         let startDateTime = `${ moment(urgentConfig.indentStartDate).format('DD MMM') }`
         let endDateTime = `${ moment(urgentConfig.indentEndDate).format('DD MMM') }`
+
+        let __timeTitle4 = startDateTime == endDateTime ? `on ${ startDateTime }` : `from ${ startDateTime } to ${ endDateTime }`
         await createFirebaseNotification2([{
             driverId: urgentConfig.driverId,
             vehicleNo: urgentConfig.vehicleNo,
             type: urgentConfig.purpose,
             taskId: `Config-${ configId }`
-        }], 'Urgent Notification', `Urgent Duty ${ startDateTime == endDateTime ? `on ${ startDateTime }` : `from ${ startDateTime } to ${ endDateTime }` } for Vehicle ${ urgentConfig.vehicleNo } has been cancelled.`)
+        }], 'Urgent Notification', `Urgent Duty ${ __timeTitle4 } for Vehicle ${ urgentConfig.vehicleNo } has been cancelled.`)
 
     },
     reAssignIndentNotice: async function (oldIndent, newIndent) {
@@ -317,7 +324,7 @@ const getForbiddenDate = async function(req, res){
 const getVehicleByGroupId = async function (req, res) {
     try {
         let { editUserId, vehicleType, startDate, endDate } = req.body;
-        let newUserId = editUserId ? editUserId : req.cookies.userId;
+        let newUserId = editUserId ?? req.cookies.userId;
         let user = await User.findOne({ where: { userId: newUserId } })
         if(!user) return res.json(utils.response(0, `User ${ newUserId } does not exist.`));
         log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
@@ -356,7 +363,7 @@ const getVehicleByGroupId = async function (req, res) {
 const getDriverByGroupId = async function (req, res) {
     try {
         let { editUserId, vehicleType, startDate, endDate } = req.body;
-        let newUserId = editUserId ? editUserId : req.cookies.userId;
+        let newUserId = editUserId ?? req.cookies.userId;
         let user = await User.findOne({ where: { userId: newUserId } })
         if(!user) return res.json(utils.response(0, `User ${ newUserId } does not exist.`));
         log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
@@ -403,7 +410,7 @@ const createUrgentConfig = async function (req, res) {
         let newUrgentConfig = null;
         let urgentConfig = req.body.urgentConfig;
         urgentConfig.creator = req.cookies.userId;
-        urgentConfig.node = urgentConfig.node ? urgentConfig.node != 'null' ? urgentConfig.node : null : null;
+        urgentConfig.node = urgentConfig.node && urgentConfig.node != 'null' ? urgentConfig.node : null;
         urgentConfig.indentStartDate = moment(urgentConfig.indentStartDate).format('YYYY-MM-DD')
         urgentConfig.indentEndDate = moment(urgentConfig.indentEndDate).format('YYYY-MM-DD')
         let user = await mtAdminService.TaskUtils.findUser(req.cookies.userId)
@@ -490,26 +497,29 @@ const getUrgentConfig = async function (req, res) {
             endDateOrder, idDateOrder, pageNum, pageLength 
         } = req.body;
         let user = await mtAdminService.TaskUtils.findUser(req.cookies.userId)
-        if(!groupId){
-            if(user.userType.toLowerCase() == 'customer') groupId = user.unitId
+        if(!groupId && user.userType.toLowerCase() == 'customer'){
+            groupId = user.unitId
         }
-        let unitIdList = []
+    
         let userUnit = await UnitUtils.getPermitUnitList(req.cookies.userId)
-        unitIdList = userUnit.unitIdList
-        if(hub) {
-            if(node) {
-                let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
-                unitIdList = [unit.id]
+        const initUnitIdList = async function (){
+            let unitIdList = []
+            if(hub) {
+                if(node) {
+                    let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
+                    unitIdList = [unit.id]
+                } else {
+                    let unit = await Unit.findAll({ where: { unit: hub } })
+                    let hubUnitIdList = unit.map(item => item.id)
+                    unitIdList = unitIdList.filter(item => hubUnitIdList.includes(item))
+                }
             } else {
-                let unit = await Unit.findAll({ where: { unit: hub } })
-                let hubUnitIdList = unit.map(item => item.id)
-                unitIdList = unitIdList.filter(item => hubUnitIdList.includes(item))
+                unitIdList = userUnit.unitIdList
             }
-        } 
-        // else {
-        //     let userUnit = await UnitUtils.getPermitUnitList(req.cookies.userId)
-        //     unitIdList = userUnit.unitIdList
-        // }
+            return unitIdList
+        }
+        let unitIdList = await initUnitIdList();
+
         log.info(`duty unitIdList ${ JSON.stringify(unitIdList) }`)
         let pageList = await userService.getUserPageList(req.cookies.userId, 'Urgent Duty')
         let operationList = pageList.map(item => `${ item.action }`).join(',')
@@ -538,69 +548,63 @@ const getUrgentConfig = async function (req, res) {
             ) d on d.driverId = uc.driverId
             where 1=1
         `     
-        if(selectedDate){
-            sql += ` and ? BETWEEN uc.indentStartDate and uc.indentEndDate`
-            sql2 += ` and ? BETWEEN uc.indentStartDate and uc.indentEndDate`
-            replacements.push(selectedDate)
-            replacements2.push(selectedDate)
-        }
-        if(taskStatus){
-            sql += ` and ud.status = ?`
-            sql2 += ` and ud.status = ?`
-            replacements.push(taskStatus)
-            replacements2.push(taskStatus)
-        }  
-        if(purpose) {
-            sql += ` and uc.purpose = ?`
-            sql2 += ` and uc.purpose = ?`
-            replacements.push(purpose)
-            replacements2.push(purpose)
-        }
-        if(createDate) {
-            sql += ` and uc.createdAt like ?`
-            sql2 += ` and uc.createdAt like ?`
-            replacements.push(createDate + '%')
-            replacements2.push(createDate + '%')
-        }
-        if(vehicleNo) {
-            sql += ` and uc.vehicleNo like ?`
-            sql2 += ` and uc.vehicleNo like ?`
-            replacements.push(`'${ vehicleNo }%'`)
-            replacements2.push(`'${ vehicleNo }%'`)
-        }
-        if(driverName) {
-            sql += ` and d.driverName like ?`
-            sql2 += ` and d.driverName like ?`
-            replacements.push(`'${ driverName }%'`)
-            replacements2.push(`'${ driverName }%'`)
-        }
-        if(resource) {
-            sql += ` and uc.vehicleType = ?`
-            sql2 += ` and uc.vehicleType = ?`
-            replacements.push(resource)
-            replacements2.push(resource)
-        }
-        if(groupId) {
-            sql += ` and uc.groupId = ?`
-            sql2 += ` and uc.groupId = ?`
-            replacements.push(groupId)
-            replacements2.push(groupId)
-        } else {
-            // if(hub){
-            //     sql += ` and uc.hub = '${ hub }'`
-            //     sql2 += ` and uc.hub = '${ hub }'`
-            // }
-            // if(node){
-            //     sql += ` and uc.node = '${ node }'`
-            //     sql2 += ` and uc.node = '${ node }'`
-            // }
-            if(unitIdList.length > 0) {
+
+        const initOptionSql = function (){
+            if(selectedDate){
+                sql += ` and ? BETWEEN uc.indentStartDate and uc.indentEndDate`
+                sql2 += ` and ? BETWEEN uc.indentStartDate and uc.indentEndDate`
+                replacements.push(selectedDate)
+                replacements2.push(selectedDate)
+            }
+            if(taskStatus){
+                sql += ` and ud.status = ?`
+                sql2 += ` and ud.status = ?`
+                replacements.push(taskStatus)
+                replacements2.push(taskStatus)
+            }  
+            if(purpose) {
+                sql += ` and uc.purpose = ?`
+                sql2 += ` and uc.purpose = ?`
+                replacements.push(purpose)
+                replacements2.push(purpose)
+            }
+            if(createDate) {
+                sql += ` and uc.createdAt like ?`
+                sql2 += ` and uc.createdAt like ?`
+                replacements.push(createDate + '%')
+                replacements2.push(createDate + '%')
+            }
+            if(vehicleNo) {
+                sql += ` and uc.vehicleNo like ?`
+                sql2 += ` and uc.vehicleNo like ?`
+                replacements.push(`'${ vehicleNo }%'`)
+                replacements2.push(`'${ vehicleNo }%'`)
+            }
+            if(driverName) {
+                sql += ` and d.driverName like ?`
+                sql2 += ` and d.driverName like ?`
+                replacements.push(`'${ driverName }%'`)
+                replacements2.push(`'${ driverName }%'`)
+            }
+            if(resource) {
+                sql += ` and uc.vehicleType = ?`
+                sql2 += ` and uc.vehicleType = ?`
+                replacements.push(resource)
+                replacements2.push(resource)
+            }
+            if(groupId) {
+                sql += ` and uc.groupId = ?`
+                sql2 += ` and uc.groupId = ?`
+                replacements.push(groupId)
+                replacements2.push(groupId)
+            } else if(unitIdList.length > 0) {
                 sql += ` and uc.unitId in(?)`
                 sql2 += ` and uc.unitId in(?)`
-                replacements.push(unitIdList.join(","))
-                replacements2.push(unitIdList.join(","))
+                replacements.push(unitIdList)
+                replacements2.push(unitIdList)
             }
         }
+        initOptionSql()
         let orderSql = [];
         if (endDateOrder) {
             orderSql.push(` uc.indentEndDate ` + endDateOrder)
@@ -659,17 +663,17 @@ const updateUrgentDutyById = async function (req, res) {
         let newUrgentConfig = null;
         let urgentConfig = req.body.urgentConfig;
         let id = req.body.id;
-        urgentConfig.node = urgentConfig.node ? urgentConfig.node != 'null' ? urgentConfig.node : null : null;
+        urgentConfig.node = urgentConfig.node && urgentConfig.node != 'null' ? urgentConfig.node : null;
         urgentConfig.indentStartDate = moment(urgentConfig.indentStartDate).format('YYYY-MM-DD')
         urgentConfig.indentEndDate = moment(urgentConfig.indentEndDate).format('YYYY-MM-DD')
         let urgentConfigList = await sequelizeObj.query(`
-        select id from urgent_config 
-        where cancelledDateTime is null
-        and (driverId = ? or vehicleNo = ?)
-        and ((? >= indentStartDate AND ? <= indentEndDate) 
-        OR (? >= indentStartDate AND ? <= indentEndDate) 
-        OR (? < indentStartDate AND ? > indentEndDate))
-        and id != ?
+            select id from urgent_config 
+            where cancelledDateTime is null
+            and (driverId = ? or vehicleNo = ?)
+            and ((? >= indentStartDate AND ? <= indentEndDate) 
+            OR (? >= indentStartDate AND ? <= indentEndDate) 
+            OR (? < indentStartDate AND ? > indentEndDate))
+            and id != ?
         `,{ type: QueryTypes.SELECT, replacements: [
             urgentConfig.driverId,
             urgentConfig.vehicleNo,
@@ -726,7 +730,7 @@ const updateUrgentDutyById = async function (req, res) {
                     where ui.id is not null and ud.configId = ? and ud.mobileEndTime is null and ui.status != 'cancelled'
                 `,{ type: QueryTypes.SELECT, replacements: [id] })
                 if(urgentDutyList.length > 0){
-                    throw ` The operation failed. Emergency indentation already exists and cannot change the time and Resource.`
+                    throw new Error(` The operation failed. Emergency indentation already exists and cannot change the time and Resource.`)
                 }
                 await UrgentDuty.destroy({ where: { configId: id, mobileEndTime: { [Op.is]: null } } })
                 let dateList = await UrgentUtil.getMiddleDay(urgentConfig.indentStartDate, urgentConfig.indentEndDate)
@@ -749,59 +753,61 @@ const updateUrgentDutyById = async function (req, res) {
                         remarks: 'update the urgent duty.'
                     })
                 }
-            } else {
-                if(oldUrgentConfig.driverId != urgentConfig.driverId || oldUrgentConfig.vehicleNo != urgentConfig.vehicleNo) {
-                    await UrgentDuty.update({ driverId: urgentConfig.driverId, vehicleNo: urgentConfig.vehicleNo }, { where: { configId: newUrgentConfigObj.id, mobileEndTime: { [Op.is]: null } } });
-                    let newUrgentDuty = await UrgentDuty.findAll({ where: { configId: newUrgentConfigObj.id, mobileEndTime: { [Op.is]: null } } })
-                    await OperationRecord.create({
-                        id: null,
-                        operatorId: req.cookies.userId,
-                        businessType: 'Urgent Duty',
-                        businessId: newUrgentConfigObj.id,
-                        optType: 'Edit',
-                        beforeData: `${ JSON.stringify(oldUrgentDutyList) }`, 
-                        afterData: `${ JSON.stringify(newUrgentDuty) }`, 
-                        optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                        remarks: 'update the urgent duty.'
-                    })
-                    let dutyId = newUrgentDuty.map(item => item.id)
-                    let oldUrgentIndent = await UrgentIndent.findAll({ where: { dutyId: dutyId, status: { [Op.ne]: ' Cancelled' } } })
-                    await UrgentIndent.update({ driverId: urgentConfig.driverId, vehicleNo: urgentConfig.vehicleNo }, { where: { dutyId: dutyId, status: { [Op.ne]: 'Cancelled' } } })
-                    let newUrgentIndent = await UrgentIndent.findAll({ where: { dutyId: dutyId, status: { [Op.ne]: ' Cancelled' } } })
-                    await OperationRecord.create({
-                        id: null,
-                        operatorId: req.cookies.userId,
-                        businessType: 'Urgent Duty',
-                        businessId: newUrgentConfigObj.id,
-                        optType: 'Edit',
-                        beforeData: `${ JSON.stringify(oldUrgentIndent) }`, 
-                        afterData: `${ JSON.stringify(newUrgentIndent) }`, 
-                        optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                        remarks: 'update the urgent indent.'
-                    })
-                }
+            } else if(oldUrgentConfig.driverId != urgentConfig.driverId || oldUrgentConfig.vehicleNo != urgentConfig.vehicleNo) {
+                await UrgentDuty.update({ driverId: urgentConfig.driverId, vehicleNo: urgentConfig.vehicleNo }, { where: { configId: newUrgentConfigObj.id, mobileEndTime: { [Op.is]: null } } });
+                let newUrgentDuty = await UrgentDuty.findAll({ where: { configId: newUrgentConfigObj.id, mobileEndTime: { [Op.is]: null } } })
+                await OperationRecord.create({
+                    id: null,
+                    operatorId: req.cookies.userId,
+                    businessType: 'Urgent Duty',
+                    businessId: newUrgentConfigObj.id,
+                    optType: 'Edit',
+                    beforeData: `${ JSON.stringify(oldUrgentDutyList) }`, 
+                    afterData: `${ JSON.stringify(newUrgentDuty) }`, 
+                    optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
+                    remarks: 'update the urgent duty.'
+                })
+                let dutyId = newUrgentDuty.map(item => item.id)
+                let oldUrgentIndent = await UrgentIndent.findAll({ where: { dutyId: dutyId, status: { [Op.ne]: ' Cancelled' } } })
+                await UrgentIndent.update({ driverId: urgentConfig.driverId, vehicleNo: urgentConfig.vehicleNo }, { where: { dutyId: dutyId, status: { [Op.ne]: 'Cancelled' } } })
+                let newUrgentIndent = await UrgentIndent.findAll({ where: { dutyId: dutyId, status: { [Op.ne]: ' Cancelled' } } })
+                await OperationRecord.create({
+                    id: null,
+                    operatorId: req.cookies.userId,
+                    businessType: 'Urgent Duty',
+                    businessId: newUrgentConfigObj.id,
+                    optType: 'Edit',
+                    beforeData: `${ JSON.stringify(oldUrgentIndent) }`, 
+                    afterData: `${ JSON.stringify(newUrgentIndent) }`, 
+                    optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
+                    remarks: 'update the urgent indent.'
+                })
             }
         }).catch(error => {
             throw error
         })
-        if(newUrgentConfig.length > 0){
-            let urgentDutyList = await sequelizeObj.query(`
-                select ui.id, ui.indentId, ud.mobileStartTime from urgent_duty ud
-                left join urgent_indent ui on ui.dutyId = ud.id 
-                where ui.id is not null and ud.configId = ? and ud.mobileEndTime is null and ui.status not in ('completed', 'cancelled')
-            `,{ type: QueryTypes.SELECT, replacements: [id] })
-            if(urgentDutyList.length > 0){
-                for(let item of urgentDutyList){
-                    let driver = await Driver.findOne({ where: { driverId: urgentConfig.driverId } })
-                    if(driver.nric) {
-                        if(driver.nric.length > 9) driver.nric = utils.decodeAESCode(driver.nric);
-                    } 
-                    let vehicle = await Vehicle.findOne({ where: { vehicleNo: urgentConfig.vehicleNo } });
-                    await assignService.TaskUtils.assignTaskBySystem({ taskId: item.indentId, driver, vehicle, status: true })
+
+        const updateSystemByUrgent = async function (){
+            if(newUrgentConfig.length > 0){
+                let urgentDutyList = await sequelizeObj.query(`
+                    select ui.id, ui.indentId, ud.mobileStartTime from urgent_duty ud
+                    left join urgent_indent ui on ui.dutyId = ud.id 
+                    where ui.id is not null and ud.configId = ? and ud.mobileEndTime is null and ui.status not in ('completed', 'cancelled')
+                `,{ type: QueryTypes.SELECT, replacements: [id] })
+                if(urgentDutyList.length > 0){
+                    for(let item of urgentDutyList){
+                        let driver = await Driver.findOne({ where: { driverId: urgentConfig.driverId } })
+                        if(driver.nric) {
+                            if(driver.nric.length > 9) driver.nric = utils.decodeAESCode(driver.nric);
+                        } 
+                        let vehicle = await Vehicle.findOne({ where: { vehicleNo: urgentConfig.vehicleNo } });
+                        await assignService.TaskUtils.assignTaskBySystem({ taskId: item.indentId, driver, vehicle, status: true })
+                    }
                 }
+                await UrgentUtil.updateDutyNotice(oldUrgentConfig, newUrgentConfigObj)
             }
-            await UrgentUtil.updateDutyNotice(oldUrgentConfig, newUrgentConfigObj)
         }
+        await updateSystemByUrgent();
         return res.json(utils.response(1, true));
     } catch (error) {
         log.error(error);
@@ -886,123 +892,130 @@ const getUrgentIndentList = async function (req, res) {
 
         let replacements = [], limitCondition = []
         let replacements2 = []
-        if (user.userType.toLowerCase() == 'customer') {
-            limitCondition.push(` ui.groupId = ? `)
-            replacements.push(user.unitId)
-            replacements2.push(user.unitId)
-        } else if (user.userType.toLowerCase() == 'administrator') {
-            if (group) {
+        const initUnitSqlByUserType = async function (){
+            if (user.userType.toLowerCase() == 'customer') {
                 limitCondition.push(` ui.groupId = ? `)
-                replacements.push(group)
-                replacements2.push(group)
-            } 
-        } else if (user.userType.toLowerCase() == 'hq') {
-            let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
-
-            // HQ user has group permission
-            if (user.group?.length) {
+                replacements.push(user.unitId)
+                replacements2.push(user.unitId)
+            } else if (user.userType.toLowerCase() == 'administrator') {
                 if (group) {
                     limitCondition.push(` ui.groupId = ? `)
                     replacements.push(group)
                     replacements2.push(group)
-                } else if (group == 0) {
-                    limitCondition.push(` ui.groupId in (?) `)
-                    replacements.push(groupIdList)
-                    replacements2.push(groupIdList)
                 } 
-                // else {
-                //     limitCondition.push(` ui.groupId IS NULL `)
-                // }
-            }
-            
-            let tempSqlList = []
-            if (unitIdList.length) {
-                tempSqlList.push(` un.id IN (?) `)
-                replacements.push(unitIdList);
-                replacements2.push(unitIdList);
-            }
-            if (groupIdList.length) {
-                tempSqlList.push(` ui.groupId in (?) `)
-                replacements.push(groupIdList);
-                replacements2.push(groupIdList);
-            }
-            
-            if (tempSqlList.length) {
-                limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
-            } else {
-                limitCondition.push(` 1=2 `)
-            }
-        } else if (user.userType.toLowerCase() == 'unit') {
-            if (user.node) {
-                limitCondition.push(` ( ui.hub <=> ? AND ui.node <=> ? ) `)
-                replacements.push(user.hub);
-                replacements.push(user.node);
-                replacements2.push(user.hub);
-                replacements2.push(user.node);
-            } else {
-                limitCondition.push(` ( ui.hub = ? ) `)
-                replacements.push(user.hub);
-                replacements2.push(user.hub);
-            }
-        }
+            } else if (user.userType.toLowerCase() == 'hq') {
+                const initUnitSqlByHq = async function (){
+                    let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
 
-        if (taskStatus) {
-            // limitCondition.push(` ui.status LIKE '%${ taskStatus }%' `)
-            if (taskStatus.toLowerCase() == 'system expired') {
-                limitCondition.push(` (ui.status LIKE '%waitcheck%' and now() > ui.endTime)`)
-            } else if (taskStatus.toLowerCase() == 'waitcheck') {
-                limitCondition.push(` (ui.status LIKE '%waitcheck%' and now() < ui.endTime)`)
-            } else {
-                limitCondition.push(` ui.status LIKE ? `)
-                replacements.push(`'%${ taskStatus }%'`)
-                replacements2.push(`'%${ taskStatus }%'`)
+                    // HQ user has group permission
+                    if (user.group?.length) {
+                        if (group) {
+                            limitCondition.push(` ui.groupId = ? `)
+                            replacements.push(group)
+                            replacements2.push(group)
+                        } else if (group == 0) {
+                            limitCondition.push(` ui.groupId in (?) `)
+                            replacements.push(groupIdList)
+                            replacements2.push(groupIdList)
+                        } 
+                        // else {
+                        //     limitCondition.push(` ui.groupId IS NULL `)
+                        // }
+                    }
+                    
+                    let tempSqlList = []
+                    if (unitIdList.length) {
+                        tempSqlList.push(` un.id IN (?) `)
+                        replacements.push(unitIdList);
+                        replacements2.push(unitIdList);
+                    }
+                    if (groupIdList.length) {
+                        tempSqlList.push(` ui.groupId in (?) `)
+                        replacements.push(groupIdList);
+                        replacements2.push(groupIdList);
+                    }
+                    
+                    if (tempSqlList.length) {
+                        limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
+                    } else {
+                        limitCondition.push(` 1=2 `)
+                    }
+                }
+                await initUnitSqlByHq()
+            } else if (user.userType.toLowerCase() == 'unit') {
+                if (user.node) {
+                    limitCondition.push(` ( ui.hub <=> ? AND ui.node <=> ? ) `)
+                    replacements.push(user.hub);
+                    replacements.push(user.node);
+                    replacements2.push(user.hub);
+                    replacements2.push(user.node);
+                } else {
+                    limitCondition.push(` ( ui.hub = ? ) `)
+                    replacements.push(user.hub);
+                    replacements2.push(user.hub);
+                }
             }
         }
+        await initUnitSqlByUserType()
+        const initOptionSqlByIndent = async function (){
+            if (taskStatus) {
+                // limitCondition.push(` ui.status LIKE '%${ taskStatus }%' `)
+                if (taskStatus.toLowerCase() == 'system expired') {
+                    limitCondition.push(` (ui.status LIKE '%waitcheck%' and now() > ui.endTime)`)
+                } else if (taskStatus.toLowerCase() == 'waitcheck') {
+                    limitCondition.push(` (ui.status LIKE '%waitcheck%' and now() < ui.endTime)`)
+                } else {
+                    limitCondition.push(` ui.status LIKE ? `)
+                    replacements.push(`'%${ taskStatus }%'`)
+                    replacements2.push(`'%${ taskStatus }%'`)
+                }
+            }
 
-        if (taskId) {
-            limitCondition.push(` ui.indentId LIKE ? or ui.requestId LIKE ? `)
-            replacements.push(`'%${ taskId }%'`)
-            replacements.push(`'%${ taskId }%'`)
-            replacements2.push(`'%${ taskId }%'`)
-            replacements2.push(`'%${ taskId }%'`)
-        }
+            if (taskId) {
+                limitCondition.push(` ui.indentId LIKE ? or ui.requestId LIKE ? `)
+                replacements.push(`'%${ taskId }%'`)
+                replacements.push(`'%${ taskId }%'`)
+                replacements2.push(`'%${ taskId }%'`)
+                replacements2.push(`'%${ taskId }%'`)
+            }
 
-        if (hub) {
-            limitCondition.push(` ui.hub = ? `)
-            replacements.push(hub)
-            replacements2.push(hub)
-        }
-        if (node) {
-            limitCondition.push(` ui.node = ? `)
-            replacements.push(node)
-            replacements2.push(node)
-        }
-        if (driverName) {
-            limitCondition.push(` d.driverName LIKE ? `)
-            replacements.push(`'%${ driverName }%'`)
-            replacements2.push(`'%${ driverName }%'`)
-        }
-        if (vehicleNo) {
-            limitCondition.push(` ud.vehicleNo LIKE  ?`)
-            replacements.push(`'%${ vehicleNo }%'`)
-            replacements2.push(`'%${ vehicleNo }%'`)
-        }
-        if (indentId) {
-            limitCondition.push(` ui.id LIKE ? `)
-            replacements.push(`'%${ indentId }%'`)
-            replacements2.push(`'%${ indentId }%'`)
-        }
-        if (selectedDate) {
-            limitCondition.push(` Date(ui.startTime) LIKE  ?`)
-            replacements.push(`'%${ selectedDate }%'`)
-            replacements2.push(`'%${ selectedDate }%'`)
-        }
+            if (hub) {
+                limitCondition.push(` ui.hub = ? `)
+                replacements.push(hub)
+                replacements2.push(hub)
+            }
+            if (node) {
+                limitCondition.push(` ui.node = ? `)
+                replacements.push(node)
+                replacements2.push(node)
+            }
+            if (driverName) {
+                limitCondition.push(` d.driverName LIKE ? `)
+                replacements.push(`'%${ driverName }%'`)
+                replacements2.push(`'%${ driverName }%'`)
+            }
+            if (vehicleNo) {
+                limitCondition.push(` ud.vehicleNo LIKE  ?`)
+                replacements.push(`'%${ vehicleNo }%'`)
+                replacements2.push(`'%${ vehicleNo }%'`)
+            }
+            if (indentId) {
+                limitCondition.push(` ui.id LIKE ? `)
+                replacements.push(`'%${ indentId }%'`)
+                replacements2.push(`'%${ indentId }%'`)
+            }
+            if (selectedDate) {
+                limitCondition.push(` Date(ui.startTime) LIKE  ?`)
+                replacements.push(`'%${ selectedDate }%'`)
+                replacements2.push(`'%${ selectedDate }%'`)
+            }
 
-        if (limitCondition.length) {
-            baseSql += ' WHERE ' + limitCondition.join(' AND ');
-            baseSql2 += ' WHERE ' + limitCondition.join(' AND ');
+            if (limitCondition.length) {
+                baseSql += ' WHERE ' + limitCondition.join(' AND ');
+                baseSql2 += ' WHERE ' + limitCondition.join(' AND ');
+            }
         }
-
+        await initOptionSqlByIndent()
         let totalList = await sequelizeObj.query(baseSql2, { type: QueryTypes.SELECT, replacements: replacements2 });
         
         baseSql += ` order by ui.startTime, ui.indentId  asc `
@@ -1041,7 +1054,7 @@ const cancelIndent = async function (req, res) {
     try {
         let { id, requestId, cancelledCause, cancelBy } = req.body;
         let indent = await UrgentUtil.getIndentDetail([ id ])
-        if (indent && indent.length) {
+        if (indent?.length) {
             indent = indent[0]
             if (moment().isAfter(indent.endTime)) {
                 return res.json(utils.response(0, `Can not cancel indent after end time.`));
@@ -1094,11 +1107,12 @@ const reAssignIndent = async function (req, res) {
     try {
         let { id, oldDutyId, newDutyId } = req.body;
 
-        oldDutyId = oldDutyId.split('-')[1]
+        oldDutyId = oldDutyId.split('-')[1] // old duty
+        log.warn(`old duty ==> ${ oldDutyId }`)
         newDutyId = newDutyId.split('-')[1]
 
         let indent = await UrgentUtil.getIndentDetail([ id ])
-        if (indent && indent.length) {
+        if (indent?.length) {
             indent = indent[0]
         } else {
             log.error(`Indent id ${ id } does not exist.`)
@@ -1107,7 +1121,7 @@ const reAssignIndent = async function (req, res) {
 
         if ([ 'cancelled', 'completed' ].includes(indent.status.toLowerCase())) {
             log.error(`Indent already be ${ indent.status }, can not re-assign.`)
-            throw `Indent already be ${ indent.status }, can not re-assign.`
+            throw new Error(`Indent already be ${ indent.status }, can not re-assign.`)
         }
 
         // Change old duty/indent to ready/waitcheck
@@ -1198,10 +1212,10 @@ const reAssignIndent = async function (req, res) {
 
 const getAvailableDutyList = async function (req, res) {
     try {
-        let { id, indentId } = req.body;
+        let { id } = req.body;
 
         let indent = await UrgentUtil.getIndentDetail([ id ])
-        if (indent && indent.length) {
+        if (indent?.length) {
             indent = indent[0]
         } else {
             log.error(`Indent id ${ id } does not exist.`)

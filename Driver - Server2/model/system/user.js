@@ -124,18 +124,17 @@ const CheckUserStatus = function (status, activeTime, lastLoginTime, createdAt) 
     lastLoginTime = lastLoginTime == null ? createdAt : lastLoginTime
     let day90 = 90
     let day180 = 180
-    if (status != null) {
-        if (status == CONTENT.CV_USER_STATUS.Active) {
-            lastLoginTime = moment(lastLoginTime).isSameOrAfter(moment(activeTime)) ? lastLoginTime : activeTime
-        } else if (status == CONTENT.CV_USER_STATUS.LockOut) {
-            if (CheckIfDaysPassed(lastLoginTime, day180)) {
-                return CONTENT.CV_USER_STATUS.Deactivated
-            } else {
-                return CONTENT.CV_USER_STATUS.LockOut
-            }
-        } else if (status == CONTENT.CV_USER_STATUS.Deactivated) {
+
+    if (status == CONTENT.CV_USER_STATUS.Active) {
+        lastLoginTime = moment(lastLoginTime).isSameOrAfter(moment(activeTime)) ? lastLoginTime : activeTime
+    } else if (status == CONTENT.CV_USER_STATUS.LockOut) {
+        if (CheckIfDaysPassed(lastLoginTime, day180)) {
             return CONTENT.CV_USER_STATUS.Deactivated
+        } else {
+            return CONTENT.CV_USER_STATUS.LockOut
         }
+    } else if (status == CONTENT.CV_USER_STATUS.Deactivated) {
+        return CONTENT.CV_USER_STATUS.Deactivated
     }
 
     if (CheckIfDaysPassed(lastLoginTime, day180)) {

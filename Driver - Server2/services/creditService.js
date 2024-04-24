@@ -1,94 +1,12 @@
 const log = require('../log/winston').logger('Driver Service');
 const utils = require('../util/utils');
-const conf = require('../conf/conf');
-const CONTENT = require('../util/content');
 
 const moment = require('moment');
 
 const { Sequelize, Op, QueryTypes } = require('sequelize');
-const { sequelizeObj } = require('../db/dbConf')
 const { sequelizeSystemObj } = require('../db/dbConf_system')
 
 const { User } = require('../model/user');
-const { TaskUtils } = require('./assignService2');
-
-const _SystemDriver = require('../model/system/driver');
-const _SystemVehicle = require('../model/system/vehicle');
-const _SystemLocation = require('../model/system/location');
-const _SystemTask = require('../model/system/task');
-const _SystemJob = require('../model/system/job2');
-const _SystemRequest = require('../model/system/request');
-const _SystemGroup = require('../model/system/group');
-const _SystemPurposeOrder = require('../model/system/purchaseOrder');
-
-const calculatePointsByStatusAndDate = async function (list, date) {
-    let accumulated = 0, used = 0, pending = 0;
-    for (let indent of list) {
-        indent.points = { accumulated: 0, used: 0, pending: 0 }
-        let requestId = indent.requestId;
-
-        let jobList = await _SystemJob.Job2.findAll({ where: { requestId } })
-        for (let job of jobList) {
-            if (!job.status) {
-                log.warn(`JobId ${ job.id } status is empty!`)
-                continue;
-            }
-
-            let jobTaskList = await sequelizeSystemObj.query(`
-                SELECT jt.id, jt.tripId, jt.taskStatus, jt.startDate FROM job_task jt
-                WHERE jt.executionDate LIKE ?
-                AND tripId = ?
-            `, { type: QueryTypes.SELECT, replacements: [ date + '%', job.id ] })
-            
-            if (jobTaskList.length) {
-                indent.startDate = moment(jobTaskList[0].startDate).format('YYYY-MM-DD HH:mm:ss');
-            }
-
-            if (job.status.toLowerCase().indexOf('pending for approval') > -1) {
-                log.info(`Checking pending ....`)
-                // Check pending
-                for (let task of jobTaskList) {
-                    let order = await _SystemPurposeOrder.InitialPurchaseOrder.findOne({ where: { taskId: task.id, jobId: task.tripId } })
-                    if (order) {
-                        pending += Number(order.total)
-                        indent.points.pending += Number(order.total)
-                    }
-                }
-            } 
-            if (job.status.toLowerCase() == 'approved') {
-                // Check accumulated
-                for (let task of jobTaskList) {
-                    if (!['completed', 'late trip', 'no show'].includes(task.taskStatus.toLowerCase())) {
-                        log.info(`Checking accumulated ....`)
-                        let order = await _SystemPurposeOrder.InitialPurchaseOrder.findOne({ where: { taskId: task.id, jobId: task.tripId } })
-                        if (order) {
-                            accumulated += Number(order.total)
-                            indent.points.accumulated += Number(order.total)
-                        }
-                    }
-                }
-            }
-            // Check used
-            for (let task of jobTaskList) {
-                if (!task.taskStatus) {
-                    log.warn(`TaskId ${ task.id } taskStatus is empty!`)
-                    continue;
-                }
-
-                if (['completed', 'late trip', 'no show'].includes(task.taskStatus.toLowerCase())) {
-                    log.info(`Checking used ....`)
-                    let order = await _SystemPurposeOrder.InitialPurchaseOrder.findOne({ where: { taskId: task.id, jobId: task.tripId } })
-                    if (order) {
-                        used += Number(order.total)
-                        indent.points.used += Number(order.total)
-                    }
-                }
-            }
-        }
-    }
-
-    return { accumulated, used, pending, list };
-}
 
 const calculatePointsByStatusAndDate2 = async function (list, date) {
     let accumulated = 0, used = 0, pending = 0;
@@ -114,29 +32,21 @@ const calculatePointsByStatusAndDate2 = async function (list, date) {
             if (!data.status) {
                 log.warn(`JobId => ${ data.jobId } status is empty!`)
                 continue;
-            }
-
-            if (data.status.toLowerCase().indexOf('pending for approval') > -1) {
+            } else if (data.status.toLowerCase().indexOf('pending for approval') > -1) {
                 log.info(`Checking pending => `, JSON.stringify(data, null, 4))
                 // Check pending
                 pending += Number(data.total)
                 indent.points.pending += Number(data.total)
-            }
-
-            if (data.status.toLowerCase() == 'approved') {
+            } else if (data.status.toLowerCase() == 'approved' && !['completed', 'late trip', 'no show'].includes(data.taskStatus.toLowerCase())) {
                 // Check accumulated
-                if (!['completed', 'late trip', 'no show'].includes(data.taskStatus.toLowerCase())) {
-                    accumulated += Number(data.total)
-                    indent.points.accumulated += Number(data.total)
-                }
+                accumulated += Number(data.total)
+                indent.points.accumulated += Number(data.total)
             }
 
             // Check used
             if (!data.taskStatus) {
                 log.warn(`TaskId ${ data.taskId } taskStatus is empty!`)
-                continue;
-            }
-            if (['completed', 'late trip', 'no show'].includes(data.taskStatus.toLowerCase())) {
+            } else if (['completed', 'late trip', 'no show'].includes(data.taskStatus.toLowerCase())) {
                 log.info(`Checking used => `, JSON.stringify(data, null, 4))
                 used += Number(data.total)
                 indent.points.used += Number(data.total)

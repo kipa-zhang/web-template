@@ -97,8 +97,8 @@ const getSysTask = async function (res, req) {
         if(sysTaskListByServer){
             obj.hub = sysTaskListByServer.hub;
             obj.node = sysTaskListByServer.node;
-            obj.driverStatus = sysTaskListByServer.driverStatus ? sysTaskListByServer.driverStatus : item.driverStatus;
-            obj.vehicleStatus = sysTaskListByServer.vehicleStatus ? sysTaskListByServer.vehicleStatus : item.vehicleStatus;
+            obj.driverStatus = sysTaskListByServer.driverStatus ?? item.driverStatus;
+            obj.vehicleStatus = sysTaskListByServer.vehicleStatus ?? item.vehicleStatus;
         } else {
             let sysTaskUnitListByServer = await Unit.findOne({ where: { id: item.mobiusUnit } });
             obj.hub = sysTaskUnitListByServer ? sysTaskUnitListByServer.unit : null;
