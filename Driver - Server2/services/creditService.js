@@ -37,7 +37,8 @@ const calculatePointsByStatusAndDate2 = async function (list, date) {
                 // Check pending
                 pending += Number(data.total)
                 indent.points.pending += Number(data.total)
-            } else if (data.status.toLowerCase() == 'approved' && !['completed', 'late trip', 'no show'].includes(data.taskStatus.toLowerCase())) {
+            } else if (data.status.toLowerCase() == 'approved' 
+                && !['completed', 'late trip', 'no show'].includes(data.taskStatus.toLowerCase())) {
                 // Check accumulated
                 accumulated += Number(data.total)
                 indent.points.accumulated += Number(data.total)

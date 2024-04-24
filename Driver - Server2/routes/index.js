@@ -96,14 +96,17 @@ router.get('/', async (req, res) => {
     let pageList = await userService.getUserPageList(user.userId)
 
     let availableSwitchCV = false;
-    let baseUser = await sequelizeObj.query(` SELECT * FROM user_base WHERE mvUserId = ? `, { type: QueryTypes.SELECT, replacements: [ user.userId ] })
-    if (baseUser.length && baseUser[0].cvUserId) {
-        // check cv user is not lock out and deactived
-        let cvUser = await _SysUser.USER.findByPk(baseUser[0].cvUserId);
-        if (cvUser && cvUser.status != CONTENT.CV_USER_STATUS.Deactivated && cvUser.status != CONTENT.CV_USER_STATUS.LockOut) {
-            availableSwitchCV = true;
+    const initAvailableCV = async function () {
+        let baseUser = await sequelizeObj.query(` SELECT * FROM user_base WHERE mvUserId = ? `, { type: QueryTypes.SELECT, replacements: [ user.userId ] })
+        if (baseUser.length && baseUser[0].cvUserId) {
+            // check cv user is not lock out and deactived
+            let cvUser = await _SysUser.USER.findByPk(baseUser[0].cvUserId);
+            if (cvUser && cvUser.status != CONTENT.CV_USER_STATUS.Deactivated && cvUser.status != CONTENT.CV_USER_STATUS.LockOut) {
+                availableSwitchCV = true;
+            }
         }
     }
+    await initAvailableCV()
     
     res.cookie('userLocalMapTile', conf.Use_Local_MapTile, { expires: utils.expiresCookieDate() });
 

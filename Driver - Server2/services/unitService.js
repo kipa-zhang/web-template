@@ -256,69 +256,78 @@ const getPermitUnitList2 = async function (userId = null) {
         if (!user) {
             // Empty collection
         } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].indexOf(user.userType) > -1) {
-            let hubList = await sequelizeObj.query(`
-                SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
-                FROM unit
-                GROUP BY unit
-            `, { type: QueryTypes.SELECT })
-
-            for (let hub of hubList) {
-                let nodeList = await sequelizeObj.query(`
-                    SELECT id, subUnit AS node, lat, lng 
-                    FROM unit WHERE id IN (?)
-                `, { type: QueryTypes.SELECT, replacements: [ hub.hubIdList.split(',') ] })
-                hub.nodeList = nodeList
-            }
-            result.hubNodeList = hubList;
-            hubList.map(hub => result.hubNodeIdList = result.hubNodeIdList.concat(hub.hubIdList.split(',')))
-        } else if ([ CONTENT.USER_TYPE.HQ ].indexOf(user.userType) > -1) {
-            let hubList = await sequelizeObj.query(`
-                SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
-                FROM unit
-                WHERE FIND_IN_SET(?, hq)
-                GROUP BY unit
-            `, { type: QueryTypes.SELECT, replacements: [ user.hq ] })
-
-            for (let hub of hubList) {
-                let nodeList = await sequelizeObj.query(`
-                    SELECT id, subUnit AS node, lat, lng 
-                    FROM unit WHERE id IN (?)
-                `, { type: QueryTypes.SELECT, replacements: [ hub.hubIdList.split(',') ] })
-                hub.nodeList = nodeList
-            }
-            result.hubNodeList = hubList;
-            hubList.map(hub => result.hubNodeIdList = result.hubNodeIdList.concat(hub.hubIdList.split(',')))
-        } else if ([ CONTENT.USER_TYPE.UNIT, CONTENT.USER_TYPE.MOBILE ].indexOf(user.userType) > -1) {
-            let permitUnitIdList = [ ]
-            if (user.subUnit || user.node) {
-                permitUnitIdList = [ user.unitId ]
-            } else {
+            const initHubNodeIdList = async function () {
                 let hubList = await sequelizeObj.query(`
                     SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
                     FROM unit
-                    WHERE unit = ?
                     GROUP BY unit
-                `, { type: QueryTypes.SELECT, replacements: [ (user.unit ? user.unit : user.hub) ] })
-                permitUnitIdList = hubList[0].hubIdList.split(',')
+                `, { type: QueryTypes.SELECT })
+
+                for (let hub of hubList) {
+                    let nodeList = await sequelizeObj.query(`
+                        SELECT id, subUnit AS node, lat, lng 
+                        FROM unit WHERE id IN (?)
+                    `, { type: QueryTypes.SELECT, replacements: [ hub.hubIdList.split(',') ] })
+                    hub.nodeList = nodeList
+                }
+                result.hubNodeList = hubList;
+                hubList.map(hub => result.hubNodeIdList = result.hubNodeIdList.concat(hub.hubIdList.split(',')))
             }
+            await initHubNodeIdList()
+        } else if ([ CONTENT.USER_TYPE.HQ ].indexOf(user.userType) > -1) {
+            const initHubNodeIdList2 = async function () {
+                let hubList = await sequelizeObj.query(`
+                    SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
+                    FROM unit
+                    WHERE FIND_IN_SET(?, hq)
+                    GROUP BY unit
+                `, { type: QueryTypes.SELECT, replacements: [ user.hq ] })
 
-            let hubList = await sequelizeObj.query(`
-                SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
-                FROM unit
-                WHERE id IN (?)
-                GROUP BY unit
-            `, { type: QueryTypes.SELECT, replacements: [ permitUnitIdList ] })
+                for (let hub of hubList) {
+                    let nodeList = await sequelizeObj.query(`
+                        SELECT id, subUnit AS node, lat, lng 
+                        FROM unit WHERE id IN (?)
+                    `, { type: QueryTypes.SELECT, replacements: [ hub.hubIdList.split(',') ] })
+                    hub.nodeList = nodeList
+                }
+                result.hubNodeList = hubList;
+                hubList.map(hub => result.hubNodeIdList = result.hubNodeIdList.concat(hub.hubIdList.split(',')))
+            }
+            await initHubNodeIdList2()
+        } else if ([ CONTENT.USER_TYPE.UNIT, CONTENT.USER_TYPE.MOBILE ].indexOf(user.userType) > -1) {
+            const initHubNodeIdList3 = async function () {
+                let permitUnitIdList = [ ]
+                if (user.subUnit || user.node) {
+                    permitUnitIdList = [ user.unitId ]
+                } else {
+                    let hubList = await sequelizeObj.query(`
+                        SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
+                        FROM unit
+                        WHERE unit = ?
+                        GROUP BY unit
+                    `, { type: QueryTypes.SELECT, replacements: [ (user.unit ? user.unit : user.hub) ] })
+                    permitUnitIdList = hubList[0].hubIdList.split(',')
+                }
 
-            for (let hub of hubList) {
-                let nodeList = await sequelizeObj.query(`
-                    SELECT id, subUnit AS node, lat, lng 
-                    FROM unit WHERE id IN (?)
-                `, { type: QueryTypes.SELECT, replacements: [ hub.hubIdList.split(',') ] })
-                hub.nodeList = nodeList
-            }                
-            
-            result.hubNodeList = hubList;
-            hubList.map(hub => result.hubNodeIdList = result.hubNodeIdList.concat(hub.hubIdList.split(',')))
+                let hubList = await sequelizeObj.query(`
+                    SELECT unit AS hub, GROUP_CONCAT(id) AS hubIdList 
+                    FROM unit
+                    WHERE id IN (?)
+                    GROUP BY unit
+                `, { type: QueryTypes.SELECT, replacements: [ permitUnitIdList ] })
+
+                for (let hub of hubList) {
+                    let nodeList = await sequelizeObj.query(`
+                        SELECT id, subUnit AS node, lat, lng 
+                        FROM unit WHERE id IN (?)
+                    `, { type: QueryTypes.SELECT, replacements: [ hub.hubIdList.split(',') ] })
+                    hub.nodeList = nodeList
+                }                
+                
+                result.hubNodeList = hubList;
+                hubList.map(hub => result.hubNodeIdList = result.hubNodeIdList.concat(hub.hubIdList.split(',')))
+            }
+            await initHubNodeIdList3()
         } else if ([ CONTENT.USER_TYPE.CUSTOMER ].indexOf(user.userType) > -1) {
             result.groupId = user.unitId;
         }
