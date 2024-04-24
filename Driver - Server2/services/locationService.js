@@ -102,7 +102,7 @@ module.exports = {
                     { dropoffDestination: location.locationName }
                 ]
             } })
-            if (checkResult && checkResult.length) {
+            if (checkResult?.length > 0) {
                 log.warn(`${ location.locationName } already used in system, can not change locationName here!`)
                 
                 // Update task table
@@ -116,7 +116,7 @@ module.exports = {
                     { destination: location.locationName }
                 ]
             } })
-            if (checkResult2 && checkResult2.length) {
+            if (checkResult2?.length > 0) {
                 log.warn(`${ location.locationName } already used in MT-ADMIN, can not change locationName here!`)
                 
                 // update mt-admin table
@@ -130,7 +130,7 @@ module.exports = {
                     { pickupDestination: location.locationName }
                 ]
             } })
-            if (checkResult3 && checkResult3.length) {
+            if (checkResult3?.length > 0) {
                 log.warn(`${ location.locationName } already used in Task, can not change locationName here!`)
                 
                 // update task table
@@ -139,7 +139,7 @@ module.exports = {
             }
 
             let checkResult4 = await UrgentIndent.findAll({ where: { reportingLocation: location.locationName }})
-            if (checkResult4 && checkResult4.length) {
+            if (checkResult4?.length > 0) {
                 log.warn(`${ location.locationName } already used in Urgent Indent, can not change locationName here!`)
                 
                 // update task table
@@ -186,9 +186,9 @@ module.exports = {
                     }
                 } 
             })
-            if (checkResult && checkResult.length) {
+            if (checkResult?.length > 0) {
                 log.warn(`Location ${ location.locationName } already used in system, can not delete here!`)
-                throw `Location has been used and is unable to delete.`
+                throw new Error(`Location has been used and is unable to delete.`)
             }
 
             let checkResult2 = await Task.findAll({ 
@@ -202,9 +202,9 @@ module.exports = {
                     }
                 } 
             })
-            if (checkResult2 && checkResult2.length) {
+            if (checkResult2?.length > 0) {
                 log.warn(`${ location.locationName } already used in MT-ADMIN, can not delete here!`)
-                throw `Location has been used and is unable to delete.`
+                throw new Error(`Location has been used and is unable to delete.`)
             }
 
             let checkResult3 = await UrgentIndent.findAll({ 
@@ -215,9 +215,9 @@ module.exports = {
                     }
                 } 
             })
-            if (checkResult3 && checkResult3.length) {
+            if (checkResult3?.length > 0) {
                 log.warn(`${ location.locationName } already used in Urgent, can not delete here!`)
-                throw `Location has been used and is unable to delete.`
+                throw new Error(`Location has been used and is unable to delete.`)
             }
         }
 

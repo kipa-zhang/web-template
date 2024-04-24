@@ -152,7 +152,8 @@ module.exports.returnLoanByLoanId = async function (req, res) {
         ) ${ loanOut.driverId ? ` and t.driverId = ${ loanOut.driverId }` : '' }
         ${ loanOut.vehicleNo ? ` and t.vehicleNumber = '${ loanOut.vehicleNo }'` : '' }
         `, { type: QueryTypes.SELECT });
-        if(taskByLoan.length > 0)  return res.json(utils.response(0, `The operation failed and the ${ loanOut.driverId ? ` driver` : 'vehicle' } had unfinished tasks.`));
+        let __errorName = loanOut.driverId ? ` driver` : 'vehicle'
+        if(taskByLoan.length > 0)  return res.json(utils.response(0, `The operation failed and the ${ __errorName } had unfinished tasks.`));
         
         await sequelizeObj.transaction(async transaction => {
             let newLoanRecord = {
@@ -177,14 +178,16 @@ module.exports.returnLoanByLoanId = async function (req, res) {
             await loanRecord.create(newLoanRecord);
             await loan.destroy({ where: { id: loanId } });
 
+            let __loanDriverData = loanOut.driverId && loanOut.driverId != '' ? `driverId:${ loanOut.driverId },` : '';
+            let __loanVehicleData = loanOut.vehicleNo && loanOut.vehicleNo != '' ? `vehicleNo:${ loanOut.vehicleNo }` : '';
             await OperationRecord.create({
                 id: null,
                 operatorId: req.cookies.userId,
                 businessType: 'task dashboard',
                 businessId: loanOut.taskId,
                 optType: 'return loan',
-                beforeData: `${ loanOut.driverId && loanOut.driverId != '' ? `driverId:${ loanOut.driverId },` : '' }${ loanOut.vehicleNo && loanOut.vehicleNo != '' ? `vehicleNo:${ loanOut.vehicleNo }` : '' }`,
-                afterData: `${ loanOut.driverId && loanOut.driverId != '' ? `driverId:${ loanOut.driverId },` : '' }${ loanOut.vehicleNo && loanOut.vehicleNo != '' ? `vehicleNo:${ loanOut.vehicleNo }` : '' }`,
+                beforeData: `${ __loanDriverData }${ __loanVehicleData }`,
+                afterData: `${ __loanDriverData }${ __loanVehicleData }`,
                 optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
                 remarks: `return loan ${ loanOut.driverId ? 'driver' : '' }${ loanOut.vehicleNo ? 'vehicle' : '' }` 
             })

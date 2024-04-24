@@ -6,6 +6,10 @@ const utils = require('../util/utils');
 
 const { User } = require('../model/user');
 
+const whitePageList = ['/home', '/callback', '/loginUseSingpass', '/guide', '/user/registerUser', '/user/getSystemRole', '/user/registerAccountUser',
+'/assign/initSystemTaskByTripId', '/user/getAccountUserData', '/user/getSystemUrl', '/user/getServiceTypeBySelectedGroup',
+'/user/getHqTypeList', '/user/urlParameterDecode', '/user/getUserBaseByUserId', '/user/editAccountUser'];
+
 router.use(async (req, res, next) => {
     if(req.url.indexOf('?') >= 0) {
         req.url = req.url.substring(0, req.url.indexOf('?'))
@@ -14,10 +18,7 @@ router.use(async (req, res, next) => {
     log.info('HTTP Request UserId : ', req.cookies.userId);
     log.info('HTTP Request Body: ', JSON.stringify(req.body));
 
-    if (req.url == '/home' || req.url.startsWith('/callback') || req.url == '/loginUseSingpass' || req.url == '/guide'     
-    || req.url== '/user/registerUser' || req.url== '/user/getSystemRole' || req.url == '/user/registerAccountUser' || req.url == '/assign/initSystemTaskByTripId'
-    || req.url == '/user/getAccountUserData' || req.url == '/user/getSystemUrl' || req.url == '/user/getServiceTypeBySelectedGroup'
-    || req.url == '/user/getHqTypeList' || req.url == '/user/urlParameterDecode' || req.url == '/user/getUserBaseByUserId' || req.url == '/user/editAccountUser') {
+    if (whitePageList.indexOf(req.url) != -1) {
         next();
         return;
     }

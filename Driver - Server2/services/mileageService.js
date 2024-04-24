@@ -20,7 +20,7 @@ module.exports.InitMileageList = async function (req, res) {
             let user = await userService.getUserDetailInfo(userId)
 			if (!user) {
 				log.warn(`User ${ userId } does not exist.`);
-				throw `User ${ userId } does not exist.`;
+				throw new Error(`User ${ userId } does not exist.`);
 			}
 			return user;
 		}
@@ -29,19 +29,16 @@ module.exports.InitMileageList = async function (req, res) {
         let user = await checkUser(userId);
         let mileageList = []
         if (user.userType === CONTENT.USER_TYPE.HQ || user.userType === CONTENT.USER_TYPE.ADMINISTRATOR) {
-            // mileageList = await Mileage.findAll();
             mileageList = await sequelizeObj.query(`
                 SELECT m.*, d.driverName FROM mileage m
                 LEFT JOIN driver d ON d.driverId = m.driverId   
             `, { type: QueryTypes.SELECT })
         } else {
-            // let groupUserIdList = await groupService.getGroupUserIdListByUser(user);
             let unitIdList = await unitService.getUnitPermissionIdList(user)
 
             // Device id bind to vehicle, so just judge vehicleNo here.
-            let driverList = [], deviceList = [];
+            let driverList = [];
             let option = [], vehicleList = [];
-            // if (groupUserIdList.length) option.push({ creator: groupUserIdList })
             if (unitIdList.length) option.push({ unitId: unitIdList })
             if (option.length) {
                 driverList = await Driver.findAll({ where: { [Op.or]: option }, attribute: ['driverId'] })

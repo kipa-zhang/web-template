@@ -102,7 +102,7 @@ const getSysTask = async function (res, req) {
         } else {
             let sysTaskUnitListByServer = await Unit.findOne({ where: { id: item.mobiusUnit } });
             obj.hub = sysTaskUnitListByServer ? sysTaskUnitListByServer.unit : null;
-            obj.node = sysTaskUnitListByServer ? sysTaskUnitListByServer.subUnit ? sysTaskUnitListByServer.subUnit : null : null;
+            obj.node = sysTaskUnitListByServer?.subUnit ? sysTaskUnitListByServer.subUnit : null;
         }
         sysTaskList.push(obj)
     }

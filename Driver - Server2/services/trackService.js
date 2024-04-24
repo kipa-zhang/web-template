@@ -37,17 +37,24 @@ const outputService = require('./outputService');
 const mtAdminService = require('./mtAdminService');
 const fs = require('graceful-fs');
 
+const checkUser = async function (userId) {
+    let user = await userService.getUserDetailInfo(userId)
+    if (!user) {
+        log.warn(`User ${ userId } does not exist.`);
+        throw Error(`User ${ userId } does not exist.`);
+    }
+    return user;
+}
+
+const checkTimeIfMissing = function (time) {
+    let flag = conf.VehicleMissingFrequency;
+    flag = flag || 0;
+    flag = Number.parseInt(flag);
+    return moment().diff(moment(time), 'm') > flag;
+}
+
 module.exports.getDriverAndDeviceList2 = async function (req, res) {
     try {
-        const checkUser = async function (userId) {
-            let user = await userService.getUserDetailInfo(userId)
-			if (!user) {
-				log.warn(`User ${ userId } does not exist.`);
-				throw Error(`User ${ userId } does not exist.`);
-			}
-			return user;
-		}
-
         const getAvailableDriverAndDeviceList = async function (selectDate) {
             try {
                 let availableDeviceIdList = [], availableDriverIdList = []
@@ -131,42 +138,45 @@ module.exports.getDriverAndDeviceList2 = async function (req, res) {
             `
             if(availableDriverIdList.length){
                 baseSqL += ` and dp.driverId in (?)`
-                replacements.push(availableDriverIdList.join(','))
+                replacements.push(availableDriverIdList)
             } else {
                 baseSqL += ` and 1=2`
             }
             let sql = ` SELECT * FROM ( ${ baseSqL } ) tt WHERE 1=1 `
 
-            if (user.userType === CONTENT.USER_TYPE.HQ) {
-                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` ( tt.unitId IN ( ? ) AND tt.groupId IS NULL ) `) 
-                    replacements.push(unitIdList.map(item => `'${ item }'`).join(','))
+            const getPermitSql = async function () {
+                if (user.userType === CONTENT.USER_TYPE.HQ) {
+                    let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
+                    
+                    let tempSqlList = []
+                    if (unitIdList.length) {
+                        tempSqlList.push(` ( tt.unitId IN ( ? ) AND tt.groupId IS NULL ) `) 
+                        replacements.push(unitIdList)
+                    }
+                    if (groupIdList.length) {
+                        tempSqlList.push(` tt.groupId in (?) `) 
+                        replacements.push(groupIdList)
+                    }
+                    
+                    if (tempSqlList.length) {
+                        sql += ` and (${ tempSqlList.join(' OR ') }) `
+                    } else {
+                        sql += ` AND 1 = 2 `;
+                    }
+                } else if (user.userType === CONTENT.USER_TYPE.UNIT) {
+                    let { unitIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
+                    if (unitIdList.length) {
+                        sql += ` AND ( tt.unitId IN ( ? ) AND tt.groupId IS NULL ) `
+                        replacements.push(unitIdList)
+                    } else {
+                        sql += ` AND 1 = 2 `;
+                    }
+                } else if (user.userType === CONTENT.USER_TYPE.CUSTOMER) {
+                    sql += ` AND tt.groupId = ? `
+                    replacements.push(user.unitId)
                 }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId in (?) `) 
-                    replacements.push(groupIdList.map(item => `'${ item }'`).join(','))
-                }
-                
-                if (tempSqlList.length) {
-                    sql += ` and (${ tempSqlList.join(' OR ') }) `
-                } else {
-                    sql += ` AND 1 = 2 `;
-                }
-            } else if (user.userType === CONTENT.USER_TYPE.UNIT) {
-                let { unitIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
-                if (unitIdList.length) {
-                    sql += ` AND ( tt.unitId IN ( ? ) AND tt.groupId IS NULL ) `
-                    replacements.push(unitIdList.map(item => `'${ item }'`).join(','))
-                } else {
-                    sql += ` AND 1 = 2 `;
-                }
-            } else if (user.userType === CONTENT.USER_TYPE.CUSTOMER) {
-                sql += ` AND tt.groupId = ? `
-                replacements.push(user.unitId)
             }
+            await getPermitSql()
 
             if (groupDriver) {
                 sql += ` GROUP BY tt.driverId `
@@ -248,42 +258,46 @@ module.exports.getDriverAndDeviceList2 = async function (req, res) {
             `
             if(availableDeviceIdList.length){
                 baseSqL += ` and d.deviceId in (?)`
-                replacements.push(availableDeviceIdList.map(item => `'${ item }'`).join(','))
+                replacements.push(availableDeviceIdList)
             } else {
                 baseSqL += ` and 1=2`
             }
             let sql = ` SELECT * FROM ( ${ baseSqL } ) vv WHERE 1=1 `
 
-            if (user.userType === CONTENT.USER_TYPE.HQ) {
-                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` ( vv.unitId IN ( ? ) AND vv.groupId IS NULL ) `) 
-                    replacements.push(unitIdList.map(item => `'${ item }'`).join(','))
+            const getPermitSql = async function () {
+                if (user.userType === CONTENT.USER_TYPE.HQ) {
+                    let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
+                    
+                    let tempSqlList = []
+                    if (unitIdList.length) {
+                        tempSqlList.push(` ( vv.unitId IN ( ? ) AND vv.groupId IS NULL ) `) 
+                        replacements.push(unitIdList)
+                    }
+                    if (groupIdList.length) {
+                        tempSqlList.push(` vv.groupId in (?) `) 
+                        replacements.push(groupIdList)
+                    }
+                    
+                    if (tempSqlList.length) {
+                        sql += ` and (${ tempSqlList.join(' OR ') }) `
+                    } else {
+                        sql += ` AND 1 = 2 `;
+                    }
+                } else if (user.userType === CONTENT.USER_TYPE.UNIT) {
+                    let unitIdList = await unitService.getUnitPermissionIdList(user);
+                    if (unitIdList.length) {
+                        sql += ` AND ( vv.unitId IN ( ? ) AND vv.groupId IS NULL ) `
+                        replacements.push(unitIdList)
+                    } else {
+                        sql += ` AND 1 = 2 `
+                    }
+                } else if (user.userType === CONTENT.USER_TYPE.CUSTOMER) {
+                    sql += ` AND vv.groupId = ? `
+                    replacements.push(user.unitId)
                 }
-                if (groupIdList.length) {
-                    tempSqlList.push(` vv.groupId in (?) `) 
-                    replacements.push(groupIdList.map(item => `'${ item }'`).join(','))
-                }
-                
-                if (tempSqlList.length) {
-                    sql += ` and (${ tempSqlList.join(' OR ') }) `
-                } else {
-                    sql += ` AND 1 = 2 `;
-                }
-            } else if (user.userType === CONTENT.USER_TYPE.UNIT) {
-                let unitIdList = await unitService.getUnitPermissionIdList(user);
-                if (unitIdList.length) {
-                    sql += ` AND ( vv.unitId IN ( ? ) AND vv.groupId IS NULL ) `
-                    replacements.push(unitIdList.map(item => `'${ item }'`).join(','))
-                } else {
-                    sql += ` AND 1 = 2 `
-                }
-            } else if (user.userType === CONTENT.USER_TYPE.CUSTOMER) {
-                sql += ` AND vv.groupId = ? `
-                replacements.push(user.unitId)
             }
+            await getPermitSql()
+            
             sql += ` group by d.deviceId `
             log.info(sql)
 			deviceList = await sequelizeObj.query(sql, { type: QueryTypes.SELECT, replacements: replacements })	
@@ -303,12 +317,6 @@ module.exports.getDriverAndDeviceList2 = async function (req, res) {
             return deviceList;
         }
 
-        const checkTimeIfMissing = function (time) {
-            let flag = conf.VehicleMissingFrequency;
-            flag = flag ? flag : 0;
-            flag = Number.parseInt(flag);
-            return moment().diff(moment(time), 'm') > flag;
-        }
 
         let user = await checkUser(req.cookies.userId);
         let selectedDate = req.body.selectedDate;
@@ -332,15 +340,6 @@ module.exports.getDriverAndDeviceList2 = async function (req, res) {
 
 module.exports.getDriverAndDeviceList = async function (req, res) {
     try {
-        const checkUser = async function (userId) {
-            let user = await userService.getUserDetailInfo(userId)
-			if (!user) {
-				log.warn(`User ${ userId } does not exist.`);
-				throw Error(`User ${ userId } does not exist.`);
-			}
-			return user;
-		}
-
         const getDriverList = async function (user, selectedDate, groupDriver) {
             let driverList = []
             
@@ -404,18 +403,23 @@ module.exports.getDriverAndDeviceList = async function (req, res) {
                 sql += ` AND tt.updatedAt LIKE ? `
                 replacements.push(selectedDate+'%')
             }
-            if (user.userType === CONTENT.USER_TYPE.UNIT) {
-                let { unitIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
-                if (unitIdList.length) {
-                    sql += ` AND ( tt.unitId IN ( ? ) AND tt.groupId IS NULL ) `
-                    replacements.push(unitIdList.map(item => `'${ item }'`).join(','))
-                } else {
-                    sql += ` AND 1 = 2 `;
+
+            const getPermitSql = async function () {
+                if (user.userType === CONTENT.USER_TYPE.UNIT) {
+                    let { unitIdList } = await unitService.UnitUtils.getPermitUnitList(user.userId);
+                    if (unitIdList.length) {
+                        sql += ` AND ( tt.unitId IN ( ? ) AND tt.groupId IS NULL ) `
+                        replacements.push(unitIdList)
+                    } else {
+                        sql += ` AND 1 = 2 `;
+                    }
+                } else if (user.userType === CONTENT.USER_TYPE.CUSTOMER) {
+                    sql += ` AND tt.groupId = ? `
+                    replacements.push(user.unitId)
                 }
-            } else if (user.userType === CONTENT.USER_TYPE.CUSTOMER) {
-                sql += ` AND tt.groupId = ? `
-                replacements.push(user.unitId)
             }
+            await getPermitSql()
+            
             log.info(sql)
 
             if (groupDriver) {
@@ -501,13 +505,11 @@ module.exports.getDriverAndDeviceList = async function (req, res) {
                 sql += ` AND vv.updatedAt LIKE ? `
                 replacements.push(selectedDate+'%')
             }
-            if (user.userType === CONTENT.USER_TYPE.HQ || user.userType === CONTENT.USER_TYPE.ADMINISTRATOR) {
-                
-            } else if (user.userType === CONTENT.USER_TYPE.UNIT) {
+            if (user.userType === CONTENT.USER_TYPE.UNIT) {
                 let unitIdList = await unitService.getUnitPermissionIdList(user);
                 if (unitIdList.length) {
                     sql += ` AND ( vv.unitId IN ( ? ) AND vv.groupId IS NULL ) `
-                    replacements.push(unitIdList.map(item => `'${ item }'`).join(','))
+                    replacements.push(unitIdList)
                 } else {
                     sql += ` AND 1 = 2 `
                 }
@@ -534,13 +536,6 @@ module.exports.getDriverAndDeviceList = async function (req, res) {
             return deviceList;
         }
 
-        const checkTimeIfMissing = function (time) {
-            let flag = conf.VehicleMissingFrequency;
-            flag = flag ? flag : 0;
-            flag = Number.parseInt(flag);
-            return moment().diff(moment(time), 'm') > flag;
-        }
-
         let user = await checkUser(req.cookies.userId);
         let selectedDate = req.body.selectedDate;
         let groupDriver = req.body.groupDriver
@@ -561,15 +556,6 @@ module.exports.getDriverAndDeviceList = async function (req, res) {
 };
 module.exports.getDriverAndDevicePositionList = async function (req, res) {
     try {
-        const checkUser = async function (userId) {
-            let user = await userService.getUserDetailInfo(userId)
-			if (!user) {
-				log.warn(`User ${ userId } does not exist.`);
-				throw Error(`User ${ userId } does not exist.`);
-			}
-			return user;
-		}
-
         const getDriverPositionList = async function (driverList, startDateTime, endDateTime) {
             let driverPositionList = [];
             for (let driver of driverList) {
@@ -654,15 +640,6 @@ module.exports.getTrackDashboardInfo = async function (req, res) {
     try {
         let userId = req.cookies.userId;
 
-        const checkUser = async function (userId) {
-            let user = await userService.getUserDetailInfo(userId)
-			if (!user) {
-				log.warn(`User ${ userId } does not exist.`);
-				throw Error(`User ${ userId } does not exist.`);
-			}
-			return user;
-		}
-
         let user = await checkUser(userId)
         let unitIdList = null;
         
@@ -695,9 +672,7 @@ module.exports.getTrackDashboardInfo = async function (req, res) {
         let differentDeviceIdAndVehicleNoList = [];
         for (let latestTrack of latestTrackList) {
             let ifExist = differentDeviceIdAndVehicleNoList.some(obj => {
-                if (obj.deviceId == latestTrack.deviceId && obj.vehicleNo == latestTrack.vehicleNo) {
-                    return true;
-                }
+                return obj.deviceId == latestTrack.deviceId && obj.vehicleNo == latestTrack.vehicleNo
             })
             if (!ifExist) {
                 differentDeviceIdAndVehicleNoList.push({ deviceId: latestTrack.deviceId, vehicleNo: latestTrack.vehicleNo });
@@ -705,61 +680,70 @@ module.exports.getTrackDashboardInfo = async function (req, res) {
         }
         let resultLatestTrackList = [];
         for (let deviceIdAndVehicleNo of differentDeviceIdAndVehicleNoList) {
-            let device = { 
-                deviceId: deviceIdAndVehicleNo.deviceId, 
-                vehicleNo: deviceIdAndVehicleNo.vehicleNo, 
-                hardBraking: {
-                    eventCount: 0,
-                    occTime: null
-                },
-                rapidAcc: {
-                    eventCount: 0,
-                    occTime: null
-                },
-                speeding: {
-                    eventCount: 0,
-                    occTime: null
-                },
-                missing: {
-                    eventCount: 0,
-                    occTime: null
-                },
-                idle: {
-                    eventCount: 0,
-                    occTime: null
-                }
-            };
-            for (let latestTrack of latestTrackList) {
-                if (latestTrack.deviceId == deviceIdAndVehicleNo.deviceId 
-                    && deviceIdAndVehicleNo.vehicleNo == latestTrack.vehicleNo) {
-                    device.vehicleNo = latestTrack.vehicleNo;
-                    device.driver = latestTrack.driverName;
-                    device.dataFrom = latestTrack.dataFrom;
-                    
-                    if (latestTrack.violationType === CONTENT.ViolationType.HardBraking) {
-                        device.hardBraking = latestTrack
-                    } else if (latestTrack.violationType === CONTENT.ViolationType.RapidAcc) {
-                        device.rapidAcc = latestTrack
-                    } else if (latestTrack.violationType === CONTENT.ViolationType.Speeding) {
-                        device.speeding = latestTrack
-                    } else if (latestTrack.violationType === CONTENT.ViolationType.IDLETime) {
-                        device.idle = latestTrack
-                    } else if (latestTrack.violationType === CONTENT.ViolationType.Missing) {
-                        device.missing = latestTrack
+            const getData = function () {
+                let device = { 
+                    deviceId: deviceIdAndVehicleNo.deviceId, 
+                    vehicleNo: deviceIdAndVehicleNo.vehicleNo, 
+                    hardBraking: {
+                        eventCount: 0,
+                        occTime: null
+                    },
+                    rapidAcc: {
+                        eventCount: 0,
+                        occTime: null
+                    },
+                    speeding: {
+                        eventCount: 0,
+                        occTime: null
+                    },
+                    missing: {
+                        eventCount: 0,
+                        occTime: null
+                    },
+                    idle: {
+                        eventCount: 0,
+                        occTime: null
+                    }
+                };
+                for (let latestTrack of latestTrackList) {
+                    if (latestTrack.deviceId == deviceIdAndVehicleNo.deviceId 
+                        && deviceIdAndVehicleNo.vehicleNo == latestTrack.vehicleNo) {
+                        device.vehicleNo = latestTrack.vehicleNo;
+                        device.driver = latestTrack.driverName;
+                        device.dataFrom = latestTrack.dataFrom;
+                        
+                        const initCount = function () {
+                            if (latestTrack.violationType === CONTENT.ViolationType.HardBraking) {
+                                device.hardBraking = latestTrack
+                            } else if (latestTrack.violationType === CONTENT.ViolationType.RapidAcc) {
+                                device.rapidAcc = latestTrack
+                            } else if (latestTrack.violationType === CONTENT.ViolationType.Speeding) {
+                                device.speeding = latestTrack
+                            } else if (latestTrack.violationType === CONTENT.ViolationType.IDLETime) {
+                                device.idle = latestTrack
+                            } else if (latestTrack.violationType === CONTENT.ViolationType.Missing) {
+                                device.missing = latestTrack
+                            }
+                        }
+                        initCount()
                     }
                 }
+                resultLatestTrackList.push(device)
             }
-            resultLatestTrackList.push(device)
+            getData()
         }
 
         result = { list: resultLatestTrackList, hardBraking: 0, rapidAcc: 0, speeding: 0, missing: 0, idleTime: 0, outOfService: 0, parked: 0, onRoad: 0 };
         
         for (let track of latestTrackList) {
-            if (track.violationType === CONTENT.ViolationType.HardBraking) result.hardBraking += track.count;
-            else if (track.violationType === CONTENT.ViolationType.RapidAcc) result.rapidAcc += track.count;
-            else if (track.violationType === CONTENT.ViolationType.Speeding) result.speeding += track.count;
-            else if (track.violationType === CONTENT.ViolationType.IDLETime) result.idleTime += track.count;
-            else if (track.violationType === CONTENT.ViolationType.Missing) result.missing += track.count;
+            const initCount = function () {
+                if (track.violationType === CONTENT.ViolationType.HardBraking) result.hardBraking += track.count;
+                else if (track.violationType === CONTENT.ViolationType.RapidAcc) result.rapidAcc += track.count;
+                else if (track.violationType === CONTENT.ViolationType.Speeding) result.speeding += track.count;
+                else if (track.violationType === CONTENT.ViolationType.IDLETime) result.idleTime += track.count;
+                else if (track.violationType === CONTENT.ViolationType.Missing) result.missing += track.count;
+            }
+            initCount()
         }
         let positionList = await sequelizeObj.query(`
             SELECT * FROM vehicle_relation vr
@@ -773,28 +757,26 @@ module.exports.getTrackDashboardInfo = async function (req, res) {
         `, { type: QueryTypes.SELECT, replacements: [ unitIdList ] });
         for (let position of positionList) {
             if (position.state === CONTENT.DEVICE_STATE.PARKED) result.parked++;
-            if (position.state === CONTENT.DEVICE_STATE.ON_ROAD) result.onRoad++;
+            else if (position.state === CONTENT.DEVICE_STATE.ON_ROAD) result.onRoad++;
         }
         for (let position of mobileList) {
             if (position.state === CONTENT.DEVICE_STATE.PARKED) result.parked++;
-            if (position.state === CONTENT.DEVICE_STATE.ON_ROAD) result.onRoad++;
+            else if (position.state === CONTENT.DEVICE_STATE.ON_ROAD) result.onRoad++;
         }
         
         // Sort by event time
-        if (result.list && result.list.length) {
-            let newList = result.list.sort((a, b) => {
-                let a_time = [a.hardBraking.occTime, a.rapidAcc.occTime, a.speeding.occTime, a.missing.occTime]
-                let b_time = [b.hardBraking.occTime, b.rapidAcc.occTime, b.speeding.occTime, b.missing.occTime]
-                a_time.sort((a1, a2) => {
-                    return a1 < a2 ? 1 : -1
-                })
-                b_time.sort((b1, b2) => {
-                    return b1 < b2 ? 1 : -1
-                })
-                return a_time[0] < b_time[0] ? 1 : -1
+        let newList = result.list.sort((a, b) => {
+            let a_time = [a.hardBraking.occTime, a.rapidAcc.occTime, a.speeding.occTime, a.missing.occTime]
+            let b_time = [b.hardBraking.occTime, b.rapidAcc.occTime, b.speeding.occTime, b.missing.occTime]
+            a_time.sort((a1, a2) => {
+                return a1 < a2 ? 1 : -1
             })
-            result.list = newList;
-        }
+            b_time.sort((b1, b2) => {
+                return b1 < b2 ? 1 : -1
+            })
+            return a_time[0] < b_time[0] ? 1 : -1
+        })
+        result.list = newList;
         return res.json(utils.response(1, result));
     } catch (err) {
         log.error('(getTrackDashboardInfo2) : ', err);
@@ -808,19 +790,23 @@ module.exports.getEventHistory = async function (req, res) {
         if (!date) date = moment().format('YYYY-MM-DD')
         if (!violationType) violationType = 'all'
 
-        if (violationType && violationType != 'all') {
-            if (violationType == 'speeding') {
-                violationType = CONTENT.ViolationType.Speeding
-            } else if (violationType == 'rapidAcc') {
-                violationType = CONTENT.ViolationType.RapidAcc
-            } else if (violationType == 'missing') {
-                violationType = CONTENT.ViolationType.Missing
-            } else if (violationType == 'hardBraking') {
-                violationType = CONTENT.ViolationType.HardBraking
-            } else if (violationType == 'noGoZone') {
-                violationType = CONTENT.ViolationType.NoGoZoneAlert
+        const getViolationType = function () {
+            if (violationType && violationType != 'all') {
+                if (violationType == 'speeding') {
+                    violationType = CONTENT.ViolationType.Speeding
+                } else if (violationType == 'rapidAcc') {
+                    violationType = CONTENT.ViolationType.RapidAcc
+                } else if (violationType == 'missing') {
+                    violationType = CONTENT.ViolationType.Missing
+                } else if (violationType == 'hardBraking') {
+                    violationType = CONTENT.ViolationType.HardBraking
+                } else if (violationType == 'noGoZone') {
+                    violationType = CONTENT.ViolationType.NoGoZoneAlert
+                }
             }
         }
+        getViolationType()
+        
         let trackHistoryList = []
         let sql = ``
         let replacements = []
@@ -971,7 +957,6 @@ module.exports.getEventLatestSpeedInfo = async function (req, res) {
         let deviceId = req.body.deviceId;
         let vehicleNo = req.body.vehicleNo;
         let type = req.body.type;
-        let occTime = req.body.occTime;
         let startTime = req.body.startTime;
         let endTime = req.body.endTime;
 

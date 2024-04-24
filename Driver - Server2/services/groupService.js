@@ -47,12 +47,12 @@ module.exports.createUserGroup = async function (req, res) {
         await sequelizeObj.transaction(async transaction => {
             const checkUserGroup = async function (userGroup) {
                 if (!userGroup.groupName) {
-                    throw `GroupName can not be empty.`
+                    throw new Error(`GroupName can not be empty.`)
                 }
                 // check if exist in userGroup
                 let userGroupResult = await UserGroup.findOne({ where: { groupName: userGroup.groupName } })
                 if (userGroupResult) {
-                    throw `UserGroup ${ userGroup.groupName } already exist.`
+                    throw new Error(`UserGroup ${ userGroup.groupName } already exist.`)
                 }
             }
             const createUserGroup = async function (userGroup) {
@@ -83,7 +83,7 @@ module.exports.updateUserGroup = async function (req, res) {
         await sequelizeObj.transaction(async transaction => {
             const checkUserGroup = async function (userGroup) {
                 if (!userGroup.groupName) {
-                    throw `GroupName can not be empty.`
+                    throw new Error(`GroupName can not be empty.`)
                 }
             }
             const updateUserGroup = async function (userGroup) {
@@ -124,6 +124,7 @@ module.exports.getGroupUserIdListByUser = async function (user) {
         }
         return groupUserIdList;
     } catch (error) {
+        log.error(error)
         throw error
     }
 }

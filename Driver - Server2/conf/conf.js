@@ -27,6 +27,8 @@ module.exports.activeMQConf = 'mqtt://192.168.1.188:1883';
 
 module.exports.dataPath = "D://data"
 
+module.exports.uploadFilePath = "D:\\mobius-server\\uploadFiles"
+
 module.exports.serverPort = 5000;
 module.exports.serverPortHttps = 5080;
 

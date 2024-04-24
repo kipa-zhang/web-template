@@ -25,18 +25,6 @@ const RoleUtils = {
             return []
         }
     },
-    generateBrotherNode: async function (parentId) {
-        let pageList = await sequelizeObj.query(` 
-            SELECT mp.module, GROUP_CONCAT(mp.\`page\`) AS pages, GROUP_CONCAT(mp.\`id\`) AS ids FROM (
-                SELECT module, \`page\`, id
-                FROM module_page 
-                WHERE module != 'Role Management' AND parentId = ?
-                GROUP BY module, \`page\`
-            ) mp
-            GROUP BY mp.module
-        `, { type: QueryTypes.SELECT, replacements: [ parentId ] })
-        let result = []
-    },
     generatePageTree: async function (roleId, parentId) {
         let alreadyPageList = []
         if (roleId) {
@@ -77,7 +65,7 @@ const RoleUtils = {
             // If has no pages, init real id and checked result
             if (!page.pages) {
                 result1.id = page.ids
-                result1.checked = (alreadyPageList.length && alreadyPageList.includes('' + page.ids)) ? true : false
+                result1.checked = (alreadyPageList.length > 0 && alreadyPageList.includes('' + page.ids))
             }
 
             // page is not empty, means has children
@@ -100,7 +88,7 @@ const RoleUtils = {
                                 id: item.id,
                                 title: p,
                                 isNode: true,
-                                checked: (alreadyPageList.length && alreadyPageList.includes('' + item.id)) ? true : false
+                                checked: (alreadyPageList.length > 0 && alreadyPageList.includes('' + item.id))
                             })
                             continue;
                         }
@@ -109,7 +97,7 @@ const RoleUtils = {
                             id: item.id,
                             title: item.action,
                             isNode: true,
-                            checked: (alreadyPageList.length && alreadyPageList.includes('' + item.id)) ? true : false
+                            checked: (alreadyPageList.length > 0 && alreadyPageList.includes('' + item.id))
                         })
 
                         if (item.id == 520 || item.id == 530) {
@@ -277,7 +265,7 @@ module.exports = {
                 if (role.id) {
                     let result = await Role.findByPk(role.id)
                     if (!result) {
-                        throw `Role ID ${ role.id } does not exist.`
+                        throw new Error(`Role ID ${ role.id } does not exist.`)
                     }
                 }
                 if (role.roleName) {
@@ -292,7 +280,7 @@ module.exports = {
     
                     let result = await Role.findAll({ where: options })
                     if (result.length) {
-                        throw `Role name ${ role.roleName } already exist.`
+                        throw new Error(`Role name ${ role.roleName } already exist.`)
                     }
                 }
             }
@@ -347,7 +335,7 @@ module.exports = {
             // check role exist
             let roleObj = await Role.findByPk(roleId)
             if (!roleObj) {
-                throw `Role ID ${ roleId } does not exist.`
+                throw new Error(`Role ID ${ roleId } does not exist.`)
             }
 
             // check role if still in use

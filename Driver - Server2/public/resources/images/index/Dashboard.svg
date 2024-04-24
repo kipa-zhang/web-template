@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="53" height="53" viewBox="0 0 53 53">
-  <g id="Dashboard" transform="translate(-4490 -3528)">
-    <g id="a" transform="translate(4490 3528)" fill="none" stroke="#dbb227" stroke-width="1">
-      <circle cx="26.5" cy="26.5" r="26.5" stroke="none"/>
-      <circle cx="26.5" cy="26.5" r="26" fill="none"/>
-    </g>
-    <path id="a-2" data-name="a" d="M91,66H79V64H77v2H65a1,1,0,0,0-1,1V83a1,1,0,0,0,1,1H77v1.575l-4.775,2.8,1,1.75,4.5-2.625h.6l4.5,2.625,1-1.75L79,85.575V84H91a1,1,0,0,0,1-1V67A1,1,0,0,0,91,66ZM90,82H66V68H90ZM86.7,70,88,71.5l-9.9,8.475-5.1-4.3-3.7,3.1L68.025,77.25l5-4.175,5.1,4.3Z" transform="translate(4439 3477)" fill="#dbb227"/>
-  </g>
-</svg>

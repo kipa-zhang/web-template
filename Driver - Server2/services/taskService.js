@@ -8,7 +8,7 @@ const jsonfile = require('jsonfile')
 const moment = require('moment');
 let axios = require('axios');
 
-const { Sequelize, Op, QueryTypes } = require('sequelize');
+const { Sequelize, Op, QueryTypes, NUMBER } = require('sequelize');
 const { sequelizeObj } = require('../db/dbConf')
 const { sequelizeSystemObj } = require('../db/dbConf_system')
 
@@ -104,17 +104,15 @@ const TaskUtils = {
                 log.info(`checkoutAlertEvent => ${ alertZone.zoneName }`)
                 for (let location of locationList) {
                     location.createdAt = moment(location.createdAt).format('YYYY-MM-DD HH:mm:ss')
-                    if (this.checkAlertDate(alertZone, location.createdAt)) {
-                        if (this.checkAlertTime(alertZone, location.createdAt)) { 
-                            if (this.checkPointInPolygon([location.lat, location.lng], JSON.parse(alertZone.polygon))) { 
-                                result.push({
-                                    driverName: location.driverName,
-                                    vehicleNo: location.vehicleNo,
-                                    createdAt: location.createdAt,
-                                    zoneName: alertZone.zoneName
-                                })
-                            }
-                        } 
+                    if (this.checkAlertDate(alertZone, location.createdAt) 
+                        && this.checkAlertTime(alertZone, location.createdAt)
+                        && this.checkPointInPolygon([location.lat, location.lng], JSON.parse(alertZone.polygon))) {
+                            result.push({
+                                driverName: location.driverName,
+                                vehicleNo: location.vehicleNo,
+                                createdAt: location.createdAt,
+                                zoneName: alertZone.zoneName
+                            })
                     }
                 }
             }
@@ -127,20 +125,14 @@ const TaskUtils = {
     },
     checkAlertDate: function (noGoZone, dateTime) {
         let currentDate = moment(dateTime).format('YYYY-MM-DD')
-        if (moment(currentDate, 'YYYY-MM-DD').isBetween(moment(noGoZone.startDate, 'YYYY-MM-DD'), moment(noGoZone.endDate, 'YYYY-MM-DD'), null, [])) {
-            return true
-        }
-        return false
+        return moment(currentDate, 'YYYY-MM-DD').isBetween(moment(noGoZone.startDate, 'YYYY-MM-DD'), moment(noGoZone.endDate, 'YYYY-MM-DD'), null, []);
     },
     checkAlertTime: function (noGoZone, dateTime) {
         // DATA => 'YYYY-MM-DD HH:mm:ss'
         const checkWeek = function (selectedWeeks, date) {
             let week = moment(date).day()
             let weeks = selectedWeeks.split(',').map(item => Number.parseInt(item))
-            if (weeks.indexOf(week) > -1) {
-                return true
-            }
-            return false
+            return weeks.indexOf(week) > -1;
         }
     
         // DATA => 'YYYY-MM-DD HH:mm:ss'
@@ -273,6 +265,402 @@ const TaskUtils = {
     }
 }
 
+const generateTotalTask = function (hubNodeDataArray) {
+    let opsCount = 0;
+    let trainingCount = 0;
+    let adminCount = 0;
+    let exerciseCount = 0;
+    let dutyCount = 0;
+    let drivingTrainingCount = 0;
+    let maintenanceCount = 0;
+    let othersCount = 0;
+    let familiarisationCount = 0;
+    let wptCount = 0;
+    let mptCount = 0;
+    let aviCount = 0;
+    let pmCount = 0;
+    let totalTaskCount = 0;
+
+    hubNodeDataArray.forEach(item => totalTaskCount += item.taskNum)
+
+    let hasPurposeList = hubNodeDataArray.filter(item => item.purpose)
+    for (let temp of hasPurposeList) {
+        if (temp.purpose.toLowerCase().startsWith('ops')) {
+            opsCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('training')) {
+            trainingCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('admin')) {
+            adminCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('exercise')) {
+            exerciseCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('duty')) {
+            dutyCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('driving training')) {
+            drivingTrainingCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('maintenance')) {
+            maintenanceCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('others')) {
+            othersCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('familiarisation')) {
+            familiarisationCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('wpt')) {
+            wptCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('mpt')) {
+            mptCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('avi')) {
+            aviCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('pm')) {
+            pmCount += temp.taskNum
+        } 
+    }
+    return {
+        totalTaskCount,
+        opsCount,
+        trainingCount,
+        adminCount,
+        exerciseCount,
+        dutyCount,
+        drivingTrainingCount,
+        maintenanceCount,
+        othersCount,
+        familiarisationCount,
+        wptCount,
+        mptCount,
+        aviCount,
+        pmCount,
+    }
+}
+
+const generateStartedTask = function (hubNodeStartedDataArray) {
+    let opsStartedCount = 0;
+    let trainingStartedCount = 0;
+    let adminStartedCount = 0;
+    let exerciseStartedCount = 0;
+    let dutyStartedCount = 0;
+    let drivingTrainingStartedCount = 0;
+    let maintenanceStartedCount = 0;
+    let othersStartedCount = 0;
+    let familiarisationStartedCount = 0;
+    let wptStartedCount = 0;
+    let mptStartedCount = 0;
+    let aviStartedCount = 0;
+    let pmStartedCount = 0;
+
+    let hasPurposeList = hubNodeStartedDataArray.filter(item => item.purpose)
+    for (let temp of hasPurposeList) {
+        if (temp.purpose.toLowerCase().startsWith('ops')) {
+            opsStartedCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('training')) {
+            trainingStartedCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('admin')) {
+            adminStartedCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('exercise')) {
+            exerciseStartedCount += temp.taskNum
+        } else if (temp.purpose.toLowerCase().startsWith('duty')) {
+            dutyStartedCount += temp.taskNum
+         } else if (temp.purpose.toLowerCase().startsWith('driving training')) {
+            drivingTrainingStartedCount += temp.taskNum
+         } else if (temp.purpose.toLowerCase().startsWith('maintenance')) {
+            maintenanceStartedCount += temp.taskNum
+         } else if (temp.purpose.toLowerCase().startsWith('others')) {
+            othersStartedCount += temp.taskNum
+         }  else if (temp.purpose.toLowerCase().startsWith('familiarisation')) {
+            familiarisationStartedCount += temp.taskNum
+         }  else if (temp.purpose.toLowerCase().startsWith('wpt')) {
+            wptStartedCount += temp.taskNum
+         }  else if (temp.purpose.toLowerCase().startsWith('mpt')) {
+            mptStartedCount += temp.taskNum
+         }  else if (temp.purpose.toLowerCase().startsWith('avi')) {
+            aviStartedCount += temp.taskNum
+         }  else if (temp.purpose.toLowerCase().startsWith('pm')) {
+            pmStartedCount += temp.taskNum
+         }
+    }
+
+    return {
+        opsStartedCount,
+        trainingStartedCount,
+        adminStartedCount,
+        exerciseStartedCount,
+        dutyStartedCount,
+        drivingTrainingStartedCount,
+        maintenanceStartedCount,
+        othersStartedCount,
+        familiarisationStartedCount,
+        wptStartedCount,
+        mptStartedCount,
+        aviStartedCount,
+        pmStartedCount
+    }
+}
+
+const getHubNodeList = async function (hub, user) {
+    let hubNodeList = []
+    if (hub) {
+        let unitData = await Unit.findAll({ where: { unit: hub } })
+        hubNodeList = unitData.map(item => {
+            return {
+                hub: item.unit,
+                node: item.subUnit ? item.subUnit : 'Other',
+                lat: item.lat,
+                lng: item.lng
+            }
+        })
+    } else if (user.unitId) {
+        let unitList = await Unit.findOne({ where: { id: user.unitId } })
+        if(unitList.subUnit){
+            hubNodeList.push({
+                hub: unitList.unit,
+                node: unitList.subUnit ? unitList.subUnit : 'Other',
+                lat: unitList.lat,
+                lng: unitList.lng
+            })
+        } else {
+            let unitData = await Unit.findAll({ where: { unit: unitList.unit } })
+            hubNodeList = unitData.map(item => {
+                return {
+                    hub: item.unit,
+                    node: item.subUnit ? item.subUnit : 'Other',
+                    lat: item.lat,
+                    lng: item.lng
+                }
+            })
+        }
+    } else {
+        let unitData = await Unit.findAll()
+        hubNodeList = unitData.map(item => {
+            return {
+                hub: item.unit,
+                node: item.subUnit ? item.subUnit : 'Other',
+                lat: item.lat,
+                lng: item.lng
+            }
+        })
+    }
+
+    return hubNodeList
+}
+
+const getPermitData = async function (hub, user) {
+    let hubNodeIdList = [], groupId = null;
+
+    if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
+        groupId = user.unitId;
+        log.info(`getTodayOffenceDashboard => (groupId) : ${ groupId }`)
+    } else {
+        if (!hub) {
+            let unitList = await unitService.UnitUtils.getPermitUnitList2(user.userId);
+            hubNodeIdList = unitList.hubNodeIdList;
+        } else {
+            hubNodeIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(hub);
+        }
+        log.info(`getTodayOffenceDashboard => (hubNodeIdList) : ${ JSON.stringify(hubNodeIdList) }`)
+    }
+
+    return {
+        hubNodeIdList,
+        groupId
+    }
+}
+
+const generateTempSql = function (unitIdList, groupIdList) {
+    let tempSqlList = [], tempReplacements0 = []
+    if (unitIdList.length) {
+        tempSqlList.push(` u.id IN ( ? ) `) 
+        tempReplacements0.push(unitIdList)
+    }
+    if (groupIdList.length) {
+        tempSqlList.push(` tt.groupId in ( ? ) `) 
+        tempReplacements0.push(groupIdList)
+    }
+
+    return {
+        tempSqlList,
+        tempReplacements0
+    }
+}
+const generateUrgentTempSql = function (unitIdList, groupIdList) {
+    let tempSqlList = [], tempReplacements0 = []
+    if (unitIdList.length) {
+        tempSqlList.push(` u.id IN ( ? ) `) 
+        tempReplacements0.push(unitIdList)
+    }
+    if (groupIdList.length) {
+        tempSqlList.push(` ui.groupId in ( ? ) `) 
+        tempReplacements0.push(groupIdList)
+    }
+
+    return {
+        tempSqlList,
+        tempReplacements0
+    }
+}
+const  generateLimitSQL = async function (hub, user, hubNodeIdList) {
+    let tempSql = ``, tempReplacements = []
+    if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
+        tempSql += ` AND tt.groupId = ? `
+        tempReplacements.push(user.unitId)
+    } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
+        let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+
+        if (hub) {
+            tempSql += ` AND tt.hub = ? `
+            tempReplacements.push(hub)
+        } else if (hub == null) {
+            tempSql += ` AND tt.groupId IS NOT NULL `
+        }
+
+        let { tempSqlList, tempReplacements0 } = generateTempSql(unitIdList, groupIdList)
+        tempReplacements = tempReplacements.concat(tempReplacements0)
+
+        if (tempSqlList.length) {
+            tempSql += ` and (${ tempSqlList.join(' OR ') }) ` 
+        } else {
+            tempSql += ` and 1=2 ` 
+        }
+    } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
+        if (hub) {
+            tempSql += ` AND tt.hub = ? `
+            tempReplacements.push(hub)
+        } else if (hub == null) {
+            tempSql += ` AND tt.groupId IS NOT NULL `
+        }
+    } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
+        tempSql += ` AND ( u.id IN ( ? ) AND tt.groupId IS NULL ) `
+        tempReplacements.push(hubNodeIdList)
+    }
+
+    return {
+        tempSql,
+        tempReplacements
+    }
+}
+const  generateUrgentLimitSQL = async function (hub, user, hubNodeIdList) {
+    let tempSql = ``, tempReplacements = []
+    if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
+        tempSql += ` AND ui.groupId = ? `
+        tempReplacements.push(user.unitId)
+    } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
+        let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+
+        if (hub) {
+            tempSql += ` AND ui.hub = ? `
+            tempReplacements.push(hub)
+        } else if (hub == null) {
+            tempSql += ` AND ui.groupId IS NOT NULL `
+        }
+
+        let { tempSqlList, tempReplacements0 } = generateUrgentTempSql(unitIdList, groupIdList)
+        tempReplacements = tempReplacements.concat(tempReplacements0)
+
+        if (tempSqlList.length) {
+            tempSql += ` and (${ tempSqlList.join(' OR ') }) ` 
+        } else {
+            tempSql += ` and 1=2 ` 
+        }
+    } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
+        if (hub) {
+            tempSql += ` AND ui.hub = ? `
+            tempReplacements.push(hub)
+        } else if (hub == null) {
+            tempSql += ` AND ui.groupId IS NOT NULL `
+        }
+    } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
+        tempSql += ` AND ( u.id IN ( ? ) AND ui.groupId IS NULL ) `
+        tempReplacements.push(hubNodeIdList)
+    }
+
+    return {
+        tempSql,
+        tempReplacements
+    }
+}
+
+const generateLimitCondition = async function (group, user) {
+    const getLimitConditionByGroup = function (group) {
+        let limitCondition = [], replacements = []
+        if (group) {
+            limitCondition.push(` t.groupId = ? `)
+            replacements.push(group)
+        } else if (group == 0) {
+            limitCondition.push(` t.groupId IS NOT NULL `)
+        } else {
+            limitCondition.push(` t.groupId IS NULL `)
+        }
+
+        return {
+            limitCondition,
+            replacements
+        }
+    }
+    const getLimitConditionByGroup2 = async function (group, user) {
+        let limitCondition = [], replacements = []
+        
+        let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+        let tempSqlList = []
+        if (unitIdList.length) {
+            tempSqlList.push(` u.id IN (?) `)
+            replacements.push(unitIdList);
+        }
+        if (groupIdList.length) {
+            tempSqlList.push(` t.groupId in (?) `)
+            replacements.push(groupIdList);
+        }
+        
+        if (tempSqlList.length) {
+            limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
+        } else {
+            limitCondition.push(` 1=2 `)
+        }
+
+        // HQ user has group permission
+        if (user.group?.length) {
+            if (group) {
+                limitCondition.push(` t.groupId = ? `)
+                replacements.push(group)
+            } else if (group == 0) {
+                limitCondition.push(` t.groupId in (?) `)
+                replacements.push(groupIdList)
+            } else {
+                limitCondition.push(` t.groupId IS NULL `)
+            }
+        }
+
+        return {
+            limitCondition,
+            replacements
+        }
+    }
+
+    let limitCondition = [], replacements = []
+
+    if (user.userType.toLowerCase() == 'customer') {
+        limitCondition.push(` t.groupId = ? `)
+        replacements.push(user.unitId)
+    } else if (user.userType.toLowerCase() == 'administrator') {
+        let result = getLimitConditionByGroup(group)
+        limitCondition = limitCondition.concat(result.limitCondition)
+        replacements = replacements.concat(result.replacements)
+    } else if (user.userType.toLowerCase() == 'hq') {
+        let result = await getLimitConditionByGroup2(group, user)
+        limitCondition = limitCondition.concat(result.limitCondition)
+        replacements = replacements.concat(result.replacements)
+    } else if (user.userType.toLowerCase() == 'unit') {
+        let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
+        if (hubNodeIdList.length) {
+            // Maybe not more than 1000 node in one hub
+            limitCondition.push(` ( u.id IN (?) AND t.groupId IS NULL ) `)
+            replacements.push(hubNodeIdList);
+        }
+    }
+
+    return {
+        limitCondition,
+        replacements
+    }
+}
+
+
 module.exports = {
     TaskUtils,
     getPurposeList: async (req, res) => {
@@ -282,6 +670,19 @@ module.exports = {
     //2023-06-15 Customer user,Add two purpose(WPT and MPT), task null and - (DV/LOA)
     getHubByPurpose2: async (req, res) => {
         try {
+            const generateHubData = function (hub, hubConf) {
+                let hubData = { hub: (hub && hub != '-') ? hub : 'DV_LOA', purposeData: [] }
+
+                hubData.circleColor = hubNodeConf.defaultColor
+                hubConf.forEach(item => {
+                    if (hubData.hub?.toLowerCase() == item.hub?.toLowerCase()) {
+                        hubData.circleColor = item.color
+                    } 
+                })
+
+                return hubData
+            }
+
             let userId = req.body.userId;
             let timeSelected = req.body.timeSelected;
             if (!timeSelected) timeSelected = moment().format('YYYY-MM-DD');
@@ -296,201 +697,85 @@ module.exports = {
                 LEFT JOIN driver d ON d.driverId = t.driverId
                 where t.driverId is not null and t.driverStatus != 'Cancelled' and d.permitStatus != 'invalid' and
                 ((? between (DATE_FORMAT(t.indentStartTime,'%Y-%m-%d')) and DATE_FORMAT(t.indentEndTime,'%Y-%m-%d'))
-                OR t.driverStatus = 'started')
+                OR t.driverStatus = 'started') ${ req.cookies.userType != 'ADMINISTRATOR' ? ` and t.hub != '-' ` : '' }
                 GROUP BY t.hub, t.purpose 
             `, { 
                 type: QueryTypes.SELECT,
                 replacements: [ moment(timeSelected).format('YYYY-MM-DD') ] 
             })
 
-            let startedTaskList = await sequelizeObj.query(`
-                select count(t.taskId) as taskNum, t.hub, t.purpose from task t
-                LEFT JOIN driver d ON d.driverId = t.driverId
-                where t.driverId is not null and d.permitStatus != 'invalid' and
-                ? between (DATE_FORMAT(t.indentStartTime,'%Y-%m-%d')) and DATE_FORMAT(t.indentEndTime,'%Y-%m-%d')
-                and t.mobileStartTime is not null GROUP BY t.hub, t.purpose 
-            `, { 
-                type: QueryTypes.SELECT,
-                replacements: [ moment(timeSelected).format('YYYY-MM-DD') ] 
-            })
-
             let taskListByGroup = null
-            let startedTaskListByGroup = null
-            if(userUnit.groupIdList){
-                if(userUnit.groupIdList.length > 0){
-                    taskListByGroup = await sequelizeObj.query(`
-                        select count(t.taskId) as taskNum, t.hub, t.purpose from task t
-                        LEFT JOIN driver d ON d.driverId = t.driverId
-                        where t.driverId is not null and t.driverStatus != 'Cancelled' and d.permitStatus != 'invalid' and
-                        ((? between (DATE_FORMAT(t.indentStartTime,'%Y-%m-%d')) and DATE_FORMAT(t.indentEndTime,'%Y-%m-%d'))
-                        OR t.driverStatus = 'started')
-                        and t.groupId in ( ? )
-                        GROUP BY t.hub, t.purpose 
-                    `, { 
-                        type: QueryTypes.SELECT,
-                        replacements: [ moment(timeSelected).format('YYYY-MM-DD'), userUnit.groupIdList ] 
-                    })
-
-                    startedTaskListByGroup = await sequelizeObj.query(`
-                        select count(t.taskId) as taskNum, t.hub, t.purpose from task t
-                        LEFT JOIN driver d ON d.driverId = t.driverId
-                        where t.driverId is not null and d.permitStatus != 'invalid' and
-                        ? between (DATE_FORMAT(t.indentStartTime,'%Y-%m-%d')) and DATE_FORMAT(t.indentEndTime,'%Y-%m-%d')
-                        and t.groupId in ( ? )
-                        and t.mobileStartTime is not null GROUP BY t.hub, t.purpose 
-                    `, { 
-                        type: QueryTypes.SELECT,
-                        replacements: [ moment(timeSelected).format('YYYY-MM-DD'), userUnit.groupIdList ]
-                    })
-                }
+            if(userUnit?.groupIdList.length){
+                taskListByGroup = await sequelizeObj.query(`
+                    select count(t.taskId) as taskNum, t.hub, t.purpose from task t
+                    LEFT JOIN driver d ON d.driverId = t.driverId
+                    where t.driverId is not null and t.driverStatus != 'Cancelled' and d.permitStatus != 'invalid' and
+                    ((? between (DATE_FORMAT(t.indentStartTime,'%Y-%m-%d')) and DATE_FORMAT(t.indentEndTime,'%Y-%m-%d'))
+                    OR t.driverStatus = 'started')
+                    and t.groupId in ( ? )
+                    GROUP BY t.hub, t.purpose 
+                `, { 
+                    type: QueryTypes.SELECT,
+                    replacements: [ moment(timeSelected).format('YYYY-MM-DD'), userUnit.groupIdList ] 
+                })
             }
     
              let result = []
+             let hubConf = jsonfile.readFileSync(`./conf/hubNodeConf.json`)
              for (let hub of unitList) {
-                 let hubData = { hub: (hub && hub != '-') ? hub : 'DV_LOA', purposeData: [] }
-                 let hubConf = jsonfile.readFileSync(`./conf/hubNodeConf.json`)
-                 for (let item of hubConf) {
-                    if (hubData.hub?.toLowerCase() == item.hub?.toLowerCase()) {
-                        hubData.circleColor = item.color
-                    }  
-                 }
-                if (!hubData.circleColor) {
-                    hubData.circleColor = hubNodeConf.defaultColor
-                }
-                 // total task
-                 let taskListDataArray
-                 if(hub){
+                let hubData = generateHubData(hub, hubConf)
+                
+                // total task
+                let taskListDataArray
+                if (hub) {
                     taskListDataArray = taskList.filter(item => item.hub == hub);
-                 } else if(taskListByGroup) {
+                } else if (taskListByGroup) {
                     taskListDataArray = taskListByGroup.filter(item => item);
                 } else {
                     taskListDataArray = taskList.filter(item => (!item.hub || item.hub == '-'));
                 }
-                 let opsCount = 0;
-                 let trainingCount = 0;
-                 let adminCount = 0;
-                 let exerciseCount = 0;
-                 let dutyCount = 0;
-                 let drivingTrainingCount = 0;
-                 let maintenanceCount = 0;
-                 let othersCount = 0;
-                 let familiarisationCount = 0;
-                 let wptCount = 0;
-                 let mptCount = 0;
-                 let aviCount = 0;
-                 let pmCount = 0;
-                 if(taskListDataArray && taskListDataArray.length > 0) {
-                     for (let temp of taskListDataArray) {
-                         if (temp.purpose && temp.purpose.toLowerCase().startsWith('ops')) {
-                             opsCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('training')) {
-                             trainingCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('admin')) {
-                             adminCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('exercise')) {
-                             exerciseCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('duty')) {
-                            dutyCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('driving training')) {
-                            drivingTrainingCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('maintenance')) {
-                            maintenanceCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('others')) {
-                            othersCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('familiarisation')) {
-                            familiarisationCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('wpt')) {
-                            wptCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('mpt')) {
-                            mptCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('avi')) {
-                            aviCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('pm')) {
-                            pmCount += temp.taskNum
-                         } 
-                     }
-                 }
-     
-                 // started task
-                 let startedTaskListStartedDataArray
-                 if(hub){
-                    startedTaskListStartedDataArray = startedTaskList.filter(item => item.hub == hub);
-                 } else {
-                    if(startedTaskListByGroup){
-                        startedTaskListStartedDataArray = startedTaskListByGroup.filter(item => item);
-                    } else {
-                        startedTaskListStartedDataArray = startedTaskList.filter(item => !item.hub);
-                    }
-                 }
-                 let opsStartedCount = 0;
-                 let trainingStartedCount = 0;
-                 let adminStartedCount = 0;
-                 let exerciseStartedCount = 0;
-                 let dutyStartedCount = 0;
-                 let drivingTrainingStartedCount = 0;
-                 let maintenanceStartedCount = 0;
-                 let othersStartedCount = 0;
-                 let familiarisationStartedCount = 0;
-                 let wptStartedCount = 0;
-                 let mptStartedCount = 0;
-                 let aviStartedCount = 0;
-                 let pmStartedCount = 0;
-                 if(startedTaskListStartedDataArray && startedTaskListStartedDataArray.length > 0) {
-                     for (let temp of startedTaskListStartedDataArray) {
-                         if (temp.purpose && temp.purpose.toLowerCase().startsWith('ops')) {
-                             opsStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('training')) {
-                             trainingStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('admin')) {
-                             adminStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('exercise')) {
-                             exerciseStartedCount += temp.taskNum
-                         }   else if (temp.purpose && temp.purpose.toLowerCase().startsWith('duty')) {
-                            dutyStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('driving training')) {
-                            drivingTrainingStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('maintenance')) {
-                            maintenanceStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('others')) {
-                            othersStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('familiarisation')) {
-                            familiarisationStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('wpt')) {
-                            wptStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('mpt')) {
-                            mptStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('avi')) {
-                            aviStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('pm')) {
-                            pmStartedCount += temp.taskNum
-                         }   
-                     }
-                 }
-                 if((hubData.hub).toUpperCase() == 'DV_LOA') {
-                    hubData.purposeData.push({purpose: 'Ops', taskCount: opsCount, startedTaskCount: opsStartedCount})
-                    hubData.purposeData.push({purpose: 'Training', taskCount: trainingCount, startedTaskCount: trainingStartedCount})
-                    hubData.purposeData.push({purpose: 'Admin', taskCount: adminCount, startedTaskCount: adminStartedCount})   
-                    hubData.purposeData.push({purpose: 'WPT', taskCount: wptCount, startedTaskCount: wptStartedCount})
-                    hubData.purposeData.push({purpose: 'MPT', taskCount: mptCount, startedTaskCount: mptStartedCount})   
-                 } else {
-                    hubData.purposeData.push({purpose: 'Ops', taskCount: opsCount, startedTaskCount: opsStartedCount})
-                    hubData.purposeData.push({purpose: 'Training', taskCount: trainingCount, startedTaskCount: trainingStartedCount})
-                    hubData.purposeData.push({purpose: 'Admin', taskCount: adminCount, startedTaskCount: adminStartedCount})   
-                    hubData.purposeData.push({purpose: 'Exercise', taskCount: exerciseCount, startedTaskCount: exerciseStartedCount})
-                    hubData.purposeData.push({purpose: 'Duty', taskCount: dutyCount, startedTaskCount: dutyStartedCount})
-                    hubData.purposeData.push({purpose: 'Driving Training', taskCount: drivingTrainingCount, startedTaskCount: drivingTrainingStartedCount})
-                    hubData.purposeData.push({purpose: 'Maintenance', taskCount: maintenanceCount, startedTaskCount: maintenanceStartedCount})
-                    hubData.purposeData.push({purpose: 'Others', taskCount: othersCount, startedTaskCount: othersStartedCount})
-                    hubData.purposeData.push({purpose: 'Familiarisation', taskCount: familiarisationCount, startedTaskCount: familiarisationStartedCount})
-                    hubData.purposeData.push({purpose: 'WPT', taskCount: wptCount, startedTaskCount: wptStartedCount})
-                    hubData.purposeData.push({purpose: 'MPT', taskCount: mptCount, startedTaskCount: mptStartedCount})   
-                    hubData.purposeData.push({purpose: 'AVI', taskCount: aviCount, startedTaskCount: aviStartedCount})
-                    hubData.purposeData.push({purpose: 'PM', taskCount: pmCount, startedTaskCount: pmStartedCount})   
-   
-                 }
+                let {
+                    opsCount,
+                    trainingCount,
+                    adminCount,
+                    exerciseCount,
+                    dutyCount,
+                    drivingTrainingCount,
+                    maintenanceCount,
+                    othersCount,
+                    familiarisationCount,
+                    wptCount,
+                    mptCount,
+                    aviCount,
+                    pmCount,
+                } = generateTotalTask(taskListDataArray)
+                   
+                 
+                if((hubData.hub).toUpperCase() == 'DV_LOA') {
+                    hubData.purposeData.push({purpose: 'Ops', taskCount: opsCount})
+                    hubData.purposeData.push({purpose: 'Training', taskCount: trainingCount})
+                    hubData.purposeData.push({purpose: 'Admin', taskCount: adminCount})   
+                    hubData.purposeData.push({purpose: 'WPT', taskCount: wptCount})
+                    hubData.purposeData.push({purpose: 'MPT', taskCount: mptCount})   
+                } else {
+                    hubData.purposeData.push({purpose: 'Ops', taskCount: opsCount})
+                    hubData.purposeData.push({purpose: 'Training', taskCount: trainingCount})
+                    hubData.purposeData.push({purpose: 'Admin', taskCount: adminCount})   
+                    hubData.purposeData.push({purpose: 'Exercise', taskCount: exerciseCount})
+                    hubData.purposeData.push({purpose: 'Duty', taskCount: dutyCount})
+                    hubData.purposeData.push({purpose: 'Driving Training', taskCount: drivingTrainingCount})
+                    hubData.purposeData.push({purpose: 'Maintenance', taskCount: maintenanceCount})
+                    hubData.purposeData.push({purpose: 'Others', taskCount: othersCount})
+                    hubData.purposeData.push({purpose: 'Familiarisation', taskCount: familiarisationCount})
+                    hubData.purposeData.push({purpose: 'WPT', taskCount: wptCount})
+                    hubData.purposeData.push({purpose: 'MPT', taskCount: mptCount})   
+                    hubData.purposeData.push({purpose: 'AVI', taskCount: aviCount})
+                    hubData.purposeData.push({purpose: 'PM', taskCount: pmCount})   
+
+                }
             
-                 result.push(hubData);
-             }
+                result.push(hubData);
+            }
                      
             return res.json(utils.response(1, result));
         } catch(error) {
@@ -510,54 +795,8 @@ module.exports = {
             let hub = req.body.hub;
             if (!timeSelected) timeSelected = moment().format('YYYY-MM-DD');
             let user = await User.findOne({ where: { userId: userId } })
-            let hubNodeList = []
-            if(hub) {
-                let unitData = await Unit.findAll({ where: { unit: hub } })
-                for(let item of unitData){
-                    let obj = {
-                        hub: item.unit,
-                        node: item.subUnit ? item.subUnit : 'Other',
-                        lat: item.lat,
-                        lng: item.lng
-                    }
-                    hubNodeList.push(obj)
-                }
-            } else {
-                if(user.unitId){
-                    let unitList = await Unit.findOne({ where: { id: user.unitId } })
-                    if(unitList.subUnit){
-                        hubNodeList.push({
-                            hub: unitList.unit,
-                            node: unitList.subUnit ? unitList.subUnit : 'Other',
-                            lat: unitList.lat,
-                            lng: unitList.lng
-                        })
-                    } else {
-                        let unitData = await Unit.findAll({ where: { unit: unitList.unit } })
-                        for(let item of unitData){
-                            let obj = {
-                                hub: item.unit,
-                                node: item.subUnit ? item.subUnit : 'Other',
-                                lat: item.lat,
-                                lng: item.lng
-                            }
-                            hubNodeList.push(obj)
-                        }
-                    }
-                } else {
-                    let unitData = await Unit.findAll()
-                    for(let item of unitData){
-                        let obj = {
-                            hub: item.unit,
-                            node: item.subUnit ? item.subUnit : 'Other',
-                            lat: item.lat,
-                            lng: item.lng
-                        }
-                        hubNodeList.push(obj)
-                    } 
-                }
-            }
-    
+            let hubNodeList = await getHubNodeList(hub, user)
+            
             let nodeTaskData = await sequelizeObj.query(`
                 SELECT
                     t.hubNode,
@@ -599,100 +838,43 @@ module.exports = {
                 let hubData = { hub: hubNode.hub, node: hubNode.node, totalTaskCount: 0, location: { lat: hubNode.lat, lng: hubNode.lng }, purposeData: [] }
                 // total task
                 let hubNodeDataArray = nodeTaskData.filter(item => item.hubNode == hubNode.hub + '-' +  hubNode.node);
-                let opsCount = 0;
-                let trainingCount = 0;
-                let adminCount = 0;
-                let exerciseCount = 0;
-                let dutyCount = 0;
-                let drivingTrainingCount = 0;
-                let maintenanceCount = 0;
-                let othersCount = 0;
-                let familiarisationCount = 0;
-                let wptCount = 0;
-                let mptCount = 0;
-                let aviCount = 0;
-                let pmCount = 0;
-                if(hubNodeDataArray && hubNodeDataArray.length > 0) {
-                    for (let temp of hubNodeDataArray) {
-                        if (temp.purpose && temp.purpose.toLowerCase().startsWith('ops')) {
-                            opsCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('training')) {
-                            trainingCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('admin')) {
-                            adminCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('exercise')) {
-                            exerciseCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('duty')) {
-                            dutyCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('driving training')) {
-                            drivingTrainingCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('maintenance')) {
-                            maintenanceCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('others')) {
-                            othersCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('familiarisation')) {
-                            familiarisationCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('wpt')) {
-                            wptCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('mpt')) {
-                            mptCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('avi')) {
-                            aviCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('pm')) {
-                            pmCount += temp.taskNum
-                         } 
-                        
-                        hubData.totalTaskCount += temp.taskNum
-                    }
-                }
-    
-    
+                let {
+                    totalTaskCount,
+                    opsCount,
+                    trainingCount,
+                    adminCount,
+                    exerciseCount,
+                    dutyCount,
+                    drivingTrainingCount,
+                    maintenanceCount,
+                    othersCount,
+                    familiarisationCount,
+                    wptCount,
+                    mptCount,
+                    aviCount,
+                    pmCount,
+                } = generateTotalTask(hubNodeDataArray)
+
+                hubData.totalTaskCount = totalTaskCount
+
                 // started task
                 let hubNodeStartedDataArray = nodeStartedTaskData.filter(item => item.hubNode == hubNode.hub + '-' +  hubNode.node);
-                let opsStartedCount = 0;
-                let trainingStartedCount = 0;
-                let adminStartedCount = 0;
-                let exerciseStartedCount = 0;
-                let dutyStartedCount = 0;
-                let drivingTrainingStartedCount = 0;
-                let maintenanceStartedCount = 0;
-                let othersStartedCount = 0;
-                let familiarisationStartedCount = 0;
-                let wptStartedCount = 0;
-                let mptStartedCount = 0;
-                let aviStartedCount = 0;
-                let pmStartedCount = 0;
-                if(hubNodeStartedDataArray && hubNodeStartedDataArray.length > 0) {
-                    for (let temp of hubNodeStartedDataArray) {
-                        if (temp.purpose && temp.purpose.toLowerCase().startsWith('ops')) {
-                            opsStartedCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('training')) {
-                            trainingStartedCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('admin')) {
-                            adminStartedCount += temp.taskNum
-                        } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('exercise')) {
-                            exerciseStartedCount += temp.taskNum
-                        }    else if (temp.purpose && temp.purpose.toLowerCase().startsWith('duty')) {
-                            dutyStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('driving training')) {
-                            drivingTrainingStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('maintenance')) {
-                            maintenanceStartedCount += temp.taskNum
-                         } else if (temp.purpose && temp.purpose.toLowerCase().startsWith('others')) {
-                            othersStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('familiarisation')) {
-                            familiarisationStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('wpt')) {
-                            wptStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('mpt')) {
-                            mptStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('avi')) {
-                            aviStartedCount += temp.taskNum
-                         }  else if (temp.purpose && temp.purpose.toLowerCase().startsWith('pm')) {
-                            pmStartedCount += temp.taskNum
-                         }
-                    }
-                }
+                let {
+                    opsStartedCount,
+                    trainingStartedCount,
+                    adminStartedCount,
+                    exerciseStartedCount,
+                    dutyStartedCount,
+                    drivingTrainingStartedCount,
+                    maintenanceStartedCount,
+                    othersStartedCount,
+                    familiarisationStartedCount,
+                    wptStartedCount,
+                    mptStartedCount,
+                    aviStartedCount,
+                    pmStartedCount
+                } = generateStartedTask(hubNodeStartedDataArray)
+
                 if((hubData.hub).toUpperCase() == 'DV_LOA') {
                     hubData.purposeData.push({purpose: 'Ops', taskCount: opsCount, startedTaskCount: opsStartedCount})
                     hubData.purposeData.push({purpose: 'Training', taskCount: trainingCount, startedTaskCount: trainingStartedCount})
@@ -723,288 +905,25 @@ module.exports = {
         }
     },
 
-    getAllOffenceDashboard: async (req, res) => {
-        try {
-            let userId = req.cookies.userId;
-            
-            let user = await userService.UserUtils.getUserDetailInfo(userId);
-            if (!user) {
-                log.error(`UserId ${ userId } does not exist!`)
-                return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
-            }
-        
-            // Driver
-            let driverSql = `
-                SELECT SUBSTRING_INDEX(GROUP_CONCAT(tt.occTime ORDER BY tt.occTime DESC), ',', 1) AS lastOccTime, COUNT(*) AS total, tt.* FROM 
-                (
-                    SELECT th.deviceId, th.violationType, th.vehicleNo, th.occTime, th.dataFrom, d.driverName, dp.state 
-                    FROM track_history th
-                    LEFT JOIN (
-                        select driverId, unitId, nric, driverName, contactNumber, state FROM driver 
-                        UNION ALL 
-                        select driverId, unitId, nric, driverName, contactNumber, state FROM driver_history
-                    ) d ON d.driverId = th.deviceId
-                    left join user us on us.driverId = d.driverId
-                    LEFT JOIN driver_position dp ON dp.driverId = th.deviceId and dp.vehicleNo = th.vehicleNo
-                    WHERE th.dataFrom = 'mobile' 
-            `
-
-            let replacements = []
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                let groupDriverList = await driverService.getDriverInfo({ groupId: user.unitId })
-                let groupDriverIdList = groupDriverList.map(item => item.driverId)
-                if (groupDriverIdList.length) {
-                    driverSql += ` AND d.driverId in ( ? ) `
-                    replacements.push(groupDriverIdList)
-                } else {
-                    log.warn(`getAllOffenceDashboard => GroupID ${ user.unitId } has no driver`)
-                    driverSql += ` AND 1=2 `
-                }
-            } else if ([ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType ) {
-                let driverList = await driverService.getDriverInfo({ hub: user.hub, node: user.node })
-                let driverIdList = driverList.map(item => item.driverId)
-                if (driverIdList.length) {
-                    driverSql += ` AND d.driverId IN ( ? ) `
-                    replacements.push(driverIdList)
-                } else {
-                    driverSql += ` AND 1=2 `
-                }
-            }
-
-            driverSql += ` 
-                ORDER BY th.occTime DESC
-                ) tt GROUP BY tt.deviceId, tt.violationType, vehicleNo
-            `
-            console.log(driverSql)
-            let driverOffenceList = await sequelizeObj.query(driverSql, { type: QueryTypes.SELECT, replacements });
-
-            // Vehicle
-            let deviceSql = `
-                SELECT SUBSTRING_INDEX(GROUP_CONCAT(tt.occTime ORDER BY tt.occTime DESC), ',', 1) AS lastOccTime, COUNT(*) AS total, tt.* FROM 
-                (
-                    SELECT th.deviceId, th.violationType, v.vehicleNo, th.occTime, th.dataFrom, d.state FROM track_history th
-                    LEFT JOIN (
-                        select vehicleNo, unitId, vehicleType, limitSpeed, deviceId FROM vehicle 
-                        UNION ALL 
-                        select vehicleNo, unitId, vehicleType, limitSpeed, deviceId FROM vehicle_history
-                    ) v ON v.deviceId = th.deviceId 
-                    LEFT JOIN device d ON d.deviceId = v.deviceId
-                    WHERE th.dataFrom = 'obd'
-            `
-
-            let replacements2 = []
-            // if (user.userType.toLowerCase() == 'customer') {
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                let groupVehicleList = await driverService.getVehicleInfo({ groupId: user.unitId })
-                let groupVehicleNoList = groupVehicleList.map(item => item.vehicleNo)
-                if (groupVehicleNoList.length) {
-                    deviceSql += ` AND v.vehicleNo in ( ? ) `
-                    replacements2.push(groupVehicleNoList)
-                } else {
-                    log.warn(`getAllOffenceDashboard => GroupID ${ user.unitId } has no driver`)
-                    deviceSql += ` AND 1=2 `
-                }
-            // } else if (user.userType.toLowerCase() == 'hq' || user.userType.toLowerCase() == 'administrator') {
-            } else if ([ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-
-            // } else if (user.userType.toLowerCase() == 'unit') {
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType ) {
-                let vehicleList = await driverService.getVehicleInfo({ hub: user.hub, node: user.node })
-                let vehicleNoList = vehicleList.map(item => item.vehicleNo)
-                if (vehicleNoList.length) {
-                    deviceSql += ` AND v.vehicleNo IN ( ? ) `
-                    replacements2.push(vehicleNoList)
-                } else {
-                    deviceSql += ` AND 1=2 `
-                }
-            }
-
-            deviceSql += ` 
-                ORDER BY th.occTime DESC
-                ) tt GROUP BY tt.deviceId, tt.violationType
-            `
-            console.log(deviceSql)
-            let deviceOffenceList = await sequelizeObj.query(deviceSql, { type: QueryTypes.SELECT, replacements: replacements2 });
-
-            // Calculate result
-            let result = { list: [], hardBraking: 0, rapidAcc: 0, speeding: 0, missing: 0, idleTime: 0, outOfService: 0, parked: 0, onRoad: 0 };
-            
-            let deviceList = Array.from(new Set(driverOffenceList.map(driverOffence => driverOffence.deviceId + ',' + driverOffence.vehicleNo)));
-            deviceList = deviceList.map(device => { 
-                let list = device.split(',')
-                return {
-                    deviceId: list[0],
-                    vehicleNo: list[1]
-                }
-            })
-            for (let device of deviceList) {
-                let data = {
-                    hardBraking: {
-                        count: 0,
-                        occTime: null
-                    },
-                    rapidAcc: { 
-                        count: 0,
-                        occTime: null
-                    },
-                    speeding: {
-                        count: 0,
-                        occTime: null
-                    },
-                    missing: {
-                        count: 0,
-                        occTime: null
-                    },
-                    idle: {
-                        count: 0,
-                        occTime: null
-                    }
-                }
-                for (let driverOffence of driverOffenceList) {
-                    if (driverOffence.deviceId == device.deviceId && driverOffence.vehicleNo == device.vehicleNo) {
-                        data.deviceId = device.deviceId;
-                        data.vehicleNo = device.vehicleNo;
-                        data.state = driverOffence.state;
-                        data.dataFrom = driverOffence.dataFrom;
-                        data.driver = driverOffence.driverName;
-
-                        if (driverOffence.violationType == CONTENT.ViolationType.HardBraking) {
-                            data.hardBraking = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.hardBraking += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.RapidAcc) {
-                            data.rapidAcc = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.rapidAcc += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.Speeding) {
-                            data.speeding = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.speeding += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.Missing) {
-                            data.missing = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.missing += driverOffence.total
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-                result.list.push(data)
-            }
-
-            let deviceList2 = Array.from(new Set(deviceOffenceList.map(deviceOffence => deviceOffence.deviceId)));
-            for (let device of deviceList2) {
-                let data = { 
-                    hardBraking: {
-                        count: 0,
-                        occTime: null
-                    },
-                    rapidAcc: {
-                        count: 0,
-                        occTime: null
-                    },
-                    speeding: {
-                        count: 0,
-                        occTime: null
-                    },
-                    missing: {
-                        count: 0,
-                        occTime: null
-                    },
-                    idle: {
-                        count: 0,
-                        occTime: null
-                    }
-                }
-                for (let deviceOffence of deviceOffenceList) {
-                    if (deviceOffence.deviceId == device) {
-                        data.deviceId = device;
-                        data.vehicleNo = deviceOffence.vehicleNo;
-                        data.state = deviceOffence.state;
-                        data.dataFrom = deviceOffence.dataFrom;
-                        data.driver = deviceOffence.driverName;
-
-                        if (deviceOffence.violationType == CONTENT.ViolationType.HardBraking) {
-                            data.hardBraking = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.hardBraking += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.RapidAcc) {
-                            data.rapidAcc = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.rapidAcc += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.Speeding) {
-                            data.speeding = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.speeding += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.Missing) {
-                            data.missing = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.missing += deviceOffence.total
-                        }
-                    } else {
-                        continue;
-                    }
-                }
-                result.list.push(data)
-            }
-
-            for (let position of result.list) {
-                if (position.state === CONTENT.DEVICE_STATE.PARKED) result.parked++;
-                if (position.state === CONTENT.DEVICE_STATE.ON_ROAD) result.onRoad++;
-            }
-
-            return res.json(utils.response(1, result));
-        } catch (error) {
-            log.error(error);
-            return res.json(utils.response(0, error));
-        }
-    },
     getTodayOffenceDashboard: async (req, res) => {
         try {
+            
             let timeSelected = req.body.timeSelected
-            if(!timeSelected){
+            if (!timeSelected) {
                 timeSelected = moment().format('YYYY-MM-DD');
             }
+
             let userId = req.cookies.userId;
-            
-            let hub = req.body.hub
-            let hubNodeIdList = [], groupId = null;
             let user = await userService.UserUtils.getUserDetailInfo(userId);
             if (!user) {
                 log.error(`UserId ${ userId } does not exist!`)
                 return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
             }
 
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                groupId = user.unitId;
-                log.info(`getTodayOffenceDashboard => (groupId) : ${ groupId }`)
-            } else {
-                if (!hub) {
-                    let unitList = await unitService.UnitUtils.getPermitUnitList2(userId);
-                    hubNodeIdList = unitList.hubNodeIdList;
-                } else {
-                    hubNodeIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(hub);
-                }
-                log.info(`getTodayOffenceDashboard => (hubNodeIdList) : ${ JSON.stringify(hubNodeIdList) }`)
-            }
+            let hub = req.body.hub
+            let {
+                hubNodeIdList
+            } = await getPermitData(hub, user)
 
             // Driver
             let driverSql = `
@@ -1045,49 +964,10 @@ module.exports = {
                     AND tt.taskId is not null 
             `
 
-            let replacements = [ timeSelected, timeSelected, timeSelected]
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                driverSql += ` AND tt.groupId = ? `
-                replacements.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
-
-                if (hub) {
-                    driverSql += ` AND tt.hub = ? `
-                    replacements.push(hub)
-                }
-                if (hub == null) {
-                    driverSql += ` AND tt.groupId IS NOT NULL `
-                }
-
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN ( ? ) `) 
-                    replacements.push(unitIdList)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId in ( ? ) `) 
-                    replacements.push(groupIdList)
-                }
-                
-                if (tempSqlList.length) {
-                    driverSql += ` and (${ tempSqlList.join(' OR ') }) ` 
-                } else {
-                    driverSql += ` and 1=2 ` 
-                }
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    driverSql += ` AND tt.hub = ? `
-                    replacements.push(hub)
-                }
-                if (hub == null) {
-                    driverSql += ` AND tt.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                driverSql += ` AND ( u.id IN ( ? ) AND tt.groupId IS NULL ) `
-                replacements.push(hubNodeIdList)
-            }
-
+            let replacements = [ timeSelected, timeSelected, timeSelected + '%']
+            let driverResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            driverSql += driverResultSQL.tempSql;
+            replacements = replacements.concat(driverResultSQL.tempReplacements)
             driverSql += ` 
                 ORDER BY th.occTime DESC
                 ) tt GROUP BY tt.deviceId, tt.violationType, vehicleNo
@@ -1095,10 +975,6 @@ module.exports = {
             log.info(driverSql)
             let driverOffenceList = await sequelizeObj.query(driverSql, { type: QueryTypes.SELECT, replacements });
 
-            // Device
-            // let vehicleNoList = driverOffenceList.map(item => item.vehicleNo);
-            // vehicleNoList = Array.from(new Set(vehicleNoList))
-            replacements = []
             let deviceSql = `
                 SELECT SUBSTRING_INDEX(GROUP_CONCAT(tt.occTime ORDER BY tt.occTime DESC), ',', 1) AS lastOccTime, COUNT(*) AS total, tt.* FROM 
                 (
@@ -1128,47 +1004,11 @@ module.exports = {
                     AND th.dataFrom = 'obd'
                     AND tt.taskId is not null 
             `
-            replacements = [ timeSelected, timeSelected, timeSelected ]
+            replacements = [ timeSelected, timeSelected, timeSelected + '%' ]
 
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                deviceSql += ` AND tt.groupId = ${ user.unitId } `
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
-
-                if (hub) {
-                    deviceSql += ` AND tt.hub = ? `
-                    replacements.push(hub)
-                }
-                if (hub == null) {
-                    deviceSql += ` AND tt.groupId IS NOT NULL `
-                }
-
-                let tempSqlList = [], tempSqlList2 = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN ( ? ) `) 
-                    replacements.push(unitIdList)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId in ( ? ) `) 
-                    replacements.push(groupIdList)
-                }
-                
-                if (tempSqlList.length) {
-                    deviceSql += ` and (${ tempSqlList.join(' OR ') }) ` 
-                } else {
-                    deviceSql += ` and 1=2 ` 
-                }
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    deviceSql += ` AND tt.hub = '${ hub }' `
-                }
-                if (hub == null) {
-                    deviceSql += ` AND tt.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                deviceSql += ` AND ( u.id IN ( ? ) AND tt.groupId IS NULL ) `
-                replacements.push(hubNodeIdList)
-            }
+            let deviceResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            deviceSql += deviceResultSQL.tempSql;
+            replacements = replacements.concat(deviceResultSQL.tempReplacements)
 
             deviceSql += ` 
                 ORDER BY th.occTime DESC
@@ -1190,174 +1030,174 @@ module.exports = {
                     vehicleNo: list[1]
                 }
             })
-			for (let device of deviceList) {
-                let data = {
-                    hardBraking: {
-                        count: 0,
-                        occTime: null
-                    },
-                    rapidAcc: { 
-                        count: 0,
-                        occTime: null
-                    },
-                    speeding: {
-                        count: 0,
-                        occTime: null
-                    },
-                    missing: {
-                        count: 0,
-                        occTime: null
-                    },
-                    noGoAlert: {
-                        count: 0,
-                        occTime: null
-                    },
-                    idle: {
-                        count: 0,
-                        occTime: null
+            const generateDriverResult = function () {
+                for (let device of deviceList) {
+                    let data = {
+                        hardBraking: {
+                            count: 0,
+                            occTime: null
+                        },
+                        rapidAcc: { 
+                            count: 0,
+                            occTime: null
+                        },
+                        speeding: {
+                            count: 0,
+                            occTime: null
+                        },
+                        missing: {
+                            count: 0,
+                            occTime: null
+                        },
+                        noGoAlert: {
+                            count: 0,
+                            occTime: null
+                        }
                     }
-                }
-                for (let driverOffence of driverOffenceList) {
-                    if (driverOffence.deviceId == device.deviceId && driverOffence.vehicleNo == device.vehicleNo) {
-                        data.deviceId = device.deviceId;
-                        data.vehicleNo = device.vehicleNo;
-                        data.dataFrom = driverOffence.dataFrom;
-                        data.driver = driverOffence.driverName;
-                        data.vehicleType = driverOffence.vehicleType
-                        data.hub = driverOffence.hub
-                        data.node = driverOffence.node
-                        data.groupId = driverOffence.groupId
-                        if (data.groupId) {
-                            groupList.some(item => {
-                                if (item.id == data.groupId) {
-                                    data.groupName = item.groupName
-                                    return true;
+                    for (let driverOffence of driverOffenceList) {
+                        if (driverOffence.deviceId == device.deviceId && driverOffence.vehicleNo == device.vehicleNo) {
+                            data.deviceId = device.deviceId;
+                            data.vehicleNo = device.vehicleNo;
+                            data.dataFrom = driverOffence.dataFrom;
+                            data.driver = driverOffence.driverName;
+                            data.vehicleType = driverOffence.vehicleType
+                            data.hub = driverOffence.hub
+                            data.node = driverOffence.node
+                            data.groupId = driverOffence.groupId
+                            if (data.groupId) {
+                                groupList.some(item => {
+                                    if (item.id == data.groupId) {
+                                        data.groupName = item.groupName
+                                        return true;
+                                        
+                                    }
+                                })
+                            }
+    
+                            if (driverOffence.violationType == CONTENT.ViolationType.HardBraking) {
+                                data.hardBraking = {
+                                    count: driverOffence.total,
+                                    occTime: driverOffence.lastOccTime,
                                 }
-                            })
+                                result.hardBraking += driverOffence.total
+                            } else if (driverOffence.violationType == CONTENT.ViolationType.RapidAcc) {
+                                data.rapidAcc = {
+                                    count: driverOffence.total,
+                                    occTime: driverOffence.lastOccTime,
+                                }
+                                result.rapidAcc += driverOffence.total
+                            } else if (driverOffence.violationType == CONTENT.ViolationType.Speeding) {
+                                data.speeding = {
+                                    count: driverOffence.total,
+                                    occTime: driverOffence.lastOccTime,
+                                }
+                                result.speeding += driverOffence.total
+                            } else if (driverOffence.violationType == CONTENT.ViolationType.Missing) {
+                                data.missing = {
+                                    count: driverOffence.total,
+                                    occTime: driverOffence.lastOccTime,
+                                }
+                                result.missing += driverOffence.total
+                            } else if (driverOffence.violationType == CONTENT.ViolationType.NoGoZoneAlert) {
+                                data.noGoAlert = {
+                                    count: driverOffence.total,
+                                    occTime: driverOffence.lastOccTime,
+                                }
+                                result.noGoAlert += driverOffence.total
+                            }
+                        } else {
+                            continue;
                         }
-
-                        if (driverOffence.violationType == CONTENT.ViolationType.HardBraking) {
-                            data.hardBraking = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.hardBraking += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.RapidAcc) {
-                            data.rapidAcc = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.rapidAcc += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.Speeding) {
-                            data.speeding = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.speeding += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.Missing) {
-                            data.missing = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.missing += driverOffence.total
-                        } else if (driverOffence.violationType == CONTENT.ViolationType.NoGoZoneAlert) {
-                            data.noGoAlert = {
-                                count: driverOffence.total,
-                                occTime: driverOffence.lastOccTime,
-                            }
-                            result.noGoAlert += driverOffence.total
-                        }
-                    } else {
-                        continue;
                     }
+                    result.list.push(data)
                 }
-                result.list.push(data)
             }
+            generateDriverResult()
 
             let deviceList2 = Array.from(new Set(deviceOffenceList.map(deviceOffence => deviceOffence.deviceId)));
-            for (let device of deviceList2) {
-                let data = { 
-                    hardBraking: {
-                        count: 0,
-                        occTime: null
-                    },
-                    rapidAcc: {
-                        count: 0,
-                        occTime: null
-                    },
-                    speeding: {
-                        count: 0,
-                        occTime: null
-                    },
-                    missing: {
-                        count: 0,
-                        occTime: null
-                    },
-                    noGoAlert: {
-                        count: 0,
-                        occTime: null
-                    },
-                    idle: {
-                        count: 0,
-                        occTime: null
+            const generateDeviceResult = function () {
+                for (let device of deviceList2) {
+                    let data = { 
+                        hardBraking: {
+                            count: 0,
+                            occTime: null
+                        },
+                        rapidAcc: {
+                            count: 0,
+                            occTime: null
+                        },
+                        speeding: {
+                            count: 0,
+                            occTime: null
+                        },
+                        missing: {
+                            count: 0,
+                            occTime: null
+                        },
+                        noGoAlert: {
+                            count: 0,
+                            occTime: null
+                        }
                     }
-                }
-                for (let deviceOffence of deviceOffenceList) {
-                    if (deviceOffence.deviceId == device) {
-                        data.deviceId = device;
-                        data.vehicleNo = deviceOffence.vehicleNo;
-                        data.dataFrom = deviceOffence.dataFrom;
-                        data.driver = deviceOffence.driverName;
-                        data.vehicleType = deviceOffence.vehicleType;
-                        data.hub = deviceOffence.hub
-                        data.node = deviceOffence.node
-                        data.groupId = deviceOffence.groupId
-                        if (data.groupId) {
-                            groupList.some(item => {
-                                if (item.id == data.groupId) {
-                                    data.groupName = item.groupName
-                                    return true;
+                    for (let deviceOffence of deviceOffenceList) {
+                        if (deviceOffence.deviceId == device) {
+                            data.deviceId = device.deviceId;
+                            data.vehicleNo = device.vehicleNo;
+                            data.dataFrom = deviceOffence.dataFrom;
+                            data.driver = deviceOffence.driverName;
+                            data.vehicleType = deviceOffence.vehicleType
+                            data.hub = deviceOffence.hub
+                            data.node = deviceOffence.node
+                            data.groupId = deviceOffence.groupId
+                            if (data.groupId) {
+                                groupList.some(item => {
+                                    if (item.id == data.groupId) {
+                                        data.groupName = item.groupName
+                                        return true;
+                                        
+                                    }
+                                })
+                            }
+    
+                            if (deviceOffence.violationType == CONTENT.ViolationType.HardBraking) {
+                                data.hardBraking = {
+                                    count: deviceOffence.total,
+                                    occTime: deviceOffence.lastOccTime,
                                 }
-                            })
+                                result.hardBraking += deviceOffence.total
+                            } else if (deviceOffence.violationType == CONTENT.ViolationType.RapidAcc) {
+                                data.rapidAcc = {
+                                    count: deviceOffence.total,
+                                    occTime: deviceOffence.lastOccTime,
+                                }
+                                result.rapidAcc += deviceOffence.total
+                            } else if (deviceOffence.violationType == CONTENT.ViolationType.Speeding) {
+                                data.speeding = {
+                                    count: deviceOffence.total,
+                                    occTime: deviceOffence.lastOccTime,
+                                }
+                                result.speeding += deviceOffence.total
+                            } else if (deviceOffence.violationType == CONTENT.ViolationType.Missing) {
+                                data.missing = {
+                                    count: deviceOffence.total,
+                                    occTime: deviceOffence.lastOccTime,
+                                }
+                                result.missing += deviceOffence.total
+                            } else if (deviceOffence.violationType == CONTENT.ViolationType.NoGoZoneAlert) {
+                                data.noGoAlert = {
+                                    count: deviceOffence.total,
+                                    occTime: deviceOffence.lastOccTime,
+                                }
+                                result.noGoAlert += deviceOffence.total
+                            }
+                        } else {
+                            continue;
                         }
-
-                        if (deviceOffence.violationType == CONTENT.ViolationType.HardBraking) {
-                            data.hardBraking = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.hardBraking += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.RapidAcc) {
-                            data.rapidAcc = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.rapidAcc += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.Speeding) {
-                            data.speeding = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.speeding += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.Missing) {
-                            data.missing = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.missing += deviceOffence.total
-                        } else if (deviceOffence.violationType == CONTENT.ViolationType.NoGoZoneAlert) {
-                            data.noGoAlert = {
-                                count: deviceOffence.total,
-                                occTime: deviceOffence.lastOccTime,
-                            }
-                            result.noGoAlert += deviceOffence.total
-                        }
-                    } else {
-                        continue;
                     }
+                    result.list.push(data)
                 }
-                result.list.push(data)
             }
+            generateDeviceResult()
 
             if (req.body.timeSelected == moment().format('YYYY-MM-DD')) {
                 cacheData({ url: req.originalUrl, hub, user }, result)
@@ -1376,26 +1216,14 @@ module.exports = {
                 timeSelected = moment().format('YYYY-MM-DD');
             }
             let userId = req.cookies.userId;
-            let hub = req.body.hub
-            let hubNodeIdList = [], groupId = null;
+            let hub = req.body.hub;
             let user = await userService.UserUtils.getUserDetailInfo(userId);
             if (!user) {
                 log.error(`UserId ${ userId } does not exist!`)
                 return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
             }
 
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                groupId = user.unitId;
-                log.info(`getTodayRealSpeeding => (groupId) : ${ groupId }`)
-            } else {
-                if (!hub) {
-                    let unitList = await unitService.UnitUtils.getPermitUnitList2(userId);
-                    hubNodeIdList = unitList.hubNodeIdList;
-                } else {
-                    hubNodeIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(hub);
-                }
-                log.info(`getTodayRealSpeeding => (hubNodeIdList) : ${ JSON.stringify(hubNodeIdList) }`)
-            }
+            let { hubNodeIdList } = await getPermitData(hub, user)
 
             // Driver
             let replacements = [ timeSelected, timeSelected, timeSelected ]
@@ -1416,40 +1244,27 @@ module.exports = {
                     where ( (Date(?) BETWEEN Date(ui.mobileStartTime) AND Date(ui.mobileEndTime)) and ui.mobileStartTime is not null )
                     OR ui.status = 'started'
                     group by ui.driverId, ui.vehicleNo
-                ) t ON t.driverId = rs.driverId AND t.vehicleNumber = rs.vehicleNo
-                LEFT JOIN unit u ON u.unit <=> t.hub AND u.subUnit <=> t.node
+                ) tt ON tt.driverId = rs.driverId AND tt.vehicleNumber = rs.vehicleNo
+                LEFT JOIN unit u ON u.unit <=> tt.hub AND u.subUnit <=> tt.node
                 LEFT JOIN (
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver
                     UNION ALL
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver_history
                 ) d ON d.driverId = rs.driverId
-                WHERE DATE(rs.createdAt) = ? AND t.taskId IS NOT NULL 
+                WHERE DATE(rs.createdAt) = ? AND tt.taskId IS NOT NULL 
             `
 
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                driverSql += ` AND t.groupId = ? `
-                replacements.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    driverSql += ` AND t.hub = ? `
-                    replacements.push(hub)
-                }
-                if (hub == null) {
-                    driverSql += ` AND t.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {                
-                driverSql += ` AND ( u.id IN ( ? ) AND t.groupId IS NULL ) `
-                replacements.push(hubNodeIdList)
-            }
+            let driverResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            driverSql += driverResultSQL.tempSql;
+            replacements = replacements.concat(driverResultSQL.tempReplacements)
             
             driverSql += ' ORDER BY rs.createdAt DESC '
-            let driverSpeeding = await sequelizeObj.query(driverSql, { 
+            let driverSpeeding = await sequelizeObj.query(driverSql, {
                 type: QueryTypes.SELECT, 
                 replacements: replacements 
             });
 
             // Vehicle
-            // let vehicleNoList = driverOffenceList.map(item => item.vehicleNo);
             let replacements2 = [ timeSelected, timeSelected, timeSelected ]
             let deviceSql = `
                 SELECT rs.driverId, rs.vehicleNo, rs.createdAt, d.driverName, rs.speed, rs.limitSpeed
@@ -1470,30 +1285,20 @@ module.exports = {
                     where ( (Date(?) BETWEEN Date(ui.mobileStartTime) AND Date(ui.mobileEndTime)) and ui.mobileStartTime is not null )
                     OR ui.status = 'started'
                     group by ui.driverId, ui.vehicleNo
-                ) t ON t.deviceId = rs.deviceId
-                LEFT JOIN unit u ON u.unit <=> t.hub AND u.subUnit <=> t.node
+                ) tt ON tt.deviceId = rs.deviceId
+                LEFT JOIN unit u ON u.unit <=> tt.hub AND u.subUnit <=> tt.node
                 LEFT JOIN (
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver
                     UNION ALL
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver_history
                 ) d ON d.driverId = rs.driverId
-                WHERE DATE(rs.createdAt) = ? AND t.taskId IS NOT NULL
+                WHERE DATE(rs.createdAt) = ? AND tt.taskId IS NOT NULL
             `
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                deviceSql += ` AND t.groupId = ? `
-                replacements2.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    deviceSql += ` AND t.hub = ? `
-                    replacements2.push(hub)
-                }
-                if (hub == null) {
-                    deviceSql += ` AND t.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                deviceSql += ` AND ( u.id IN ( ? ) AND t.groupId IS NULL ) `
-                replacements2.push(hubNodeIdList)
-            }
+            
+            let deviceResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            deviceSql += deviceResultSQL.tempSql;
+            replacements2 = replacements2.concat(deviceResultSQL.tempReplacements)
+
             deviceSql += ' ORDER BY rs.createdAt DESC '
             let deviceSpeeding = await sequelizeObj.query(deviceSql, { 
                 type: QueryTypes.SELECT, 
@@ -1516,28 +1321,13 @@ module.exports = {
             }
             let userId = req.cookies.userId;
             let hub = req.body.hub
-            let hubNodeIdList = [], groupIdList = [];
             let user = await userService.UserUtils.getUserDetailInfo(userId);
             if (!user) {
                 log.error(`UserId ${ userId } does not exist!`)
                 return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
             }
 
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                groupIdList.push(user.unitId);
-                log.info(`getTodayRealAlert => (groupId) : ${ groupIdList }`)
-            } else {
-                if (hub == null) {
-                    groupIdList = await sequelizeSystemObj.query(` SELECT id FROM \`group\` `, { type: QueryTypes.SELECT })
-                    groupIdList = groupIdList.map(item => item.id)
-                } else if (!hub) {
-                    let unitList = await unitService.UnitUtils.getPermitUnitList2(userId);
-                    hubNodeIdList = unitList.hubNodeIdList;
-                } else {
-                    hubNodeIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(hub);
-                }
-                log.info(`getTodayRealAlert => (hubNodeIdList) : ${ JSON.stringify(hubNodeIdList) }`)
-            }
+            let { hubNodeIdList } = await getPermitData(hub, user)
 
             let replacements = [ timeSelected, timeSelected, timeSelected ]
             let sql = `
@@ -1557,31 +1347,20 @@ module.exports = {
                     where ( (Date( ? ) BETWEEN Date(ui.mobileStartTime) AND Date(ui.mobileEndTime)) and ui.mobileStartTime is not null )
                     OR ui.status = 'started'
                     group by ui.driverId, ui.vehicleNo
-                ) t ON t.driverId = ra.driverId AND t.vehicleNumber = ra.vehicleNo
-                LEFT JOIN unit u ON u.unit <=> t.hub AND u.subUnit <=> t.node
+                ) tt ON tt.driverId = ra.driverId AND tt.vehicleNumber = ra.vehicleNo
+                LEFT JOIN unit u ON u.unit <=> tt.hub AND u.subUnit <=> tt.node
                 LEFT JOIN nogo_zone nz ON nz.id = ra.zoneId
                 LEFT JOIN (
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver
                     UNION ALL
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver_history
                 ) d ON d.driverId = ra.driverId
-                WHERE DATE(ra.createdAt) = ? AND t.taskId IS NOT NULL
+                WHERE DATE(ra.createdAt) = ? AND tt.taskId IS NOT NULL
             `
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                sql += ` AND t.groupId = ? `
-                replacements.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    sql += ` AND t.hub = ? `
-                    replacements.push(hub)
-                }
-                if (hub == null) {
-                    sql += ` AND t.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                sql += ` AND ( u.id IN (?) AND t.groupId IS NULL ) `
-                replacements.push(hubNodeIdList)
-            }
+            
+            let driverResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            sql += driverResultSQL.tempSql;
+            replacements = replacements.concat(driverResultSQL.tempReplacements)
 
             sql += ' ORDER BY ra.createdAt DESC '
             let driverAlert = await sequelizeObj.query(sql, { 
@@ -1609,32 +1388,21 @@ module.exports = {
                     where ( (Date(?) BETWEEN Date(ui.mobileStartTime) AND Date(ui.mobileEndTime)) and ui.mobileStartTime is not null )
                     OR ui.status = 'started'
                     group by ui.driverId, ui.vehicleNo
-                ) t ON t.deviceId = ra.deviceId
-                LEFT JOIN unit u ON u.unit <=> t.hub AND u.subUnit <=> t.node
+                ) tt ON tt.deviceId = ra.deviceId
+                LEFT JOIN unit u ON u.unit <=> tt.hub AND u.subUnit <=> tt.node
                 LEFT JOIN nogo_zone nz ON nz.id = ra.zoneId
                 LEFT JOIN (
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver
                     UNION ALL
                     SELECT driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver_history
                 ) d ON d.driverId = ra.driverId
-                WHERE DATE(ra.createdAt) = ? AND t.taskId IS NOT NULL
+                WHERE DATE(ra.createdAt) = ? AND tt.taskId IS NOT NULL
             `
 
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                sql2 += ` AND t.groupId = ? `
-                replacements2.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    sql2 += ` AND t.hub = ? `
-                    replacements2.push(hub)
-                }
-                if (hub == null) {
-                    sql2 += ` AND t.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                sql2 += ` AND ( u.id IN ( ? ) AND t.groupId IS NULL ) `
-                replacements2.push(hubNodeIdList)
-            }
+            let deviceResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            sql2 += deviceResultSQL.tempSql;
+            replacements2 = replacements2.concat(deviceResultSQL.tempReplacements)
+
             sql2 += ' ORDER BY ra.createdAt DESC '
             let deviceAlert = await sequelizeObj.query(sql2, { 
                 type: QueryTypes.SELECT,
@@ -1659,25 +1427,13 @@ module.exports = {
             let userId = req.cookies.userId;
 
             let hub = req.body.hub
-            let hubNodeIdList = [], groupId = null;
             let user = await userService.UserUtils.getUserDetailInfo(userId);
             if (!user) {
                 log.error(`UserId ${ userId } does not exist!`)
                 return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
             }
 
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                groupId = user.unitId;
-                log.info(`getTodayOffenceList => (groupId) : ${ groupId }`)
-            } else {
-                if (!hub) {
-                    let unitList = await unitService.UnitUtils.getPermitUnitList2(userId);
-                    hubNodeIdList = unitList.hubNodeIdList;
-                } else {
-                    hubNodeIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(hub);
-                }
-                log.info(`getTodayOffenceList => (hubNodeIdList) : ${ JSON.stringify(hubNodeIdList) }`)
-            }
+            let { hubNodeIdList } = await getPermitData(hub, user)
 
             // driver
             let replacements = []
@@ -1718,52 +1474,19 @@ module.exports = {
             `;
 
             replacements = [ timeSelected, timeSelected, timeSelected + '%' ]
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                driverSql += ` AND tt.groupId = ? `
-                replacements.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
-                if (hub) {
-                    driverSql += ` AND tt.hub = ? `
-                    replacements.push(hub)
-                } else if (hub == null) {
-                    driverSql += ` AND tt.groupId IS NOT NULL `
-                }
 
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN ( ? ) `) 
-                    replacements.push(unitIdList)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId in ( ? ) `) 
-                    replacements.push(groupIdList)
-                }
-                
-                if (tempSqlList.length) {
-                    driverSql += ` and (${ tempSqlList.join(' OR ') }) ` 
-                } else {
-                    driverSql += ` and 1=2 ` 
-                }
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    driverSql += ` AND tt.hub = ? `
-                    replacements.push(hub)
-                } else if (hub == null) {
-                    driverSql += ` AND tt.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                driverSql += ` AND ( u.id IN ( ? ) AND tt.groupId IS NULL ) `
-                replacements.push(hubNodeIdList)
-            }
+            let driverResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            driverSql += driverResultSQL.tempSql;
+            replacements = replacements.concat(driverResultSQL.tempReplacements)
 
             driverSql += ` ORDER BY th.occTime DESC`
             log.info(driverSql)
-            let driverOffenceList = await sequelizeObj.query(driverSql, { type: QueryTypes.SELECT, replacements });
+            let driverOffenceList = await sequelizeObj.query(driverSql, { 
+                type: QueryTypes.SELECT, 
+                replacements 
+            });
 
             // vehicle
-            // let vehicleNoList = driverOffenceList.map(item => item.vehicleNo);
-            // vehicleNoList = Array.from(new Set(vehicleNoList))
             let replacements2 = []
             let deviceSql = `
                 SELECT th.deviceId, th.violationType, v.vehicleNo, th.occTime, th.dataFrom, th.lat, th.lng , d.driverName
@@ -1800,50 +1523,17 @@ module.exports = {
             `;
 
             replacements2 = [ timeSelected, timeSelected, timeSelected + '%' ]
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                deviceSql += ` AND tt.groupId = ? `
-                replacements2.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let { unitList, unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
-                if (hub) {
-                    deviceSql += ` AND tt.hub = ? `
-                    replacements2.push(hub)
-                } else if (hub == null) {
-                    deviceSql += ` AND tt.groupId IS NOT NULL `
-                }
 
-                let tempSqlList = [], tempSqlList2 = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN ( ? ) `) 
-                    replacements2.push(unitIdList)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId in ( ? ) `) 
-                    replacements2.push(groupIdList)
-                }
-                
-                if (tempSqlList.length) {
-                    deviceSql += ` and (${ tempSqlList.join(' OR ') }) ` 
-                } else {
-                    deviceSql += ` and 1=2 ` 
-                }
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    deviceSql += ` AND tt.hub = ? `
-                    replacements2.push(hub)
-                }
-
-                if (hub == null) {
-                    deviceSql += ` AND tt.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                deviceSql += ` AND ( u.id IN ( ? ) AND tt.groupId IS NULL ) `
-                replacements2.push(hubNodeIdList)
-            }
+            let deviceResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            deviceSql += deviceResultSQL.tempSql;
+            replacements2 = replacements2.concat(deviceResultSQL.tempReplacements)
 
             deviceSql += ` ORDER BY th.occTime DESC `
             log.info(deviceSql)
-            let deviceOffenceList = await sequelizeObj.query(deviceSql, { type: QueryTypes.SELECT, replacements: replacements2 });
+            let deviceOffenceList = await sequelizeObj.query(deviceSql, { 
+                type: QueryTypes.SELECT, 
+                replacements: replacements2 
+            });
 
             if (req.body.timeSelected == moment().format('YYYY-MM-DD')) {
                 cacheData({ url: req.originalUrl, hub, user }, { driverOffenceList, deviceOffenceList })
@@ -1863,44 +1553,32 @@ module.exports = {
             let userId = req.cookies.userId;
 
             let hub = req.body.hub
-            let hubNodeIdList = [], groupId = null;
             let user = await userService.UserUtils.getUserDetailInfo(userId);
             if (!user) {
                 log.error(`UserId ${ userId } does not exist!`)
                 return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
             }
 
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                groupId = user.unitId;
-                log.info(`getTodayInTaskVehicleList => (groupId) : ${ groupId }`)
-            } else {
-                if (!hub) {
-                    let unitList = await unitService.UnitUtils.getPermitUnitList2(userId);
-                    hubNodeIdList = unitList.hubNodeIdList;
-                } else {
-                    hubNodeIdList = await unitService.UnitUtils.getUnitIdByUnitAndSubUnit(hub);
-                }
-                log.info(`getTodayInTaskVehicleList => (hubNodeIdList) : ${ JSON.stringify(hubNodeIdList) }`)
-            }
+            let { hubNodeIdList } = await getPermitData(hub, user)
 
             // Driver
             let replacements1 = []
             let driverSql = `
-                SELECT t.taskId, t.hub, t.node, t.groupId, t.vehicleNumber, d.lat, d.lng, dd.driverName, dd.state, d.updatedAt, 
+                SELECT tt.taskId, tt.hub, tt.node, tt.groupId, tt.vehicleNumber, d.lat, d.lng, dd.driverName, dd.state, d.updatedAt, 
                 d.speed, d.missingType, v.limitSpeed, u.id as unitId, dd.groupId, us.role, d.realtimeAlert as alert, d.realtimeSpeeding as speeding
-                FROM task t
-                left join unit u on u.unit = t.hub and u.subUnit <=> t.node
-                LEFT JOIN driver_position d ON d.driverId = t.driverId AND d.vehicleNo = t.vehicleNumber
+                FROM task tt
+                left join unit u on u.unit = tt.hub and u.subUnit <=> tt.node
+                LEFT JOIN driver_position d ON d.driverId = tt.driverId AND d.vehicleNo = tt.vehicleNumber
                 LEFT JOIN (
                     select driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver 
                     UNION ALL 
                     select driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver_history
-                ) dd ON dd.driverId = t.driverId
+                ) dd ON dd.driverId = tt.driverId
                 LEFT JOIN (
                     select vehicleNo, unitId, vehicleType, limitSpeed, deviceId FROM vehicle 
                     UNION ALL 
                     select vehicleNo, unitId, vehicleType, limitSpeed, deviceId FROM vehicle_history
-                ) v ON v.vehicleNo = t.vehicleNumber
+                ) v ON v.vehicleNo = tt.vehicleNumber
                 LEFT JOIN user us ON dd.driverId = us.driverId
                 WHERE (d.lat IS NOT NULL AND d.lng IS NOT NULL)
             `;
@@ -1927,63 +1605,13 @@ module.exports = {
                 WHERE 1 = 1
             `
 
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                driverSql += ` AND t.groupId = ? `
-                replacements1.push(user.unitId)
-                driverSql2 += ` AND ui.groupId = ${ user.unitId } `
-                replacements2.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+            let driverResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            driverSql += driverResultSQL.tempSql;
+            replacements1 = replacements1.concat(driverResultSQL.tempReplacements)
 
-                if (hub) {
-                    driverSql += ` AND t.hub = ? `
-                    replacements1.push(hub)
-                    driverSql2 += ` AND ui.hub = ? `
-                    replacements2.push(hub)
-                } else if (hub == null) {
-                    driverSql += ` AND t.groupId IS NOT NULL `
-                    driverSql2 += ` AND ui.groupId IS NOT NULL `
-                } 
-
-                let tempSqlList = [], tempSqlList2 = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN ( ? ) `)
-                    replacements1.push(unitIdList)
-                    tempSqlList2.push(` u.id IN ( ? ) `)
-                    replacements2.push(unitIdList)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` t.groupId in ( ? ) `)
-                    replacements1.push(groupIdList)
-                    tempSqlList2.push(` ui.groupId in ( ? ) `)
-                    replacements2.push(groupIdList)
-                }
-                
-                if (tempSqlList.length) {
-                    driverSql += ` and (${ tempSqlList.join(' OR ') }) `
-                    driverSql2 += ` and (${ tempSqlList2.join(' OR ') }) `
-                } else {
-                    driverSql += ` and 1=2 `
-                    driverSql2 += ` and 1=2 `
-                }
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    driverSql += ` AND t.hub = ? `
-                    replacements1.push(hub)
-                    driverSql2 += ` AND ui.hub = ? `
-                    replacements2.push(hub)
-                }
-
-                if (hub == null) {
-                    driverSql += ` AND t.groupId IS NOT NULL `
-                    driverSql2 += ` AND ui.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                driverSql += ` AND ( u.id IN ( ? ) AND t.groupId IS NULL ) `
-                replacements1.push(hubNodeIdList)
-                driverSql2 += ` AND ( u.id IN ( ? ) AND ui.groupId IS NULL ) `
-                replacements2.push(hubNodeIdList)
-            }
+            let driverUrgentResultSQL = await generateUrgentLimitSQL(hub, user, hubNodeIdList)
+            driverSql2 += driverUrgentResultSQL.tempSql;
+            replacements2 = replacements2.concat(driverUrgentResultSQL.tempReplacements)
             
             if (selectedDate) {
                 driverSql += ` AND Date(d.updatedAt) = ? `
@@ -1996,20 +1624,18 @@ module.exports = {
             driverPositionList = driverPositionList.concat(driverPositionList2)
 
             // Vehicle
-            // let vehicleNoList = driverPositionList.map(item => item.vehicleNo);
-            // vehicleNoList = Array.from(new Set(vehicleNoList))
             let replacements3 = []
             let deviceSql = `
-                SELECT t.*, dv.deviceId, dv.lat, dv.lng, dd.driverName, dv.updatedAt, dv.speed, 
+                SELECT tt.*, dv.deviceId, dv.lat, dv.lng, dd.driverName, dv.updatedAt, dv.speed, 
                 dv.limitSpeed, u.id as unitId, dd.groupId, us.role, dv.realtimeAlert as alert, dv.realtimeSpeeding as speeding
-                FROM task t
+                FROM task tt
                 LEFT JOIN (
                     select driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver 
                     UNION ALL 
                     select driverId, unitId, groupId, nric, driverName, contactNumber, state FROM driver_history
-                ) dd ON dd.driverId = t.driverId
+                ) dd ON dd.driverId = tt.driverId
                 LEFT JOIN user us ON dd.driverId = us.driverId
-                left join unit u on u.unit = t.hub and u.subUnit <=> t.node
+                left join unit u on u.unit = tt.hub and u.subUnit <=> tt.node
                 LEFT JOIN (
                     SELECT dd.lat, dd.lng, dd.deviceId, dd.updatedAt, v.vehicleNo, dd.speed, v.limitSpeed, v.unitId,
                     dd.realtimeAlert, dd.realtimeSpeeding 
@@ -2019,7 +1645,7 @@ module.exports = {
                         UNION ALL 
                         select vehicleNo, deviceId, unitId, vehicleType, limitSpeed FROM vehicle_history
                     ) v ON v.deviceId = dd.deviceId
-                ) dv ON dv.vehicleNo = t.vehicleNumber 
+                ) dv ON dv.vehicleNo = tt.vehicleNumber 
                 WHERE (dv.lat IS NOT NULL AND dv.lng IS NOT NULL)
             `
 
@@ -2048,63 +1674,13 @@ module.exports = {
                 WHERE 1 = 1
             `
 
-            if (CONTENT.USER_TYPE.CUSTOMER == user.userType) {
-                deviceSql += ` AND t.groupId = ? `
-                replacements3.push(user.unitId)
-                deviceSql2 += ` AND ui.groupId = ? `
-                replacements4.push(user.unitId)
-            } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+            let deviceResultSQL = await generateLimitSQL(hub, user, hubNodeIdList)
+            deviceSql += deviceResultSQL.tempSql;
+            replacements3 = replacements3.concat(deviceResultSQL.tempReplacements)
 
-                if (hub) {
-                    deviceSql += ` AND t.hub = ? `
-                    replacements3.push(hub)
-                    deviceSql2 += ` AND ui.hub = ? `
-                    replacements4.push(hub)
-                } else if (hub == null) {
-                    deviceSql += ` AND t.groupId IS NOT NULL `
-                    deviceSql2 += ` AND ui.groupId IS NOT NULL `
-                } 
-
-                let tempSqlList = [], tempSqlList2 = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN ( ? ) `)
-                    replacements3.push(unitIdList)
-                    tempSqlList2.push(` u.id IN ( ? ) `)
-                    replacements4.push(unitIdList)
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` t.groupId in ( ? ) `)
-                    replacements3.push(groupIdList)
-                    tempSqlList2.push(` ui.groupId in ( ? ) `)
-                    replacements4.push(groupIdList)
-                }
-                
-                if (tempSqlList.length) {
-                    deviceSql += ` and (${ tempSqlList.join(' OR ') }) `
-                    deviceSql2 += ` and (${ tempSqlList2.join(' OR ') }) `
-                } else {
-                    deviceSql += ` and 1=2 `
-                    deviceSql2 += ` and 1=2 `
-                }
-            } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR, CONTENT.USER_TYPE.LICENSING_OFFICER ].includes(user.userType)) {
-                if (hub) {
-                    deviceSql += ` AND t.hub = ? `
-                    replacements3.push(hub)
-                    deviceSql2 += ` AND ui.hub = ? `
-                    replacements4.push(hub)
-                }
-
-                if (hub == null) {
-                    deviceSql += ` AND t.groupId IS NOT NULL `
-                    deviceSql2 += ` AND ui.groupId IS NOT NULL `
-                }
-            } else if (CONTENT.USER_TYPE.UNIT == user.userType) {
-                deviceSql += ` AND ( u.id IN ( ? ) AND t.groupId IS NULL ) `
-                replacements3.push(hubNodeIdList.map(item => `'${ item }'`))
-                deviceSql2 += ` AND ( u.id IN ( ? ) AND ui.groupId IS NULL ) `
-                replacements4.push(hubNodeIdList.map(item => `'${ item }'`))
-            }
+            let deviceUrgentResultSQL = await generateUrgentLimitSQL(hub, user, hubNodeIdList)
+            deviceSql2 += deviceUrgentResultSQL.tempSql;
+            replacements4 = replacements4.concat(deviceUrgentResultSQL.tempReplacements)
 
             if (selectedDate) {
                 deviceSql += ` AND Date(dv.updatedAt) = ? `
@@ -2120,36 +1696,26 @@ module.exports = {
 
             // Calculate
             let hubConf = jsonfile.readFileSync(`./conf/hubNodeConf.json`)
-            for (let driver of driverPositionList) {
-                for (let hubNode of hubConf) {
-                    if (driver.hub?.toLowerCase() == hubNode.hub?.toLowerCase()) {
-                        driver.circleColor = hubNode.color
+            const generateColor = async function (hubConf, list) {
+                for (let data of list) {
+                    data.circleColor = hubNodeConf.defaultColor
+                    for (let hubNode of hubConf) {
+                        if (data.hub?.toLowerCase() == hubNode.hub?.toLowerCase()) {
+                            data.circleColor = hubNode.color
+                        }
+                    }
+    
+                    if (data.role && (data.role == 'DV' || data.role == 'LOA') && data.groupId) {
+                        let group = await TaskUtils.getGroupById(data.groupId)
+                        data.groupName = group.groupName 
                     }
                 }
-                if (!driver.circleColor) {
-                    driver.circleColor = hubNodeConf.defaultColor
-                }
-
-                if (driver.role && (driver.role == 'DV' || driver.role == 'LOA') && driver.groupId) {
-                    let group = await TaskUtils.getGroupById(driver.groupId)
-                    driver.groupName = group.groupName 
-                }
-            }
-            for (let device of devicePositionList) {
-                for (let hubNode of hubConf) {
-                    if (device.hub?.toLowerCase() == hubNode.hub?.toLowerCase()) {
-                        device.circleColor = hubNode.color
-                    }
-                }
-                if (!device.circleColor) {
-                    device.circleColor = hubNodeConf.defaultColor
-                }
-                if (device.role && (device.role == 'DV' || device.role == 'LOA') && device.groupId ) {
-                    let group = await TaskUtils.getGroupById(device.groupId)
-                    device.groupName = group.groupName 
-                }
+                return list
             }
 
+            await generateColor(hubConf, driverPositionList)
+            await generateColor(hubConf, devicePositionList)
+            
             return res.json(utils.response(1, { driverPositionList, devicePositionList }));
         } catch (error) {
             log.error(error);
@@ -2160,7 +1726,81 @@ module.exports = {
 
     getTaskList: async function (req, res) {
         try {
-            let { selectedDate, taskStatus, taskId, driverName, vehicleNo, riskLevel, hub, node, group, pageNum, pageLength, purpose, activity, sort, sortBy } = req.body;
+            const generateSearchSql = function (option) {
+                let {
+                    taskId,
+                    activity,
+                    purpose,
+                    taskStatus,
+                    selectedDate,
+                    hub,
+                    node,
+                    driverName,
+                    vehicleNo
+                } = option
+                let limitCondition = [], replacements = []
+
+                if (taskId) {
+                    limitCondition.push(` t.taskId LIKE ` + sequelizeObj.escape("%"+taskId+"%"))
+                }
+                if (activity) {
+                    limitCondition.push(` t.activity LIKE ` + sequelizeObj.escape("%"+activity+"%"))
+                }
+                if (purpose) {
+                    limitCondition.push(` t.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
+                }
+                if (taskStatus) {
+                    if (taskStatus.toLowerCase() == 'system expired') {
+                        limitCondition.push(` (t.driverStatus LIKE '%waitcheck%' and now() > t.indentEndTime)`)
+                    } else if (taskStatus.toLowerCase() == 'waitcheck') {
+                        limitCondition.push(` (t.driverStatus LIKE '%waitcheck%' and now() < t.indentEndTime)`)
+                    } else {
+                        limitCondition.push(` t.driverStatus LIKE ` + sequelizeObj.escape("%"+taskStatus+"%"))
+                    }
+                }
+                if (selectedDate) {
+                    limitCondition.push(` (DATE(t.indentStartTime) <= ? AND DATE(t.indentEndTime) >= ? ) `)
+                    replacements.push(selectedDate + '%');
+                    replacements.push(selectedDate + '%');
+                }
+    
+                if (hub) {
+                    limitCondition.push(` t.hub=? `)
+                    replacements.push(hub);
+                }
+                if (node) {
+                    limitCondition.push(` t.node=? `)
+                    replacements.push(node);
+                }
+                if (driverName) {
+                    limitCondition.push(` d.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
+                }
+                if (vehicleNo) {
+                    limitCondition.push(` t.vehicleNumber like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
+                }
+
+                return {
+                    limitCondition,
+                    replacements
+                }
+            }
+
+            const getSortSql = function (sortBy, sort) {
+                let taskSql = ''
+                if (sortBy == 'driverName') {
+                    if (sort.toLowerCase() == 'asc') {
+                        taskSql += ` ORDER BY d.driverName ASC `
+                    } else {
+                        taskSql += ` ORDER BY d.driverName DESC `
+                    }
+                } else {
+                    taskSql += ` ORDER BY t.indentStartTime desc `
+                }
+            
+                return taskSql
+            }
+
+            let { selectedDate, taskStatus, taskId, driverName, vehicleNo, hub, node, group, pageNum, pageLength, purpose, activity, sort, sortBy } = req.body;
             
             group = group ? Number.parseInt(group) : null
 
@@ -2222,116 +1862,33 @@ module.exports = {
             `;
 
             let limitCondition = [], replacements = []
-            if (user.userType.toLowerCase() == 'customer') {
-                limitCondition.push(` t.groupId = ? `)
-                replacements.push(user.unitId)
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                if (group) {
-                    limitCondition.push(` t.groupId = ? `)
-                    replacements.push(group)
-                } else if (group == 0) {
-                    limitCondition.push(` t.groupId IS NOT NULL `)
-                } else {
-                    limitCondition.push(` t.groupId IS NULL `)
-                }
-            } else if (user.userType.toLowerCase() == 'hq') {
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+            let result = await generateLimitCondition(group, user)
+            limitCondition = limitCondition.concat(result.limitCondition)
+            replacements = replacements.concat(result.replacements)
 
-                // HQ user has group permission
-                if (user.group?.length) {
-                    if (group) {
-                        limitCondition.push(` t.groupId = ? `)
-                        replacements.push(group)
-                    } else if (group == 0) {
-                        limitCondition.push(` t.groupId in (?) `)
-                        replacements.push(groupIdList)
-                    } else {
-                        limitCondition.push(` t.groupId IS NULL `)
-                    }
-                }
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` u.id IN (?) `)
-                    replacements.push(unitIdList);
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` t.groupId in (?) `)
-                    replacements.push(groupIdList);
-                }
-                
-                if (tempSqlList.length) {
-                    limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
-                } else {
-                    limitCondition.push(` 1=2 `)
-                }
-                
-            } else if (user.userType.toLowerCase() == 'unit') {
-                let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
-                if (hubNodeIdList.length) {
-                    // Maybe not more than 1000 node in one hub
-                    limitCondition.push(` ( u.id IN (?) AND t.groupId IS NULL ) `)
-                    replacements.push(hubNodeIdList);
-                }
-            }
-
-            if (taskId) {
-                limitCondition.push(` t.taskId LIKE ` + sequelizeObj.escape("%"+taskId+"%"))
-            }
-            if (activity) {
-                limitCondition.push(` t.activity LIKE ` + sequelizeObj.escape("%"+activity+"%"))
-            }
-            if (purpose) {
-                limitCondition.push(` t.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
-            }
-            if (taskStatus) {
-                if (taskStatus.toLowerCase() == 'system expired') {
-                    limitCondition.push(` (t.driverStatus LIKE '%waitcheck%' and now() > t.indentEndTime)`)
-                } else if (taskStatus.toLowerCase() == 'waitcheck') {
-                    limitCondition.push(` (t.driverStatus LIKE '%waitcheck%' and now() < t.indentEndTime)`)
-                } else {
-                    limitCondition.push(` t.driverStatus LIKE ` + sequelizeObj.escape("%"+taskStatus+"%"))
-                }
-            }
-            if (selectedDate) {
-                limitCondition.push(` (DATE(t.indentStartTime) <= ? AND DATE(t.indentEndTime) >= ? ) `)
-                replacements.push(selectedDate + '%');
-                replacements.push(selectedDate + '%');
-            }
-
-            if (hub) {
-                limitCondition.push(` t.hub=? `)
-                replacements.push(hub);
-            }
-            if (node) {
-                limitCondition.push(` t.node=? `)
-                replacements.push(node);
-            }
-            if (driverName) {
-                limitCondition.push(` d.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
-            }
-            if (vehicleNo) {
-                limitCondition.push(` t.vehicleNumber like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
-            }
+            let searchResult = generateSearchSql({
+                taskId,
+                activity,
+                purpose,
+                taskStatus,
+                selectedDate,
+                hub,
+                node,
+                driverName,
+                vehicleNo
+            })
+            limitCondition = limitCondition.concat(searchResult.limitCondition)
+            replacements = replacements.concat(searchResult.replacements)
 
             if (limitCondition.length) {
                 taskSql += ' WHERE ' + limitCondition.join(' AND ');
                 taskSql2 += ' WHERE ' + limitCondition.join(' AND ');
             }
             
-            if (sortBy && sort) {
-                if (sortBy == 'driverName') {
-                    if (sort.toLowerCase() == 'asc') {
-                        taskSql += ` ORDER BY d.driverName ASC `
-                    } else {
-                        taskSql += ` ORDER BY d.driverName DESC `
-                    }
-                }
-            } else {
-                taskSql += ` ORDER BY t.indentStartTime desc `
-            }
-
             let totalList = await sequelizeObj.query(taskSql2, { type: QueryTypes.SELECT, replacements });
+
+            let sortSql = getSortSql(sortBy, sort)
+            taskSql += sortSql
 
             taskSql += ` limit ?, ?`
             replacements.push(Number(pageNum));
@@ -2340,27 +1897,31 @@ module.exports = {
             let taskList = await sequelizeObj.query(taskSql, { type: QueryTypes.SELECT, replacements });
 
             //task withdraw and return key time
-            if (taskList && taskList.length > 0) {
+            if (taskList.length) {
                 let taskIdList = taskList.map(item => item.taskId);
                 let taskKeyOptRecords = await sequelizeObj.query(`
                     select taskId, optType, optTime, createdAt from key_opt_record k 
                     where k.optType in('withdrawConfirm', 'returnConfirm') and k.taskId IS NOT NULL and taskId in(?) ORDER BY createdAt desc
                 `, { type: QueryTypes.SELECT, replacements: [taskIdList] });
 
-                for (let task of taskList) {
-                    let taskWithdrawConfirm = taskKeyOptRecords.find(item => (item.taskId == task.taskId && item.optType == 'withdrawConfirm'))
-                    if (taskWithdrawConfirm) {
-                        task.withdrawKeyTime = taskWithdrawConfirm.createdAt;
+                const generateResult = function (taskList) {
+                    for (let task of taskList) {
+                        let taskWithdrawConfirm = taskKeyOptRecords.find(item => (item.taskId == task.taskId && item.optType == 'withdrawConfirm'))
+                        if (taskWithdrawConfirm) {
+                            task.withdrawKeyTime = taskWithdrawConfirm.createdAt;
+                        }
+                        let taskReturnConfirm = taskKeyOptRecords.find(item => (item.taskId == task.taskId && item.optType == 'returnConfirm'))
+                        if (taskReturnConfirm) {
+                            task.returnKeyTime = taskReturnConfirm.createdAt;
+                        }
+    
+                        if (task.driverStatus == 'waitcheck' && moment().isAfter(task.indentEndTime)) {
+                            task.driverStatus = 'System Expired'
+                        }
                     }
-                    let taskReturnConfirm = taskKeyOptRecords.find(item => (item.taskId == task.taskId && item.optType == 'returnConfirm'))
-                    if (taskReturnConfirm) {
-                        task.returnKeyTime = taskReturnConfirm.createdAt;
-                    }
-
-                    if (task.driverStatus == 'waitcheck' && moment().isAfter(task.indentEndTime)) {
-                        task.driverStatus = 'System Expired'
-                    }
+                    return taskList
                 }
+                taskList = generateResult(taskList)
             }
             
             return res.json({ respMessage: taskList, recordsFiltered: totalList[0].count, recordsTotal: totalList[0].count });
@@ -2395,15 +1956,15 @@ module.exports = {
                     where t.vehicleNumber is null and t.driverStatus ='waitcheck' and t.indentEndTime > now()
                 `;
 
-                let limitCondition = [], replacements = []
+                let replacements = []
                 if (user.userType.toLowerCase() == 'customer') {
-                    limitCondition.push(` t.groupId = ? `)
+                    taskSql += ` t.groupId = ? `
                     replacements.push(user.unitId)
                 } else if (user.userType.toLowerCase() == 'unit') {
                     let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
                     if (hubNodeIdList.length) {
                         // Maybe not more than 1000 node in one hub
-                        limitCondition.push(` ( u.id IN (?) AND t.groupId IS NULL ) `)
+                        taskSql += ` ( u.id IN (?) AND t.groupId IS NULL ) `
                         replacements.push(hubNodeIdList);
                     }
                 }
@@ -2477,44 +2038,66 @@ module.exports = {
                     replacements.push(hubNodeIdList);
                 }
             }
-            if (activity) {
-                limitCondition.push(` t.activity LIKE ? `)
-                replacements.push(`%`+ activity +`%`);
-            }
-            if (purpose) {
-                limitCondition.push(` t.purpose LIKE ? `)
-                replacements.push(`%`+ purpose +`%`);
-            }
-            if (group) {
-                limitCondition.push(` t.groupId = ? `)
-                replacements.push(group);
-            } 
 
-            if (hub) {
-                limitCondition.push(` t.hub = ? `)
-                replacements.push(hub);
+            const generateLimitCondition = function (option) {
+                let {
+                    activity,
+                    purpose,
+                    group,
+                    hub,
+                    node,
+                    driverName
+                } = option
+                let limitCondition = [], replacements = []
+                if (activity) {
+                    limitCondition.push(` t.activity LIKE ? `)
+                    replacements.push(`%`+ activity +`%`);
+                }
+                if (purpose) {
+                    limitCondition.push(` t.purpose LIKE ? `)
+                    replacements.push(`%`+ purpose +`%`);
+                }
+                if (group) {
+                    limitCondition.push(` t.groupId = ? `)
+                    replacements.push(group);
+                } 
+    
+                if (hub) {
+                    limitCondition.push(` t.hub = ? `)
+                    replacements.push(hub);
+                }
+                if (node) {
+                    limitCondition.push(` t.node = ? `)
+                    replacements.push(node);
+                }
+                if (driverName) {
+                    limitCondition.push(` d.driverName like ? `)
+                    replacements.push(`%` + driverName + `%`);
+                }
+
+                return { limitCondition, replacements }
             }
-            if (node) {
-                limitCondition.push(` t.node = ? `)
-                replacements.push(node);
-            }
-            if (driverName) {
-                limitCondition.push(` d.driverName like ? `)
-                replacements.push(`%` + driverName + `%`);
-            }
+            let result = generateLimitCondition({
+                activity,
+                purpose,
+                group,
+                hub,
+                node,
+                driverName
+            })
+            limitCondition = limitCondition.concat(result.limitCondition)
+            replacements = replacements.concat(result.replacements)
 
             if (limitCondition.length) {
                 taskSql += ' AND ' + limitCondition.join(' AND ');
                 taskSql2 += ' AND ' + limitCondition.join(' AND ');
             }
             
-            if (sortBy && sort) {
-                if (sortBy == 'driverName') {
-                    if (sort.toLowerCase() == 'asc') {
-                        taskSql += ` ORDER BY d.driverName ASC `
-                    } else {
-                        taskSql += ` ORDER BY d.driverName DESC `
-                    }
+            if (sortBy == 'driverName' && sort) {
+                if (sort.toLowerCase() == 'asc') {
+                    taskSql += ` ORDER BY d.driverName ASC `
+                } else {
+                    taskSql += ` ORDER BY d.driverName DESC `
                 }
             } else {
                 taskSql += ` ORDER BY t.indentStartTime desc `
@@ -2522,7 +2105,9 @@ module.exports = {
 
             let totalList = await sequelizeObj.query(taskSql2, { type: QueryTypes.SELECT, replacements });
 
-            taskSql += ` limit ${ pageNum }, ${ pageLength }`
+            taskSql += ` limit ?, ?`
+            replacements.push(NUMBER(pageNum));
+            replacements.push(NUMBER(pageLength));
             console.log(taskSql)
             let taskList = await sequelizeObj.query(taskSql, { type: QueryTypes.SELECT, replacements });
             
@@ -2581,57 +2166,88 @@ module.exports = {
                 LEFT JOIN user du on d.driverId = du.driverId
                 LEFT JOIN task t ON t.dataFrom = 'MOBILE' and CONCAT('CU-M-', mt.id) = t.taskId
             `;
-
             
             let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
             if (!unitIdList) {
                 unitIdList = [''];
             }
-            if (!groupIdList) {
-                groupIdList = [''];
+            if (groupIdList?.length) {
+                groupIdList = [ 0 ];
             }
+
             let limitCondition = [], replacements = []
-            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                limitCondition.push(` du.unitId = ? `)
-                replacements.push(user.unitId)
-            } else if (user.userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
-                if (group) {
+            const getPermitData = function (group, user) {  
+                let limitCondition = [], replacements = []              
+                if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
                     limitCondition.push(` du.unitId = ? `)
-                    replacements.push(group)
-                }
-            } else if (user.userType == CONTENT.USER_TYPE.HQ) {
-                if (user.group?.length) {
+                    replacements.push(user.unitId)
+                } else if (user.userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
                     if (group) {
                         limitCondition.push(` du.unitId = ? `)
                         replacements.push(group)
-                    } else {
-                        limitCondition.push(` du.unitId in (?) `)
-                        replacements.push(groupIdList)
-                    } 
+                    }
+                } else if (user.userType == CONTENT.USER_TYPE.HQ) {
+                    if (user.group?.length) {
+                        if (group) {
+                            limitCondition.push(` du.unitId = ? `)
+                            replacements.push(group)
+                        } else {
+                            limitCondition.push(` du.unitId in (?) `)
+                            replacements.push(groupIdList)
+                        } 
+                    }
+                } else {
+                    limitCondition.push(` du.unitId IN (?) `)
+                    replacements.push(unitIdList)
                 }
-            } else {
-                limitCondition.push(` du.unitId IN (?) `)
-                replacements.push(unitIdList)
+
+                return { limitCondition, replacements }
+            }
+            let result = getPermitData(group, user)
+            limitCondition = limitCondition.concat(result.limitCondition)
+            replacements = replacements.concat(result.replacements)
+
+            const getSearchLimitSql = function (option) {
+                let {
+                    taskId,
+                    purpose,
+                    taskStatus,
+                    selectedDate,
+                    driverName,
+                    vehicleNo
+                } = option
+                let limitCondition = []
+                if (taskId) {
+                    limitCondition.push(` t.taskId LIKE ` + sequelizeObj.escape("%"+taskId+"%"))
+                }
+                if (purpose) {
+                    limitCondition.push(` t.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
+                }
+                if (taskStatus) {
+                    limitCondition.push(` (mt.status LIKE `+sequelizeObj.escape("%"+taskStatus+"%")+` OR t.driverStatus LIKE `+sequelizeObj.escape("%"+taskStatus+"%")+`) `)
+                }
+                if (selectedDate) {
+                    limitCondition.push(` (DATE(mt.indentStartTime) <= `+sequelizeObj.escape(selectedDate)+` AND DATE(mt.indentEndTime) >= `+sequelizeObj.escape(selectedDate)+` ) `)
+                }
+                if (driverName) {
+                    limitCondition.push(` d.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
+                }
+                if (vehicleNo) {
+                    limitCondition.push(` t.vehicleNumber like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
+                }
+
+                return limitCondition
             }
 
-            if (taskId) {
-                limitCondition.push(` t.taskId LIKE ` + sequelizeObj.escape("%"+taskId+"%"))
-            }
-            if (purpose) {
-                limitCondition.push(` t.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
-            }
-            if (taskStatus) {
-                limitCondition.push(` (mt.status LIKE `+sequelizeObj.escape("%"+taskStatus+"%")+` OR t.driverStatus LIKE `+sequelizeObj.escape("%"+taskStatus+"%")+`) `)
-            }
-            if (selectedDate) {
-                limitCondition.push(` (DATE(mt.indentStartTime) <= `+sequelizeObj.escape(selectedDate)+` AND DATE(mt.indentEndTime) >= `+sequelizeObj.escape(selectedDate)+` ) `)
-            }
-            if (driverName) {
-                limitCondition.push(` d.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
-            }
-            if (vehicleNo) {
-                limitCondition.push(` t.vehicleNumber like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
-            }
+            let limitResult = getSearchLimitSql({
+                taskId,
+                purpose,
+                taskStatus,
+                selectedDate,
+                driverName,
+                vehicleNo
+            })
+            limitCondition = limitCondition.concat(limitResult)
 
             if (limitCondition.length) {
                 taskSql += ' WHERE ' + limitCondition.join(' AND ');
@@ -2639,10 +2255,12 @@ module.exports = {
             }
             
             taskSql += ` ORDER BY mt.indentStartTime desc `
-
+            console.log(taskSql2)
             let totalList = await sequelizeObj.query(taskSql2, { type: QueryTypes.SELECT, replacements });
 
-            taskSql += ` limit ${ pageNum }, ${ pageLength }`
+            taskSql += ` limit ?, ?`
+            replacements.push(Number.parseInt(pageNum));
+            replacements.push(Number.parseInt(pageLength));
             let taskList = await sequelizeObj.query(taskSql, { type: QueryTypes.SELECT, replacements });
             
             return res.json({ respMessage: taskList, recordsFiltered: totalList[0].count, recordsTotal: totalList[0].count });
@@ -2682,80 +2300,139 @@ module.exports = {
                 return res.json(utils.response(0, `UserId ${ userId } does not exist!`));
             }
 
-            if (taskId) {
-                limitCondition.push(` (t.taskId LIKE `+sequelizeObj.escape(taskId + "%")+` or ud.dutyId LIKE `+sequelizeObj.escape(taskId + "%")+`) `);
-            }
-            if (selectedDate) {
-                limitCondition.push(` mr.createdAt LIKE `+sequelizeObj.escape(selectedDate + "%"));
-            }
-            if (hub) {
-                limitCondition.push(` (t.hub=? or uc.hub = ?) `);
-                replacements.push(hub)
-                replacements.push(hub)
-            }
-            if (node) {
-                limitCondition.push(` (t.node=? or uc.node = ?) `);
-                replacements.push(node)
-                replacements.push(node)
-            }
-            if (riskLevel) {
-                limitCondition.push(` mr.riskLevel=? `);
-                replacements.push(riskLevel)
-            }
-            if (driverName) {
-                limitCondition.push(` (d.driverName like `+sequelizeObj.escape("%" + driverName + "%")+` or d2.driverName like `+sequelizeObj.escape("%" + driverName + "%")+`) `);
-            }
-            if (vehicleNo) {
-                limitCondition.push(` t.vehicleNumber like `+sequelizeObj.escape("%" + vehicleNo + "%"));
-            }
+            const generateSearchSql = function (option) {
+                let {
+                    taskId,
+                    selectedDate,
+                    hub,
+                    node,
+                    riskLevel,
+                    driverName,
+                    vehicleNo
+                } = option
 
-            let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
-
-            if (user.userType.toLowerCase() == 'customer') {
-                limitCondition.push(` (t.groupId = ${ user.unitId } or uc.groupId = ${ user.unitId }) `)
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                if (group) {
-                    limitCondition.push(` (t.groupId = ? or uc.groupId = ?) `)
-                    replacements.push(group)
-                    replacements.push(group)
-                } else if (group == 0) {
-                    limitCondition.push(` (t.groupId IS NOT NULL or uc.groupId is not null) `)
-                } else {
-                    limitCondition.push(` (t.groupId IS NULL and uc.groupId is null) `)
+                let limitCondition = [], replacements = [];
+                if (taskId) {
+                    limitCondition.push(` (t.taskId LIKE `+sequelizeObj.escape(taskId + "%")+` or ud.dutyId LIKE `+sequelizeObj.escape(taskId + "%")+`) `);
                 }
-            } else if (user.userType.toLowerCase() == 'hq') {
-                if (user.group?.length) {
-                    if (group) {
-                        limitCondition.push(` (t.groupId = ? or uc.groupId = ?) `)
-                        replacements.push(group)
-                        replacements.push(group)
-                    } else if (group == 0) {
-                        limitCondition.push(` (t.groupId in (?) or uc.groupId in (?)) `)
-                        replacements.push(groupIdList, groupIdList)
-                    } else {
-                        limitCondition.push(` (t.groupId IS NULL and uc.groupId is null) `)
+                if (selectedDate) {
+                    limitCondition.push(` mr.createdAt LIKE `+sequelizeObj.escape(selectedDate + "%"));
+                }
+                if (hub) {
+                    limitCondition.push(` (t.hub=? or uc.hub = ?) `);
+                    replacements.push(hub)
+                    replacements.push(hub)
+                }
+                if (node) {
+                    limitCondition.push(` (t.node=? or uc.node = ?) `);
+                    replacements.push(node)
+                    replacements.push(node)
+                }
+                if (riskLevel) {
+                    limitCondition.push(` mr.riskLevel=? `);
+                    replacements.push(riskLevel)
+                }
+                if (driverName) {
+                    limitCondition.push(` (d.driverName like `+sequelizeObj.escape("%" + driverName + "%")+` or d2.driverName like `+sequelizeObj.escape("%" + driverName + "%")+`) `);
+                }
+                if (vehicleNo) {
+                    limitCondition.push(` t.vehicleNumber like `+sequelizeObj.escape("%" + vehicleNo + "%"));
+                }
+
+                return {
+                    limitCondition,
+                    replacements
+                }
+            }
+
+            let searchSqlResult = generateSearchSql({
+                taskId,
+                selectedDate,
+                hub,
+                node,
+                riskLevel,
+                driverName,
+                vehicleNo
+            })
+            limitCondition = limitCondition.concat(searchSqlResult.limitCondition)
+            replacements = replacements.concat(searchSqlResult.replacements)
+
+            
+            const getPermitSql = async function (group, user) {
+                let limitCondition = [], replacements = [];
+
+                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
+                if (user.userType.toLowerCase() == 'customer') {
+                    limitCondition.push(` (t.groupId = ${ user.unitId } or uc.groupId = ${ user.unitId }) `)
+                } else if (user.userType.toLowerCase() == 'administrator') {
+                    const getSQL = function (group) {
+                        let limitCondition = [], replacements = [];
+                        if (group) {
+                            limitCondition.push(` (t.groupId = ? or uc.groupId = ?) `)
+                            replacements.push(group)
+                            replacements.push(group)
+                        } else if (group == 0) {
+                            limitCondition.push(` (t.groupId IS NOT NULL or uc.groupId is not null) `)
+                        } else {
+                            limitCondition.push(` (t.groupId IS NULL and uc.groupId is null) `)
+                        }
+                        return { limitCondition, replacements }
                     }
-                } 
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` (un.id IN ( ? ) or un2.id IN ( ? )) `)
+                    let result = getSQL(group)
+                    limitCondition = limitCondition.concat(result.limitCondition)
+                    replacements = replacements.concat(result.replacements)
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    const getSql = function (group, user) {
+                        let limitCondition = [], replacements = [];
+
+                        if (user.group?.length) {
+                            if (group) {
+                                limitCondition.push(` (t.groupId = ? or uc.groupId = ?) `)
+                                replacements.push(group)
+                                replacements.push(group)
+                            } else if (group == 0) {
+                                limitCondition.push(` (t.groupId in (?) or uc.groupId in (?)) `)
+                                replacements.push(groupIdList, groupIdList)
+                            } else {
+                                limitCondition.push(` (t.groupId IS NULL and uc.groupId is null) `)
+                            }
+                        } 
+                        
+                        let tempSqlList = []
+                        if (unitIdList.length) {
+                            tempSqlList.push(` (un.id IN ( ? ) or un2.id IN ( ? )) `)
+                            replacements.push(unitIdList, unitIdList)
+                        }
+                        if (groupIdList.length) {
+                            tempSqlList.push(` (t.groupId in (?) or uc.groupId in (?)) `)
+                            replacements.push(groupIdList, groupIdList)
+                        }
+        
+                        if (tempSqlList.length) {
+                            limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
+                        } else {
+                            limitCondition.push(` 1=2 `)
+                        }
+
+                        return { limitCondition, replacements }
+                    }
+                    let result = getSql(group, user)
+                    limitCondition = limitCondition.concat(result.limitCondition)
+                    replacements = replacements.concat(result.replacements)
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    limitCondition.push(` (un.id IN ( ? ) or un2.id IN ( ? )) `);
                     replacements.push(unitIdList, unitIdList)
                 }
-                if (groupIdList.length) {
-                    tempSqlList.push(` (t.groupId in (?) or uc.groupId in (?)) `)
-                    replacements.push(groupIdList, groupIdList)
-                }
 
-                if (tempSqlList.length) {
-                    limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
-                } else {
-                    limitCondition.push(` 1=2 `)
+                return {
+                    limitCondition,
+                    replacements
                 }
-            } else if (user.userType.toLowerCase() == 'unit') {
-                limitCondition.push(` (un.id IN ( ? ) or un2.id IN ( ? )) `);
-                replacements.push(unitIdList, unitIdList)
             }
+
+            let permitResult = await getPermitSql(group, user)
+            limitCondition = limitCondition.concat(permitResult.limitCondition)
+            replacements = replacements.concat(permitResult.replacements)
 
             if (limitCondition.length) {
                 baseSql += ' WHERE ' + limitCondition.join(' AND ');
@@ -2822,9 +2499,6 @@ module.exports = {
     },
     deleteMT_RAC: async function (req, res) {
         try {
-            let { taskId, mtRacId } = req.body;
-            let task = await Task.findByPk(taskId)
-
             return res.json(utils.response(1, '')); 
         } catch (error) {
             log.error(error)
@@ -2832,7 +2506,7 @@ module.exports = {
         }
     },
     getOddList: async function (req, res) {
-        try {
+        try { 
             let { selectedDate, driverName, vehicleNo, taskId, hub, node, group, pageNum, pageLength } = req.body;
 
             group = group ? Number.parseInt(group) : null
@@ -2866,50 +2540,70 @@ module.exports = {
             let userId = req.cookies.userId;
             let user = await userService.UserUtils.getUserDetailInfo(userId);
 
-            let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
-            if (user.userType.toLowerCase() == 'customer') {
-                limitCondition.push(`  tt.groupId = ? `)
-                replacements.push(user.unitId)
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                if (group) {
-                    limitCondition.push(` tt.groupId = ? `)
-                    replacements.push(group);
-                } else if (group == 0) {
-                    limitCondition.push(` tt.groupId IS NOT NULL `)
-                } else {
-                    limitCondition.push(` tt.groupId IS NULL `)
-                }
-            } else if (user.userType.toLowerCase() == 'hq') {
-                if (user.group?.length) {
-                    if (group) {
-                        limitCondition.push(` tt.groupId = ? `)
-                        replacements.push(group);
-                    } else if (group == 0) {
-                        limitCondition.push(` tt.groupId IS NOT NULL `)
-                    } else {
-                        limitCondition.push(` tt.groupId IS NULL `)
+            const getPermitSql = async function (group, user) {
+
+                let limitCondition = [], replacements = []
+
+                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
+                if (user.userType.toLowerCase() == 'customer') {
+                    limitCondition.push(`  tt.groupId = ? `)
+                    replacements.push(user.unitId)
+                } else if (user.userType.toLowerCase() == 'administrator') {
+                    const getSql = function () {
+                        if (group) {
+                            limitCondition.push(` tt.groupId = ? `)
+                            replacements.push(group);
+                        } else if (group == 0) {
+                            limitCondition.push(` tt.groupId IS NOT NULL `)
+                        } else {
+                            limitCondition.push(` tt.groupId IS NULL `)
+                        }
                     }
-                } 
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` tt.unitId IN ( ? ) `)
+                    getSql()
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    const getSql = function () {
+                        if (user.group?.length) {
+                            if (group) {
+                                limitCondition.push(` tt.groupId = ? `)
+                                replacements.push(group);
+                            } else if (group == 0) {
+                                limitCondition.push(` tt.groupId IS NOT NULL `)
+                            } else {
+                                limitCondition.push(` tt.groupId IS NULL `)
+                            }
+                        } 
+                        
+                        let tempSqlList = []
+                        if (unitIdList.length) {
+                            tempSqlList.push(` tt.unitId IN ( ? ) `)
+                            replacements.push(unitIdList)
+                        }
+                        if (groupIdList.length) {
+                            tempSqlList.push(` tt.groupId IN ( ? ) `)
+                            replacements.push(groupIdList)
+                        }
+        
+                        if (tempSqlList.length) {
+                            limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
+                        } else {
+                            limitCondition.push(` 1=2 `);
+                        }
+                    }
+                    getSql()
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    limitCondition.push(` tt.unitId IN ( ? ) `);
                     replacements.push(unitIdList)
                 }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId IN ( ? ) `)
-                    replacements.push(groupIdList)
-                }
 
-                if (tempSqlList.length) {
-                    limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
-                } else {
-                    limitCondition.push(` 1=2 `);
+                return {
+                    limitCondition,
+                    replacements
                 }
-            } else if (user.userType.toLowerCase() == 'unit') {
-                limitCondition.push(` tt.unitId IN ( ? ) `);
-                replacements.push(unitIdList)
             }
+            
+            let permitResult = await getPermitSql(group, user) 
+            limitCondition = limitCondition.concat(permitResult.limitCondition)
+            replacements = replacements.concat(permitResult.replacements)
 
             limitCondition.push(` ( tt.rectifyBy is null or tt.rectifyBy = '' ) `);
 
@@ -3028,7 +2722,7 @@ module.exports = {
             }
 
             let totalList = await sequelizeObj.query(baseSql, { type: QueryTypes.SELECT, replacements });
-            baseSql += ` limit ${ pageNum }, ${ pageLength }`
+            baseSql += ` limit ?, ?`
             replacements.push(Number(pageNum))
             replacements.push(Number(pageLength))
             let incidentList = await sequelizeObj.query(baseSql, { type: QueryTypes.SELECT, replacements });
@@ -3072,72 +2766,84 @@ module.exports = {
             let userId = req.cookies.userId;
             let user = await userService.UserUtils.getUserDetailInfo(userId);
 
-            let { unitList, subUnitList, unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
-            if (user.userType.toLowerCase() == 'customer') {
-                limitCondition.push(` tt.groupId = ? `)
-                replacements.push(user.unitId)
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                if (group) {
+            const getPermitSql = async function () {
+                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
+                if (user.userType.toLowerCase() == 'customer') {
                     limitCondition.push(` tt.groupId = ? `)
-                    replacements.push(group)
-                } else if (group == 0) {
-                    limitCondition.push(` tt.groupId IS NOT NULL `)
-                } else {
-                    limitCondition.push(` tt.groupId IS NULL `)
-                }
-            } else if (user.userType.toLowerCase() == 'hq') {
-                if (user.group?.length) {
-                    if (group) {
-                        limitCondition.push(` tt.groupId = ? `)
-                        replacements.push(group)
-                    } else if (group == 0) {
-                        limitCondition.push(` tt.groupId IS NOT NULL `)
-                    } else {
-                        limitCondition.push(` tt.groupId IS NULL `)
+                    replacements.push(user.unitId)
+                } else if (user.userType.toLowerCase() == 'administrator') {
+                    const getSql = function () {
+                        if (group) {
+                            limitCondition.push(` tt.groupId = ? `)
+                            replacements.push(group)
+                        } else if (group == 0) {
+                            limitCondition.push(` tt.groupId IS NOT NULL `)
+                        } else {
+                            limitCondition.push(` tt.groupId IS NULL `)
+                        }
                     }
-                } 
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` tt.unitId IN ( ? ) `)
+                    getSql()
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    const getSql = function () {
+                        if (user.group?.length) {
+                            if (group) {
+                                limitCondition.push(` tt.groupId = ? `)
+                                replacements.push(group)
+                            } else if (group == 0) {
+                                limitCondition.push(` tt.groupId IS NOT NULL `)
+                            } else {
+                                limitCondition.push(` tt.groupId IS NULL `)
+                            }
+                        } 
+                        let tempSqlList = []
+                        if (unitIdList.length) {
+                            tempSqlList.push(` tt.unitId IN ( ? ) `)
+                            replacements.push(unitIdList)
+                        }
+                        if (groupIdList.length) {
+                            tempSqlList.push(` tt.groupId IN ( ? ) `)
+                            replacements.push(groupIdList)
+                        }
+        
+                        if (tempSqlList.length) {
+                            limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
+                        } else {
+                            limitCondition.push(` 1=2 `);
+                        }
+                    }
+                    
+                    getSql();
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    limitCondition.push(` tt.unitId IN ( ? ) `);
                     replacements.push(unitIdList)
                 }
-                if (groupIdList.length) {
-                    tempSqlList.push(` tt.groupId IN ( ? ) `)
-                    replacements.push(groupIdList)
+            }
+            await getPermitSql()
+
+            const getLimitSql = function () {
+                if (taskId) {
+                    limitCondition.push(` tt.taskId LIKE ` + sequelizeObj.escape("%"+taskId+"%"));
                 }
-
-                if (tempSqlList.length) {
-                    limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
-                } else {
-                    limitCondition.push(` 1=2 `);
+                if (selectedDate) {
+                    limitCondition.push(` tt.createdAt LIKE ` + sequelizeObj.escape("%"+selectedDate+"%"));
                 }
-
-            } else if (user.userType.toLowerCase() == 'unit') {
-                limitCondition.push(` tt.unitId IN ( ? ) `);
-                replacements.push(unitIdList)
+                if (hub) {
+                    limitCondition.push(` tt.hub=? `);
+                    replacements.push(hub)
+                }
+                if (node) {
+                    limitCondition.push(` tt.node=? `);
+                    replacements.push(node)
+                }
+                if (driverName) {
+                    limitCondition.push(` tt.driverName like ` + sequelizeObj.escape("%"+driverName+"%"));
+                }
+                if (vehicleNo) {
+                    limitCondition.push(` tt.vehicleNumber like ` + sequelizeObj.escape("%"+vehicleNo+"%"));
+                }
             }
 
-            if (taskId) {
-                limitCondition.push(` tt.taskId LIKE ` + sequelizeObj.escape("%"+taskId+"%"));
-            }
-            if (selectedDate) {
-                limitCondition.push(` tt.createdAt LIKE ` + sequelizeObj.escape("%"+selectedDate+"%"));
-            }
-            if (hub) {
-                limitCondition.push(` tt.hub=? `);
-                replacements.push(hub)
-            }
-            if (node) {
-                limitCondition.push(` tt.node=? `);
-                replacements.push(node)
-            }
-            if (driverName) {
-                limitCondition.push(` tt.driverName like ` + sequelizeObj.escape("%"+driverName+"%"));
-            }
-            if (vehicleNo) {
-                limitCondition.push(` tt.vehicleNumber like ` + sequelizeObj.escape("%"+vehicleNo+"%"));
-            }
-
+            getLimitSql()
             
             let baseSql2 =  `
                 select count(*) as count from (
@@ -3268,100 +2974,109 @@ module.exports = {
                 LEFT JOIN loan_record ll2 ON ll2.driverId = d.driverId AND d.lastSOSDateTime BETWEEN ll2.startDate AND ll2.returnDate
                 
                 WHERE d.state LIKE '%sos%'
-                AND (d.lastSOSDateTime IS NOT NULL AND '${ timeSelected }' = DATE_FORMAT(d.lastSOSDateTime, '%Y-%m-%d'))
+                AND (d.lastSOSDateTime IS NOT NULL AND ? = DATE_FORMAT(d.lastSOSDateTime, '%Y-%m-%d'))
             `
             let sosSql = ` SELECT * FROM ( ${ baseSql } ) ss WHERE 1=1 `
-            let replacements = []
-            if (user.userType.toLowerCase() == 'customer') {
-                sosSql += ` AND ss.groupId = ? `
-                replacements.push(user.unitId)
-            } else if (user.userType.toLowerCase() == 'hq') {
+            let replacements = [timeSelected]
 
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
-
-                // HQ user has group permission
-                if (user.group?.length) {
-                    if (hub) {
-                        if((hub).toLowerCase() == 'dv_loa') {
-                            sosSql += ` AND ss.groupId is not null `
+            const getPermit = async function () {
+                if (user.userType.toLowerCase() == 'customer') {
+                    sosSql += ` AND ss.groupId = ? `
+                    replacements.push(user.unitId)
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    const getSql = async function () {
+                        let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
+    
+                        // HQ user has group permission
+                        if (hub && user.group?.length) {
+                            if((hub).toLowerCase() == 'dv_loa') {
+                                sosSql += ` AND ss.groupId is not null `
+                            } else {
+                                sosSql += ` AND ss.hub = ? `
+                                replacements.push(hub);
+                            }
+                        }
+                        
+                        let tempSqlList = []
+                        if (unitIdList.length) {
+                            tempSqlList.push(` ss.unitId IN (?) `)
+                            replacements.push(unitIdList);
+                        }
+                        if (groupIdList.length) {
+                            tempSqlList.push(` ss.groupId in (?) `)
+                            replacements.push(groupIdList);
+                        }
+                        
+                        if (tempSqlList.length) {
+                            sosSql += ` AND (${ tempSqlList.join(' OR ') }) `
                         } else {
-                            sosSql += ` AND ss.hub = ? `
-                            replacements.push(hub);
+                            sosSql += ` and 1=2 `
                         }
                     }
-                }
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` ss.unitId IN (?) `)
-                    replacements.push(unitIdList);
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` ss.groupId in (?) `)
-                    replacements.push(groupIdList);
-                }
-                
-                if (tempSqlList.length) {
-                    sosSql += ` AND (${ tempSqlList.join(' OR ') }) `
-                } else {
-                    sosSql += ` and 1=2 `
-                }
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                if (hub) {
+    
+                    await getSql()
+                } else if (user.userType.toLowerCase() == 'administrator' && hub) {
                     if((hub).toLowerCase() == 'dv_loa') {
                         sosSql += ` AND ss.groupId is not null `
                     } else {
                         sosSql += ` AND ss.hub = '? `
                         replacements.push(hub);
                     }
-                }
-
-            } else if (user.userType.toLowerCase() == 'unit') {
-                let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
-                if (hubNodeIdList.length) {
-                    // Maybe not more than 1000 node in one hub
-                    sosSql += ` AND ( ss.unitId IN (?) AND ss.groupId IS NULL ) `
-                    replacements.push(hubNodeIdList);
-                } else {
-                    sosSql += ` AND 1=2 `
+    
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
+                    if (hubNodeIdList.length) {
+                        // Maybe not more than 1000 node in one hub
+                        sosSql += ` AND ( ss.unitId IN (?) AND ss.groupId IS NULL ) `
+                        replacements.push(hubNodeIdList);
+                    } else {
+                        sosSql += ` AND 1=2 `
+                    }
                 }
             }
+            getPermit()
             
             console.log(sosSql)
             let driverStateSos = await sequelizeObj.query(sosSql, { type: QueryTypes.SELECT, replacements });
             let data = []
-            for(let item of driverStateSos){
-                let obj = {
-                    type: '-',
-                    driverId: item.driverId,
-                    driverName: item.driverName,
-                    vehicleNumber: item.vehicleNumber,
-                    vehicleType: item.vehicleType,
-                    contactNumber: item.contactNumber,
-                    taskId: item.taskId,
-                    lastSOSDateTime: moment(item.lastSOSDateTime).format('YYYY-MM-DD HH:mm:ss')
-                }
-                let mtRac = await MT_RAC.findOne({ where: { taskId: item.taskId } })
-                if (mtRac && mtRac.needCommander) {
-                    obj.commander = mtRac.commander
-                }
+            for (let item of driverStateSos) {
+                const getObj = async function () {
+                    let obj = {
+                        type: '-',
+                        driverId: item.driverId,
+                        driverName: item.driverName,
+                        vehicleNumber: item.vehicleNumber,
+                        vehicleType: item.vehicleType,
+                        contactNumber: item.contactNumber,
+                        taskId: item.taskId,
+                        lastSOSDateTime: moment(item.lastSOSDateTime).format('YYYY-MM-DD HH:mm:ss')
+                    }
+                    let mtRac = await MT_RAC.findOne({ where: { taskId: item.taskId } })
+                    if (mtRac?.needCommander) {
+                        obj.commander = mtRac.commander
+                    }
+    
+                    if (item.groupId) {
+                        let group = await TaskUtils.getGroupById(item.groupId)
+                        obj.group = group ? group.groupName : item.groupId;
+                    } else {
+                        obj.hub = item.hub
+                        obj.node = item.node
+                    }
+    
+                    // get sos type
+                    let sos = await SOS.findOne({ 
+                        where: { driverId: item.driverId, taskId: item.taskId }, 
+                        order: [ ['id', 'DESC']] 
+                    })
+                    if (sos) {
+                        obj.type = sos.type;
+                    }
 
-                if (item.groupId) {
-                    let group = await TaskUtils.getGroupById(item.groupId)
-                    obj.group = group ? group.groupName : item.groupId;
-                } else {
-                    obj.hub = item.hub
-                    obj.node = item.node
+                    return obj
                 }
-
-                // get sos type
-                let sos = await SOS.findOne({ 
-                    where: { driverId: item.driverId, taskId: item.taskId }, 
-                    order: [ ['id', 'DESC']] 
-                })
-                if (sos) {
-                    obj.type = sos.type;
-                }
+                
+                let obj = await getObj()
                 data.push(obj)
             }
             data = data.sort(await TaskUtils.parseData("lastSOSDateTime"));
@@ -3371,11 +3086,9 @@ module.exports = {
                 let sosLocation = await sequelizeObj.query(`
                     SELECT lat, lng FROM driver_position WHERE driverId = ? AND vehicleNo = ?
                 `, { type: QueryTypes.SELECT, replacements: [ item.driverId, item.vehicleNumber ] })
-                if(sosLocation && sosLocation.length) {
+                if(sosLocation?.length) {
                     item.lat = sosLocation[0].lat
                     item.lng = sosLocation[0].lng
-                } else {
-
                 }
             }
 
@@ -3474,84 +3187,91 @@ module.exports = {
                     FROM ( ${ baseSql } ) ll 
                 ) l`
             let limitCondition = [], replacements = []
-            if (user.userType.toLowerCase() == 'customer') {
-                limitCondition.push(` 1=2 `)
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                
-            } else if (user.userType.toLowerCase() == 'hq') {
-                let { unitIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` l.unitId IN ( ? ) `)
-                    replacements.push(unitIdList)
-                }
 
-                if (tempSqlList.length) {
-                    limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
-                } else {
-                    limitCondition.push(` 1=2 `);
+            const getPermitSql = async function () {
+                if (user.userType.toLowerCase() == 'customer') {
+                    limitCondition.push(` 1=2 `)
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    let { unitIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
+                    
+                    let tempSqlList = []
+                    if (unitIdList.length) {
+                        tempSqlList.push(` l.unitId IN ( ? ) `)
+                        replacements.push(unitIdList)
+                    }
+    
+                    if (tempSqlList.length) {
+                        limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
+                    } else {
+                        limitCondition.push(` 1=2 `);
+                    }
+    
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
+                    if (hubNodeIdList.length) {
+                        // Maybe not more than 1000 node in one hub
+                        limitCondition.push(` l.unitId IN (?) `)
+                        replacements.push(hubNodeIdList);
+                    }
                 }
+            }
+            await getPermitSql()
 
-            } else if (user.userType.toLowerCase() == 'unit') {
-                let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
-                if (hubNodeIdList.length) {
-                    // Maybe not more than 1000 node in one hub
-                    limitCondition.push(` l.unitId IN (?) `)
-                    replacements.push(hubNodeIdList);
+            const getSearchSql = function () {
+                if (activity) {
+                    limitCondition.push(` l.activityName LIKE ` + sequelizeObj.escape("%"+activity+"%"))
+                }
+                if (purpose) {
+                    limitCondition.push(` l.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
+                }
+                if (taskStatus) {
+                    if (taskStatus.toLowerCase() == 'waitcheck') taskStatus = 'pending'
+                    else if (taskStatus.toLowerCase() == 'completed') {
+                        limitCondition.push(` ( l.status = 'returned' or l.status = 'completed' ) `)
+                    } else {
+                        limitCondition.push(` l.status = ? `)
+                        replacements.push(taskStatus);
+                    }
+                }
+                if (selectedDate) {
+                    limitCondition.push(` (DATE(l.startDate) <= ? AND DATE(l.endDate) >= ? ) `)
+                    replacements.push(selectedDate)
+                    replacements.push(selectedDate)
+                }
+                if (taskId) {
+                    limitCondition.push(` l.taskId like ` + sequelizeObj.escape("%"+taskId+"%"))
+                }
+                if (group || group == 0) {
+                    // ATMS task has no group
+                    limitCondition.push(` 1=2 `)
+                }
+                if (hub) {
+                    limitCondition.push(` l.hub=? `)
+                    replacements.push(hub);
+                }
+                if (node) {
+                    limitCondition.push(` l.node=? `)
+                    replacements.push(node);
+                }
+                if (driverName) {
+                    limitCondition.push(` l.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
+                }
+                if (vehicleNo) {
+                    limitCondition.push(` l.vehicleNo like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
                 }
             }
-
-            if (activity) {
-                limitCondition.push(` l.activityName LIKE ` + sequelizeObj.escape("%"+activity+"%"))
-            }
-            if (purpose) {
-                limitCondition.push(` l.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
-            }
-            if (taskStatus) {
-                if (taskStatus.toLowerCase() == 'waitcheck') taskStatus = 'pending'
-                if (taskStatus.toLowerCase() == 'completed') {
-                    limitCondition.push(` ( l.status = 'returned' or l.status = 'completed' ) `)
-                } else {
-                    limitCondition.push(` l.status = ? `)
-                    replacements.push(taskStatus);
-                }
-            }
-            if (selectedDate) {
-                limitCondition.push(` (DATE(l.startDate) <= ? AND DATE(l.endDate) >= ? ) `)
-                replacements.push(selectedDate)
-                replacements.push(selectedDate)
-            }
-            if (taskId) {
-                limitCondition.push(` l.taskId like ` + sequelizeObj.escape("%"+taskId+"%"))
-            }
-            if (group || group == 0) {
-                // ATMS task has no group
-                limitCondition.push(` 1=2 `)
-            }
-            if (hub) {
-                limitCondition.push(` l.hub=? `)
-                replacements.push(hub);
-            }
-            if (node) {
-                limitCondition.push(` l.node=? `)
-                replacements.push(node);
-            }
-            if (driverName) {
-                limitCondition.push(` l.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
-            }
-            if (vehicleNo) {
-                limitCondition.push(` l.vehicleNo like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
-            }
+            getSearchSql()
 
             if (limitCondition.length) {
                 sql += ' WHERE ' + limitCondition.join(' AND ');
                 sql2 += ' WHERE ' + limitCondition.join(' AND ');
             }
 
-            if (sortBy && sort) {
-                if (sortBy == 'driverName') {
-                    sql += ` ORDER BY l.driverName ${ sort } `
+            if (sortBy == 'driverName' && sort) {
+                if (sort.toLowerCase() == 'asc') {
+                    sql += ` ORDER BY l.driverName asc `
+                } else {
+                    sql += ` ORDER BY l.driverName desc `
                 }
             } else {
                 sql += ` ORDER BY l.startDate desc `
@@ -3660,101 +3380,108 @@ module.exports = {
             // 2024-03-18 new ATMS exclusion
             limitCondition.push(` l.taskId not like 'AT-%' `)
 
-            if (user.userType.toLowerCase() == 'customer') {
-                limitCondition.push(` l.groupId = ? `)
-                replacements.push(user.unitId)
-            } else if (user.userType.toLowerCase() == 'administrator') {
-                
-            } else if (user.userType.toLowerCase() == 'hq') {
-                let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
-                // HQ user has group permission
-                if (user.group?.length) {
-                    if (group) {
-                        limitCondition.push(` l.groupId = ? `)
-                        replacements.push(group)
-                    } else if (group == 0) {
-                        limitCondition.push(` l.groupId in (?) `)
-                        replacements.push(groupIdList)
+            const getPermitSql = async function () {
+                if (user.userType.toLowerCase() == 'customer') {
+                    limitCondition.push(` l.groupId = ? `)
+                    replacements.push(user.unitId)
+                } else if (user.userType.toLowerCase() == 'hq') {
+                    const getSql = async function () {
+                        let { unitIdList, groupIdList } = await unitService.UnitUtils.getPermitUnitList(userId);
+                        // HQ user has group permission
+                        if (user.group?.length) {
+                            if (group) {
+                                limitCondition.push(` l.groupId = ? `)
+                                replacements.push(group)
+                            } else if (group == 0) {
+                                limitCondition.push(` l.groupId in (?) `)
+                                replacements.push(groupIdList)
+                            }
+                        }
+                        
+                        let tempSqlList = []
+                        if (unitIdList.length) {
+                            tempSqlList.push(` l.unitId IN (?) `)
+                            replacements.push(unitIdList);
+                        }
+                        if (groupIdList.length) {
+                            tempSqlList.push(` l.groupId in (?) `)
+                            replacements.push(groupIdList);
+                        }
+                        
+                        if (tempSqlList.length) {
+                            limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
+                        } else {
+                            limitCondition.push(` 1=2 `)
+                        }
+                    }
+                    await getSql()
+                } else if (user.userType.toLowerCase() == 'unit') {
+                    let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
+                    if (hubNodeIdList.length) {
+                        // Maybe not more than 1000 node in one hub
+                        limitCondition.push(` l.unitId IN ( ? ) `)
+                        replacements.push(hubNodeIdList)
                     }
                 }
-                
-                let tempSqlList = []
-                if (unitIdList.length) {
-                    tempSqlList.push(` l.unitId IN (?) `)
-                    replacements.push(unitIdList);
-                }
-                if (groupIdList.length) {
-                    tempSqlList.push(` l.groupId in (?) `)
-                    replacements.push(groupIdList);
-                }
-                
-                if (tempSqlList.length) {
-                    limitCondition.push(` (${ tempSqlList.join(' OR ') }) `)
-                } else {
-                    limitCondition.push(` 1=2 `)
-                }
+            }
+            await getPermitSql()
 
-            } else if (user.userType.toLowerCase() == 'unit') {
-                
-                let hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
-                if (hubNodeIdList.length) {
-                    // Maybe not more than 1000 node in one hub
-                    limitCondition.push(` l.unitId IN ( ? ) `)
-                    replacements.push(hubNodeIdList)
+            const getSearchSql = function () {
+                if (activity) {
+                    limitCondition.push(` l.activityName LIKE ` + sequelizeObj.escape("%"+activity+"%"))
+                }
+                if (purpose) {
+                    limitCondition.push(` l.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
+                }
+                if (taskStatus) {
+                    if (taskStatus.toLowerCase() == 'waitcheck') taskStatus = 'pending'
+                    if (taskStatus.toLowerCase() == 'completed') {
+                        limitCondition.push(` ( l.status = 'returned' or l.status = 'completed' ) `)
+                    } else {
+                        limitCondition.push(` l.status = ? `)
+                        replacements.push(taskStatus);
+                    }
+                }
+                if (selectedDate) {
+                    limitCondition.push(` (DATE(l.startDate) <= ? AND DATE(l.endDate) >= ? ) `)
+                    replacements.push(selectedDate)
+                    replacements.push(selectedDate)
+                }
+                if (group) {
+                    limitCondition.push(` l.groupId=? `)
+                    replacements.push(group)
+                }
+    
+                if (taskId) {
+                    limitCondition.push(` l.taskId like ` + sequelizeObj.escape("%"+taskId+"%"))
+                }
+                if (hub) {
+                    limitCondition.push(` l.hub=? `)
+                    replacements.push(hub);
+                }
+                if (node) {
+                    limitCondition.push(` l.node=? `)
+                    replacements.push(node);
+                }
+                if (driverName) {
+                    limitCondition.push(` l.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
+                }
+                if (vehicleNo) {
+                    limitCondition.push(` l.vehicleNo like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
                 }
             }
-
-            if (activity) {
-                limitCondition.push(` l.activityName LIKE ` + sequelizeObj.escape("%"+activity+"%"))
-            }
-            if (purpose) {
-                limitCondition.push(` l.purpose LIKE ` + sequelizeObj.escape("%"+purpose+"%"))
-            }
-            if (taskStatus) {
-                if (taskStatus.toLowerCase() == 'waitcheck') taskStatus = 'pending'
-                if (taskStatus.toLowerCase() == 'completed') {
-                    limitCondition.push(` ( l.status = 'returned' or l.status = 'completed' ) `)
-                } else {
-                    limitCondition.push(` l.status = ? `)
-                    replacements.push(taskStatus);
-                }
-            }
-            if (selectedDate) {
-                limitCondition.push(` (DATE(l.startDate) <= ? AND DATE(l.endDate) >= ? ) `)
-                replacements.push(selectedDate)
-                replacements.push(selectedDate)
-            }
-            if (group) {
-                limitCondition.push(` l.groupId=? `)
-                replacements.push(group)
-            }
-
-            if (taskId) {
-                limitCondition.push(` l.taskId like ` + sequelizeObj.escape("%"+taskId+"%"))
-            }
-            if (hub) {
-                limitCondition.push(` l.hub=? `)
-                replacements.push(hub);
-            }
-            if (node) {
-                limitCondition.push(` l.node=? `)
-                replacements.push(node);
-            }
-            if (driverName) {
-                limitCondition.push(` l.driverName like ` + sequelizeObj.escape("%"+driverName+"%"))
-            }
-            if (vehicleNo) {
-                limitCondition.push(` l.vehicleNo like ` + sequelizeObj.escape("%"+vehicleNo+"%"))
-            }
+            getSearchSql()
 
             if (limitCondition.length) {
                 sql += ' WHERE ' + limitCondition.join(' AND ');
                 sql2 += ' WHERE ' + limitCondition.join(' AND ');
             }
 
-            if (sortBy && sort) {
-                if (sortBy == 'driverName') {
-                    sql += ` ORDER BY l.driverName ${ sort } `
+            if (sortBy == 'driverName' && sort) {
+                if (sort.toLowerCase() == 'asc') {
+                    sql += ` ORDER BY l.driverName ASC `
+                } else {
+                    sql += ` ORDER BY l.driverName DESC `
                 }
             } else {
                 sql += ` ORDER BY l.startDate desc `

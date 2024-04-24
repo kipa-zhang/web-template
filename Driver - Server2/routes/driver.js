@@ -16,7 +16,8 @@ router.post('/getDriverList', driverService.getDriverList);
 router.post('/deleteDriver', driverService.deleteDriver);
 // Not used yet
 router.post('/createDriver', driverService.createDriver);
-
+router.post('/editDriverFromResource', driverService.editDriverFromResource);
+router.post('/createDriverFromResource', driverService.editDriverFromResource);
 
 router.post('/updateDriverStatus', driverService.updateDriverStatus);
 

@@ -64,17 +64,9 @@ let TaskUtils = {
         newLocation = Array.from(new Set(newLocation));
         let locationList = await TaskUtils.GetDestination(newLocation);
         if (newLocation.length == 1) {
-            if (locationList.length > 0) {
-                return true
-            } else {
-                return false
-            }
+            return locationList.length > 0
         } else if (newLocation.length > 1) {
-            if (locationList.length > 1) {
-                return true
-            } else {
-                return false
-            }
+            return locationList.length > 1
         } else {
             return false
         }
@@ -85,11 +77,7 @@ let TaskUtils = {
             SELECT * FROM driver_leave_record WHERE status = 1 and driverId = ?           
             AND ((? >= startTime AND ? <= endTime) OR (? >= startTime AND ? <= endTime) OR (? < startTime AND ? > endTime))
         `, { type: QueryTypes.SELECT, replacements: params });
-        if(leaveDriverIds.length > 0) {
-            return false
-        } else {
-            return true
-        }
+        return leaveDriverIds.length == 0
     },
     verifyVehicleLeave: async function (vehicleNo, startDate, endDate) {
         let params = [vehicleNo, startDate, startDate, endDate, endDate,startDate, endDate]
@@ -97,11 +85,7 @@ let TaskUtils = {
             SELECT * FROM vehicle_leave_record WHERE status = 1 and vehicleNo = ?  
             AND ((? >= startTime AND ? <= endTime) OR (? >= startTime AND ? <= endTime) OR (? < startTime AND ? > endTime))
         `, { type: QueryTypes.SELECT, replacements: params });
-        if(leaveVehicleNos.length > 0) {
-            return false
-        } else {
-            return true
-        }
+        return leaveVehicleNos.length == 0
     },
     findUser: async function (userId) {
         let user = await sequelizeObj.query(`
@@ -111,7 +95,7 @@ let TaskUtils = {
             WHERE us.userId = ? LIMIT 1
         `, { type: QueryTypes.SELECT, replacements: [ userId ] });
         if (!user.length) {
-            throw `UserID ${ userId } does not exist!`;
+            throw new Error(`UserID ${ userId } does not exist!`);
         } else {
             return user[0];
         }
@@ -120,12 +104,10 @@ let TaskUtils = {
         let unitList = [];
         if (!hub) {
             unitList = await Unit.findAll({ where: { unit: { [Op.not]: null, } }, group: ['unit', 'subUnit'] })
+        } else if (node) {
+            unitList = await Unit.findAll({ where: { unit: hub, subUnit: node }, group: ['unit', 'subUnit'] })
         } else {
-            if (node) {
-                unitList = await Unit.findAll({ where: { unit: hub, subUnit: node }, group: ['unit', 'subUnit'] })
-            } else {
-                unitList = await Unit.findAll({ where: { unit: hub }, group: ['unit', 'subUnit'] })
-            }
+            unitList = await Unit.findAll({ where: { unit: hub }, group: ['unit', 'subUnit'] })
         }
         return unitList;
     },
@@ -162,14 +144,14 @@ let TaskUtils = {
             businessType: businessType,
             businessId: taskId,
             optType: typeName,
-            beforeData: `${ beforeDriverId && beforeDriverId != '' ? `driverId:${ beforeDriverId },` : '' }${ beforeVehicleNo && beforeVehicleNo != '' ? `vehicleNo:${ beforeVehicleNo }` : '' }`,
-            afterData: `${ afterDriverId && afterDriverId != '' ? `driverId:${ afterDriverId },` : '' }${ afterVehicleNo && afterVehicleNo != '' ? `vehicleNo:${ afterVehicleNo }` : '' }`,
+            beforeData: `driverId:${ beforeDriverId }, vehicleNo:${ beforeVehicleNo }`,
+            afterData: `driverId:${ afterDriverId }, vehicleNo:${ afterVehicleNo }`,
             optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
             remarks: remarks
         }
         await OperationRecord.create(obj)
     },
-    getVehicleByGroup: async function(purpose, leaveStatus, groupId, vehicleType, startDate, endDate, dateData, totalStatus) {
+    getVehicleByGroup: async function(purpose, leaveStatus, groupId, vehicleType, startDate, endDate, dateData) {
         startDate = startDate ? moment(startDate).format('YYYY-MM-DD HH:mm:ss') : null;
         endDate = endDate ? moment(endDate).format('YYYY-MM-DD HH:mm:ss') : null;
         //2023-07-14 loan out group + 2023-08-10 vehicle group
@@ -220,17 +202,22 @@ let TaskUtils = {
             replacements.push(vehicleType)
         }
         sql += ` ) vv WHERE vv.vehicleNo IS NOT NULL`
-        if(groupId){
-            if(groupId.length > 0){
-                sql += ` and vv.unitId in(?)`
-                replacements.push(groupId.join(","))
+
+        const initGroupIdSql = function (){
+            if(groupId){
+                if(groupId.length > 0){
+                    sql += ` and vv.unitId in(?)`
+                    replacements.push(groupId.join(","))
+                } else {
+                    sql += ` and vv.unitId = ?`
+                    replacements.push(groupId)
+                }
             } else {
-                sql += ` and vv.unitId = ?`
-                replacements.push(groupId)
+                sql += ` and vv.unitId is not null`
             }
-        } else {
-            sql += ` and vv.unitId is not null`
         }
+        initGroupIdSql()
+
         if(leaveStatus){
             sql += ` 
                 and vv.vehicleNo not in (
@@ -250,13 +237,18 @@ let TaskUtils = {
             replacements.push(startDate)
             replacements.push(endDate)
         }
-        if(purpose){
-            if((purposeList.indexOf(purpose?.toLowerCase()) == -1 || purpose?.toLowerCase() == 'mpt')){
-                sql += `  AND (vv.nextAviTime > ? OR vv.nextAviTime IS NULL)`
-                let dateAvi = endDate ?? dateData
-                replacements.push(moment(dateAvi).format('YYYY-MM-DD'))
+
+        const initPurposeSql = function (){
+            if(purpose){
+                if((purposeList.indexOf(purpose?.toLowerCase()) == -1 || purpose?.toLowerCase() == 'mpt')){
+                    sql += `  AND (vv.nextAviTime > ? OR vv.nextAviTime IS NULL)`
+                    let dateAvi = endDate ?? dateData
+                    replacements.push(moment(dateAvi).format('YYYY-MM-DD'))
+                }
             }
         }
+        initPurposeSql()
+
         sql += `
         GROUP BY vv.vehicleNo
         `
@@ -264,29 +256,36 @@ let TaskUtils = {
         let vehicleList = await sequelizeObj.query(sql, { type: QueryTypes.SELECT, replacements: replacements });
         return vehicleList
     },
-    getVehicleList: async function(purpose, vehicleType, startDate, endDate, unitId, unit, subUnit, dataType) {
-        let hub = unit && unit != '' && unit != 'null'  ? unit : null;
-        let node = subUnit && subUnit != '' && subUnit != 'all' && subUnit != 'null' ? subUnit : null;
-        let unitIdList = []
-        if(hub){
-            if(node){
-                let unit2 = await Unit.findOne({ where: { unit: hub, subUnit: node } })
-                unitIdList.push(unit2.id)
-            } else {
-                let unit = await Unit.findAll({ where: { unit: hub } })
-                unitIdList = unit.map(item => item.id)
-            }
-        } else {
-            if (unitId) {
-                let unit = await TaskUtils.getUnitByUnitId(unitId)
-                if (unit && !unit.subUnit) {
-                    let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
-                    unitIdList = newUnit.map(item => item.id)
-                } else if (unit && unit.subUnit) {
-                    unitIdList.push(unitId)
+    getVehicleList: async function(purpose, vehicleType, startDate, endDate, unitId, unit, subUnit) {
+        const initUnitIdListByVehicle = async function (){
+            let hub = unit && unit != '' && unit != 'null'  ? unit : null;
+            let node = subUnit && subUnit != '' && subUnit != 'all' && subUnit != 'null' ? subUnit : null;
+            let unitIdList = []
+            if(hub){
+                if(node){
+                    let unit2 = await Unit.findOne({ where: { unit: hub, subUnit: node } })
+                    unitIdList.push(unit2.id)
+                } else {
+                    let unit = await Unit.findAll({ where: { unit: hub } })
+                    unitIdList = unit.map(item => item.id)
                 }
+            } else if (unitId) {
+                let unit = await TaskUtils.getUnitByUnitId(unitId)
+                if (unit) {
+                    if (unit.subUnit) {
+                        unitIdList.push(unitId)
+                        let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
+                        unitIdList = newUnit.map(item => item.id)
+                    } else {
+                        let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
+                        unitIdList = newUnit.map(item => item.id)
+                    }
+                }
+                
             }
+            return unitIdList
         }
+        let unitIdList = await initUnitIdListByVehicle();
         log.info(`vehicleList unitIDList ${ JSON.stringify(unitIdList) }`)
         startDate = moment(startDate).format('YYYY-MM-DD HH:mm:ss');
         endDate = moment(endDate).format('YYYY-MM-DD HH:mm:ss');
@@ -336,20 +335,6 @@ let TaskUtils = {
         log.warn(`hoto Not within the specified range vehicleList ${ JSON.stringify(hotoVehicleListByNotScope) }`)
 
         let hotoVehicle = []
-        if(dataType) {
-            // 2023-08-08 hoto vehicle
-            // hotoVehicle = await sequelizeObj.query(`
-            //     SELECT vehicleNo FROM hoto 
-            //     WHERE vehicleNo IS NOT NULL 
-            //     AND (('${ startDate }' >= startDateTime AND '${ startDate }' <= endDateTime) 
-            //     OR ('${ endDate }' >= startDateTime AND '${ endDate }' <= endDateTime) 
-            //     OR ('${ startDate }' < startDateTime AND '${ endDate }' > endDateTime)
-            //     OR '${ startDate }' >= startDateTime) and status = 'Approved'
-            //     GROUP BY vehicleNo
-            // `, { type: QueryTypes.SELECT })
-            // hotoVehicle = hotoVehicle.map(item => item.vehicleNo)
-            // log.warn(`mb type task hoto vehicleList ${ JSON.stringify(hotoVehicle) }`)
-        }
         let excludeVehicle = leaveVehicle.concat(loanOutVehicle).concat(hotoVehicle).concat(hotoVehicleListByNotScope)    
         excludeVehicle = excludeVehicle.map(item => item);
         excludeVehicle = Array.from(new Set(excludeVehicle))  
@@ -398,49 +383,52 @@ let TaskUtils = {
             where d.driverId is not null and u.role in ('DV', 'LOA') and d.unitId is null
         `
         let replacements = []
-        if(!totalStatus){
-            sql += `  and d.permitStatus != 'invalid'`
-        }
-        if(vehicleType){
-            sql += ` and dc.vehicleType = ?`
-            replacements.push(vehicleType)
-        }
-        if(unitId){
-            if(unitId.length > 0){
-                sql +=  ` and d.groupId in(?)  `
-                replacements.push(unitId.join(","))
-            } else {
-                sql += ` and d.groupId = ?`
-                replacements.push(unitId)
+        const initOptionSql1 = function (){
+            if(!totalStatus){
+                sql += `  and d.permitStatus != 'invalid'`
             }
+            if(vehicleType){
+                sql += ` and dc.vehicleType = ?`
+                replacements.push(vehicleType)
+            }
+            if(unitId){
+                if(unitId.length > 0){
+                    sql +=  ` and d.groupId in(?)  `
+                    replacements.push(unitId.join(","))
+                } else {
+                    sql += ` and d.groupId = ?`
+                    replacements.push(unitId)
+                }
+            }
+            if(dateData){
+                sql += ` and (d.operationallyReadyDate > ? OR d.operationallyReadyDate is null)`
+                replacements.push(moment(dateData).format('YYYY-MM-DD'))
+            } else if (endDate){
+                sql += ` and (d.operationallyReadyDate > ? OR d.operationallyReadyDate is null)`
+                replacements.push(moment(endDate).format('YYYY-MM-DD'))
+            } else {
+                sql += ' and (d.operationallyReadyDate > CURDATE() OR d.operationallyReadyDate is null)'
+            }
+            if(leaveStatus) {
+                sql += `
+                and d.driverId not in (
+                    SELECT ifnull(dl.driverId, -1) FROM driver_leave_record dl WHERE dl.status = 1  
+                    AND ( (? >= dl.startTime AND ? <= dl.endTime) 
+                    OR (? >= dl.startTime AND ? <= dl.endTime) 
+                    OR (? < dl.startTime AND ? > dl.endTime)
+                    ) GROUP BY dl.driverId
+                )
+                ` 
+                replacements.push(startDate)
+                replacements.push(startDate)
+                replacements.push(endDate)
+                replacements.push(endDate)
+                replacements.push(startDate)
+                replacements.push(endDate)
+            }
+            sql += ` GROUP BY d.driverId`
         }
-        if(dateData){
-            sql += ` and (d.operationallyReadyDate > ? OR d.operationallyReadyDate is null)`
-            replacements.push(moment(dateData).format('YYYY-MM-DD'))
-        } else if (endDate){
-            sql += ` and (d.operationallyReadyDate > ? OR d.operationallyReadyDate is null)`
-            replacements.push(moment(endDate).format('YYYY-MM-DD'))
-        } else {
-            sql += ' and (d.operationallyReadyDate > CURDATE() OR d.operationallyReadyDate is null)'
-        }
-        if(leaveStatus) {
-            sql += `
-            and d.driverId not in (
-                SELECT ifnull(dl.driverId, -1) FROM driver_leave_record dl WHERE dl.status = 1  
-                AND ( (? >= dl.startTime AND ? <= dl.endTime) 
-                OR (? >= dl.startTime AND ? <= dl.endTime) 
-                OR (? < dl.startTime AND ? > dl.endTime)
-                ) GROUP BY dl.driverId
-            )
-            ` 
-            replacements.push(startDate)
-            replacements.push(startDate)
-            replacements.push(endDate)
-            replacements.push(endDate)
-            replacements.push(startDate)
-            replacements.push(endDate)
-        }
-        sql += ` GROUP BY d.driverId`
+        initOptionSql1()
         //2023-07-14 loan out group
         let sql2 = `
         SELECT dd.driverId, dd.driverName, dd.contactNumber, dd.unitId FROM (
@@ -498,35 +486,39 @@ let TaskUtils = {
             ${ !totalStatus ? ` and d.permitStatus != 'invalid'` : '' }   
             ) dd WHERE dd.driverId IS NOT NULL 
         `
-        if(unitId){
-            if(unitId.length > 0){
-                sql2 += ` and dd.unitId in(?)`
-                replacements2.push(unitId.join(","))
+
+        const initOptionSql2 = function (){
+            if(unitId){
+                if(unitId.length > 0){
+                    sql2 += ` and dd.unitId in(?)`
+                    replacements2.push(unitId.join(","))
+                } else {
+                    sql2 += ` and dd.unitId = ?`
+                    replacements2.push(unitId)
+                }
             } else {
-                sql2 += ` and dd.unitId = ?`
-                replacements2.push(unitId)
+                sql2 += ' and dd.unitId is not null'
             }
-        } else {
-            sql2 += ' and dd.unitId is not null'
+            if(leaveStatus){
+                sql2 += `
+                    and dd.driverId not in (
+                        SELECT ifnull(dl.driverId, -1) FROM driver_leave_record dl WHERE dl.status = 1 
+                        AND ( (? >= dl.startTime AND ? <= dl.endTime) 
+                        OR (? >= dl.startTime AND ? <= dl.endTime) 
+                        OR (? < dl.startTime AND ? > dl.endTime)
+                        ) GROUP BY dl.driverId
+                    )
+                ` 
+                replacements2.push(startDate)
+                replacements2.push(startDate)
+                replacements2.push(endDate)
+                replacements2.push(endDate)
+                replacements2.push(startDate)
+                replacements2.push(endDate)
+            }
+            sql2 += ` GROUP BY dd.driverId`
         }
-        if(leaveStatus){
-            sql2 += `
-                and dd.driverId not in (
-                    SELECT ifnull(dl.driverId, -1) FROM driver_leave_record dl WHERE dl.status = 1 
-                    AND ( (? >= dl.startTime AND ? <= dl.endTime) 
-                    OR (? >= dl.startTime AND ? <= dl.endTime) 
-                    OR (? < dl.startTime AND ? > dl.endTime)
-                    ) GROUP BY dl.driverId
-                )
-            ` 
-            replacements2.push(startDate)
-            replacements2.push(startDate)
-            replacements2.push(endDate)
-            replacements2.push(endDate)
-            replacements2.push(startDate)
-            replacements2.push(endDate)
-        }
-        sql2 += ` GROUP BY dd.driverId`
+        initOptionSql2()
         console.log(sql)
         let driverList = await sequelizeObj.query(sql, { type: QueryTypes.SELECT, replacements: replacements });
         let driverListByLoan = await sequelizeObj.query(sql2, { type: QueryTypes.SELECT, replacements: replacements2 });
@@ -559,7 +551,6 @@ module.exports.getUnitId = async function (req, res) {
 module.exports.getHubNode = async function (req, res) {
     try {
         let userId = req.cookies.userId;
-        // let unitIdList = await TaskUtils.findOutHubNodeIDByUserId(userId);
         let dataList = await unitService.UnitUtils.getPermitUnitList(userId);
         let unitIdList = dataList.unitIdList
         let result = await Unit.findAll({ where: { id: unitIdList }, group: 'id', order: ['unit', 'subUnit'] });
@@ -665,7 +656,6 @@ module.exports.GetDestination = async function (req, res) {
 
 module.exports.getVehicleType = async function (req, res) {
     try {
-        let purpose = req.body.purpose;
         let startDate = req.body.startDate;
         let endDate = req.body.endDate;
         let userId = req.cookies.userId;
@@ -679,32 +669,40 @@ module.exports.getVehicleType = async function (req, res) {
                 node = unit.subUnit;
             }
         }
-        let unitIdList = []
-        if(hub){
-            if(node){
-                let unit2 = await Unit.findOne({ where: { unit: hub, subUnit: node } })
-                unitIdList.push(unit2.id)
-            } else {
-                let unit = await Unit.findAll({ where: { unit: hub } })
-                unitIdList = unit.map(item => item.id);
-            }
-        } else {
-            let user = await TaskUtils.getUnitIdByUserId(userId);
-            if (user.unitId) {
-                unitIdList.push(user.unitId)
-                let unit = await TaskUtils.getUnitByUnitId(user.unitId)
-                if (unit) {
-                    if (!unit.subUnit) {
-                        let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
-                        unitIdList = newUnit.map(item => item.id);
-                    }
+        const initUnitIdListByHubNode = async function (){
+            let unitIdList = []
+            if(hub){
+                if(node){
+                    let unit2 = await Unit.findOne({ where: { unit: hub, subUnit: node } })
+                    unitIdList.push(unit2.id)
                 } else {
-                    unitIdList = []
+                    let unit = await Unit.findAll({ where: { unit: hub } })
+                    unitIdList = unit.map(item => item.id);
                 }
-            } else {
-                unitIdList = [];
+            } 
+            const initUnitIdListByUser = async function (){
+                if(!hub) {
+                    let user = await TaskUtils.getUnitIdByUserId(userId);
+                    if (user.unitId) {
+                        unitIdList.push(user.unitId)
+                        let unit = await TaskUtils.getUnitByUnitId(user.unitId)
+                        if (unit) {
+                            if (!unit.subUnit) {
+                                let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
+                                unitIdList = newUnit.map(item => item.id);
+                            }
+                        } else {
+                            unitIdList = []
+                        }
+                    } else {
+                        unitIdList = [];
+                    }
+                }
             }
+            await initUnitIdListByUser()
+            return unitIdList;
         }
+        let unitIdList = await initUnitIdListByHubNode();
         log.info(`vehicleTypeList unitIdList ${ JSON.stringify(unitIdList) }`)
         let replacements = []
         let sql = `
@@ -779,7 +777,7 @@ module.exports.getDriverList = async function (req, res) {
                 for (let newUnitId of newUnit) {
                     unitIdList.push(newUnitId.id)
                 }
-            } else if (unit && unit.subUnit) {
+            } else if (unit?.subUnit) {
                 unitIdList.push(unitId)
             }
         }
@@ -902,40 +900,37 @@ module.exports.getVehicleListByTaskId = async function (req, res) {
 
     let taskId = req.body.taskId;
     let task = await Task.findByPk(taskId);
-    if (task) {
-        let dataFrom = task.dataFrom;
-        let vehicleType = '';
-        if (dataFrom == 'SYSTEM') {
-            let systemTaskId = task.taskId;
-            if(systemTaskId.includes('AT-')) systemTaskId = task.taskId.slice(3)
-            let taskVehicleType = await sequelizeSystemObj.query(`
-                SELECT j.vehicleType
-                FROM job_task jt
-                LEFT JOIN job j ON jt.tripId = j.id
-                where jt.id=?
-            `, { replacements: [systemTaskId], type: QueryTypes.SELECT });
-            if (taskVehicleType && taskVehicleType.length > 0) {
-                vehicleType = taskVehicleType[0].vehicleType;
-            }
-        } else if (dataFrom == 'MT-ADMIN') {
-            let mtAdmin = await MtAdmin.findByPk(task.indentId);
-            if (mtAdmin) {
-                vehicleType = mtAdmin.vehicleType;
-            }
+    if(!task) return res.json(utils.response(0, `Task[${taskId}] does not exist.`));
+    let dataFrom = task.dataFrom;
+    let vehicleType = '';
+    if (dataFrom == 'SYSTEM') {
+        let systemTaskId = task.taskId;
+        if(systemTaskId.includes('AT-')) systemTaskId = task.taskId.slice(3)
+        let taskVehicleType = await sequelizeSystemObj.query(`
+            SELECT j.vehicleType
+            FROM job_task jt
+            LEFT JOIN job j ON jt.tripId = j.id
+            where jt.id=?
+        `, { replacements: [systemTaskId], type: QueryTypes.SELECT });
+        if (taskVehicleType && taskVehicleType.length > 0) {
+            vehicleType = taskVehicleType[0].vehicleType;
         }
-        let taskGroupId = task.groupId;
-        let vehicleList = null;
-        if (taskGroupId) {
-            //mobile task Or customer task has groupId, mobile task no vehicleType
-            vehicleList = await TaskUtils.getVehicleByGroup(task.purpose, true, user.unitId, vehicleType, task.indentStartTime, task.indentEndTime);
-        } else {
-            vehicleList = await TaskUtils.getVehicleList(task.purpose, vehicleType, task.indentStartTime, task.indentEndTime, null, task.hub, task.node,  null );
+    } else if (dataFrom == 'MT-ADMIN') {
+        let mtAdmin = await MtAdmin.findByPk(task.indentId);
+        if (mtAdmin) {
+            vehicleType = mtAdmin.vehicleType;
         }
-
-        return res.json(utils.response(1, vehicleList));
-    } else {
-        return res.json(utils.response(0, `Task[${taskId}] does not exist.`));
     }
+    let taskGroupId = task.groupId;
+    let vehicleList = null;
+    if (taskGroupId) {
+        //mobile task Or customer task has groupId, mobile task no vehicleType
+        vehicleList = await TaskUtils.getVehicleByGroup(task.purpose, true, user.unitId, vehicleType, task.indentStartTime, task.indentEndTime);
+    } else {
+        vehicleList = await TaskUtils.getVehicleList(task.purpose, vehicleType, task.indentStartTime, task.indentEndTime, null, task.hub, task.node,  null );
+    }
+
+    return res.json(utils.response(1, vehicleList));
 }
 
 //2023-05-23 optimize sql
@@ -959,13 +954,13 @@ module.exports.getMtAdminList = async function (req, res) {
         let pageList = await userService.getUserPageList(userId, 'MT-Admin')
         let operationList = pageList.map(item => `${ item.action }`).join(',')
 
-        let unitId = []
-        let dataList = await unitService.UnitUtils.getPermitUnitList(userId);
-        unitId = dataList.unitIdList
-        if((user.userType).toUpperCase() == 'CUSTOMER'){
-            unitId = []
-        } else {
-            if(hub) {
+        const initUnitId = async function (){
+            let unitId = []
+            let dataList = await unitService.UnitUtils.getPermitUnitList(userId);
+            unitId = dataList.unitIdList
+            if((user.userType).toUpperCase() == 'CUSTOMER'){
+                unitId = []
+            } else if(hub) {
                 if(node) {
                     let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
                     unitId = [unit.id]
@@ -974,22 +969,10 @@ module.exports.getMtAdminList = async function (req, res) {
                     let hubUnitIdList = unit.map(item => item.id)
                     unitId = unitId.filter(item => hubUnitIdList.includes(item))
                 }
-            } 
-            // else {
-            //     // let users = await TaskUtils.getUnitIdByUserId(userId);
-            //     // if (users.unitId) {
-            //     //     unitId.push(users.unitId)
-            //     //     let unit = await TaskUtils.getUnitByUnitId(users.unitId)
-            //     //     if (!unit.subUnit) {
-            //     //         let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
-            //     //         unitId = newUnit.map(item => item.id)
-            //     //     }
-            //     // }
-            //     let dataList = await unitService.UnitUtils.getPermitUnitList(userId);
-            //     unitId = dataList.unitIdList
-            // }
+            }
+            return unitId
         }
-    
+        let unitId = await initUnitId()
         log.info(`MtAdminList unitIdList ${ JSON.stringify(unitId) }`)
         let replacements = []
         let replacements2 = []
@@ -998,98 +981,109 @@ module.exports.getMtAdminList = async function (req, res) {
         t.driverStatus, t.mobileStartTime, t.hub, t.node, t.groupId 
         from task t
         LEFT JOIN mt_admin m ON t.indentId = m.id
-        LEFT JOIN (select driverId, nric, driverName, contactNumber from driver union all select driverId, nric, driverName, contactNumber from driver_history) d ON d.driverId = t.driverId 
+        LEFT JOIN (
+            select driverId, nric, driverName, contactNumber from driver 
+            union all 
+            select driverId, nric, driverName, contactNumber from driver_history
+        ) d ON d.driverId = t.driverId 
         LEFT JOIN user u on u.userId = m.creator 
         LEFT JOIN user uu on uu.userId = m.amendedBy 
         where m.dataType != 'mb' `//t.indentId is not null and 
         replacements.push(operationList)
         let sql2 = `SELECT COUNT(DISTINCT m.id) total from task t 
         LEFT JOIN mt_admin m ON t.indentId = m.id
-        LEFT JOIN (select driverId, nric, driverName, contactNumber from driver union all select driverId, nric, driverName, contactNumber from driver_history) d ON d.driverId = t.driverId 
+        LEFT JOIN (
+            select driverId, nric, driverName, contactNumber from driver 
+            union all 
+            select driverId, nric, driverName, contactNumber from driver_history
+        ) d ON d.driverId = t.driverId 
         LEFT JOIN user u on u.userId = m.creator 
         LEFT JOIN user uu on uu.userId = m.amendedBy 
         where m.dataType != 'mb' `
 
-        if (unitId.length > 0) {
-            sql += ` and m.unitId in(?)`
-            sql2 += ` and m.unitId in(?)`
-            replacements.push(unitId)
-            replacements2.push(unitId)
-        }
-
-        if(groupId) {
-            // sql += ` and (u.unitId = ? and u.userType = 'CUSTOMER')`
-            // sql2 += ` and (u.unitId = ? and u.userType = 'CUSTOMER')`
-            sql += ` and t.groupId = ?`
-            sql2 += ` and t.groupId = ?`
-            replacements.push(groupId)
-            replacements2.push(groupId)
-        }
-
-        if((user.userType).toUpperCase() == 'CUSTOMER') {
-            //2023-06-15 Same groupId as the logged-in person
-            // let newUser = await User.findAll({ where: { unitId: user.unitId, userType: 'CUSTOMER' } })
-            // let userIdList = newUser.map(item => item.userId);
-            // userIdList = Array.from(new Set(userIdList))
-            // sql += ` and m.creator in(?)`
-            // sql2 += ` and m.creator in(?)`
-            sql += ` and t.groupId IS NOT NULL and t.groupId = ? `
-            sql2 += ` and t.groupId IS NOT NULL and t.groupId = ? `
-            replacements.push(user.unitId)
-            replacements2.push(user.unitId)
-            // replacements.push(userIdList)
-        }
-
-        if (created_date) {
-            sql += ` and DATE_FORMAT(m.createdAt,'%Y-%m-%d') = ?`
-            sql2 += ` and DATE_FORMAT(m.createdAt,'%Y-%m-%d') = ?`
-            replacements.push(created_date)
-            replacements2.push(created_date)
-        }
-
-        if(purpose) {
-            sql += ` and m.purpose = ?`
-            sql2 += ` and m.purpose = ?`
-            replacements.push(purpose)
-            replacements2.push(purpose)
-        }
-
-        if (execution_date) {
-            if (execution_date.indexOf('~') != -1) {
-                const dates = execution_date.split(' ~ ')
-                sql += ` and (m.endDate >= ? and m.endDate <= ?)`
-                sql2 += ` and (m.endDate >= ? and m.endDate <= ?)`
-                replacements.push(dates[0])
-                replacements.push(dates[1])
-                replacements2.push(dates[0])
-                replacements2.push(dates[1])
-            } else {
-                sql += ` and m.endDate = ?`
-                sql2 += ` and m.endDate = ?`
-                replacements.push(execution_date)
-                replacements2.push(execution_date)
+        const initOptionSqlByMtAdmin = function (){
+            if (unitId.length > 0) {
+                sql += ` and m.unitId in(?)`
+                sql2 += ` and m.unitId in(?)`
+                replacements.push(unitId)
+                replacements2.push(unitId)
+            }
+    
+            if(groupId) {
+                // sql += ` and (u.unitId = ? and u.userType = 'CUSTOMER')`
+                // sql2 += ` and (u.unitId = ? and u.userType = 'CUSTOMER')`
+                sql += ` and t.groupId = ?`
+                sql2 += ` and t.groupId = ?`
+                replacements.push(groupId)
+                replacements2.push(groupId)
+            }
+    
+            if((user.userType).toUpperCase() == 'CUSTOMER') {
+                //2023-06-15 Same groupId as the logged-in person
+                // let newUser = await User.findAll({ where: { unitId: user.unitId, userType: 'CUSTOMER' } })
+                // let userIdList = newUser.map(item => item.userId);
+                // userIdList = Array.from(new Set(userIdList))
+                // sql += ` and m.creator in(?)`
+                // sql2 += ` and m.creator in(?)`
+                sql += ` and t.groupId IS NOT NULL and t.groupId = ? `
+                sql2 += ` and t.groupId IS NOT NULL and t.groupId = ? `
+                replacements.push(user.unitId)
+                replacements2.push(user.unitId)
+                // replacements.push(userIdList)
+            }
+    
+            if (created_date) {
+                sql += ` and DATE_FORMAT(m.createdAt,'%Y-%m-%d') = ?`
+                sql2 += ` and DATE_FORMAT(m.createdAt,'%Y-%m-%d') = ?`
+                replacements.push(created_date)
+                replacements2.push(created_date)
+            }
+    
+            if(purpose) {
+                sql += ` and m.purpose = ?`
+                sql2 += ` and m.purpose = ?`
+                replacements.push(purpose)
+                replacements2.push(purpose)
+            }
+    
+            if (execution_date) {
+                if (execution_date.indexOf('~') != -1) {
+                    const dates = execution_date.split(' ~ ')
+                    sql += ` and (m.endDate >= ? and m.endDate <= ?)`
+                    sql2 += ` and (m.endDate >= ? and m.endDate <= ?)`
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
+                    replacements2.push(dates[0])
+                    replacements2.push(dates[1])
+                } else {
+                    sql += ` and m.endDate = ?`
+                    sql2 += ` and m.endDate = ?`
+                    replacements.push(execution_date)
+                    replacements2.push(execution_date)
+                }
+            }
+            if(taskId) {
+                sql += ` and t.taskId like ?`
+                sql2 += ` and t.taskId like ?`
+                replacements.push('%' + taskId + '%')
+                replacements2.push('%' + taskId + '%')
+            }
+    
+            if(vehicleNo) {
+                sql += ` and t.vehicleNumber like ?`
+                sql2 += ` and t.vehicleNumber like ?`
+                replacements.push('%' + vehicleNo + '%')
+                replacements2.push('%' + vehicleNo + '%')
+            }
+    
+            if(driverName) {
+                sql += ` and d.driverName like ?`
+                sql2 += ` and d.driverName like ?`
+                replacements.push('%' + driverName + '%')
+                replacements2.push('%' + driverName + '%')
             }
         }
-        if(taskId) {
-            sql += ` and t.taskId like ?`
-            sql2 += ` and t.taskId like ?`
-            replacements.push('%' + taskId + '%')
-            replacements2.push('%' + taskId + '%')
-        }
-
-        if(vehicleNo) {
-            sql += ` and t.vehicleNumber like ?`
-            sql2 += ` and t.vehicleNumber like ?`
-            replacements.push('%' + vehicleNo + '%')
-            replacements2.push('%' + vehicleNo + '%')
-        }
-
-        if(driverName) {
-            sql += ` and d.driverName like ?`
-            sql2 += ` and d.driverName like ?`
-            replacements.push('%' + driverName + '%')
-            replacements2.push('%' + driverName + '%')
-        }
+        initOptionSqlByMtAdmin()
         let orderSql = [];
         if (endDateOrder) {
             orderSql.push(' m.endDate ' + `${ endDateOrder }`)
@@ -1290,27 +1284,14 @@ module.exports.updateMtAdminByMtAdminId = async function (req, res) {
         let businessType = req.body.businessType;
         let unit = null;
         let mtAdminId = mtAdmin.id
-        let loanObjStatus = await loan.findOne({where: { taskId: 'AT-'+mtAdminId }});
-        let loanObj2Status = await loanRecord.findOne({where: { taskId: 'AT-'+mtAdminId }});
-        if(loanObjStatus || loanObj2Status) {
-            if(loanObjStatus) {
-                if(loanObjStatus.actualStartTime || loanObjStatus.actualEndTime) {
-                    return res.json(utils.response(0, 'The operation failed because the current data status has changed.'));
-                }
-            }
-            if(loanObj2Status) {
-                return res.json(utils.response(0, 'The operation failed because the current data status has changed.'));
-            }
-        }
-        let task = await Task.findOne({where: { indentId: mtAdminId }})
-        if(task) {
-            if(task.mobileStartTime || (task.vehicleStatus).toLowerCase() == 'cancelled') return res.json(utils.response(0, `Operation failed.The status of the task has changed.`));
-        } 
+    
+        let oldTask = await Task.findOne({where: { indentId: mtAdminId }})
+        if(!oldTask) return res.json(utils.response(0, ` The operation task does not exist.`));
+        if(oldTask.mobileStartTime || (oldTask.vehicleStatus).toLowerCase() == 'cancelled') return res.json(utils.response(0, `Operation failed.The status of the task has changed.`));
         let driverState = await TaskUtils.verifyDriverLeave(mtAdmin.driverId, mtAdmin.startDate, mtAdmin.endDate);
         if(!driverState) return res.json(utils.response(0, 'Fail to modify. The driver is in the leave state.'));
         let vehicleState = await TaskUtils.verifyVehicleLeave(mtAdmin.vehicleNumber, mtAdmin.startDate, mtAdmin.endDate);
         if(!vehicleState) return res.json(utils.response(0, 'The creation failed. The vehicle is in the leave state.'));
-        let taskObj = await TaskUtils.getDriverIdAndVehicleNoByTaskId(mtAdminId);
         let pickupDestination = await TaskUtils.GetDestination(mtAdmin.reportingLocation);
         let dropoffDestination = await TaskUtils.GetDestination(mtAdmin.destination);
         if(!pickupDestination[0] || !dropoffDestination[0]) return res.json(utils.response(0, 'Please reselect. The location does not exist.'));
@@ -1322,25 +1303,14 @@ module.exports.updateMtAdminByMtAdminId = async function (req, res) {
         
         let state = await TaskUtils.verifyLocation(mtAdmin.reportingLocation, mtAdmin.destination);
         if(!state) return res.json(utils.response(0, 'Reporting Location, Destination does not exist, please select again.'));
-        if(taskObj) {
-            if(taskObj.driverId != mtAdmin.driverId) {
-                await FirebaseService.createFirebaseNotification2([{
-                    taskId,
-                    token: '',
-                    driverId: taskObj.driverId,
-                    vehicleNo: taskObj.vehicleNumber
-                }], 'INFO', 'Task cancelled!')
-            }
+        if(oldTask.driverId != mtAdmin.driverId) {
+            await FirebaseService.createFirebaseNotification2([{
+                taskId,
+                token: '',
+                driverId: oldTask.driverId,
+                vehicleNo: oldTask.vehicleNumber
+            }], 'INFO', 'Task cancelled!')
         }
-        if(!taskObj){
-            if(mtAdmin.dataType == 'mb') {
-                taskId = 'AT-' + mtAdminId
-            } else {
-                taskId = 'MT-' + mtAdminId
-                mtAdmin.driverNum = 1;
-                mtAdmin.needVehicle = 1;
-            } 
-        } 
 
         await sequelizeObj.transaction(async transaction => {
             let _user = await User.findOne({ where: { userId: req.cookies.userId } })
@@ -1348,148 +1318,45 @@ module.exports.updateMtAdminByMtAdminId = async function (req, res) {
             let oldMtAdminObj = await MtAdmin.findOne({ where: { id: mtAdminId } })
             await MtAdmin.update(mtAdmin, { where: { id: mtAdmin.id } });
             let mtAdminObj = await MtAdmin.findOne({ where: { id: mtAdminId } })
-            let task = null;
-            if((mtAdminObj.driverNum > 0 && mtAdminObj.needVehicle > 0)) {
-                let loanByTaskId = await loan.findOne({ where: { [Op.or]: [
-                    { taskId: `AT-${ mtAdminId }` },
-                    { taskId: `MT-${ mtAdminId }` }
-                  ] } })
-                if(loanByTaskId) {
-                    await loan.destroy({ where: { [Op.or]: [
-                        { taskId: `AT-${ mtAdminId }` },
-                        { taskId: `MT-${ mtAdminId }` }
-                        ] } });
-                }
-                task = {
-                    taskId: taskId,
-                    dataFrom: 'MT-ADMIN',
-                    driverId: mtAdmin.driverId ? mtAdmin.driverId : null, 
-                    vehicleNumber: mtAdmin.vehicleNumber ? mtAdmin.vehicleNumber : null, 
-                    activity: mtAdmin.activityName,
-                    indentId: mtAdmin.id,
-                    purpose: mtAdmin.purpose,
-                    // creator: req.cookies.userId,
-                    indentStartTime: mtAdmin.startDate,
-                    indentEndTime: mtAdmin.endDate,
-                    pickupDestination: mtAdmin.reportingLocation,
-                    dropoffDestination: mtAdmin.destination,
-                    pickupGPS: `${mtAdmin.reportingLocationLat ? mtAdmin.reportingLocationLat : '0.0'},${mtAdmin.reportingLocationLng ? mtAdmin.reportingLocationLng : '0.0'}`,
-                    dropoffGPS: `${mtAdmin.destinationLat ? mtAdmin.destinationLat : '0.0'},${mtAdmin.destinationLng ? mtAdmin.destinationLng : '0.0'}`,
-                    hub: unit ? unit.unit : '-',
-                    node: unit ? unit.subUnit : '-',
-                    updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
-                }
-                if(taskObj) {
-                    await Task.update(task, { where: { taskId: task.taskId } });
-                } else {
-                    task.driverStatus = task.driverId ? 'waitcheck' : null;
-                    task.vehicleStatus = 'waitcheck';
-                    task.creator = req.cookies.userId;
-                    await Task.create(task);
-                }
-                await OperationRecord.create({
-                    id: null,
-                    operatorId: req.cookies.userId,
-                    businessType: businessType,
-                    businessId: task.taskId,
-                    optType: 'Edit',
-                    beforeData: `${ JSON.stringify([taskObj ? taskObj : '',oldMtAdminObj]) }`,
-                    afterData: `${ JSON.stringify([task,mtAdminObj]) }`,
-                    optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                    remarks: 'edit the task.'
-                })
-            } else {
-                let checkTask2 = await Task.findOne({ where: { [Op.or]: [
-                    { taskId: `AT-${ mtAdminId }` },
-                    { taskId: `MT-${ mtAdminId }` }
-                  ] } })
-                if(checkTask2) {
-                await Task.destroy({ where: { [Op.or]: [
-                    { taskId: `AT-${ mtAdminId }` },
-                    { taskId: `MT-${ mtAdminId }` }
-                    ] } });
-                }
-                if(mtAdminObj.driverId || mtAdminObj.vehicleNumber){
-                    let loanByTaskId = await loan.findOne({ where: { [Op.or]: [
-                        { taskId: `AT-${ mtAdminId }` },
-                        { taskId: `MT-${ mtAdminId }` }
-                      ] } })
-                    if(loanByTaskId) {
-                        if(loanByTaskId.driverId && !mtAdminObj.driverId) {
-                            await loan.destroy({ where: { [Op.or]: [
-                                { taskId: `AT-${ mtAdminId }` },
-                                { taskId: `MT-${ mtAdminId }` }
-                              ] } });
-                        }
-                        if(loanByTaskId.vehicleNo && !mtAdminObj.vehicleNumber) {
-                            await loan.destroy({ where: { [Op.or]: [
-                                { taskId: `AT-${ mtAdminId }` },
-                                { taskId: `MT-${ mtAdminId }` }
-                              ] } });
-                        }
-                    }
-                    let loanByTaskId2 = await loan.findOne({ where: { [Op.or]: [
-                        { taskId: `AT-${ mtAdminId }` },
-                        { taskId: `MT-${ mtAdminId }` }
-                      ] } })
-                    if(loanByTaskId2) {
-                        await loan.update({  
-                            taskId: 'AT-'+mtAdminId,
-                            indentId: mtAdminObj.indentId, 
-                            driverId: mtAdminObj.driverId ? mtAdminObj.driverId : null,
-                            vehicleNo: mtAdminObj.vehicleNumber ? mtAdminObj.vehicleNumber : null, 
-                            startDate: mtAdminObj.startDate, 
-                            endDate: mtAdminObj.endDate, 
-                            groupId: -1,
-                            unitId: mtAdmin.unitId,
-                            activity: mtAdmin.activityName,
-                            purpose: mtAdmin.purpose,
-                            creator: req.cookies.userId
-                        }, { where: { taskId } })
-                    } else {
-                        await loan.create({  
-                            taskId: 'AT-'+mtAdminId,
-                            indentId: mtAdminObj.indentId, 
-                            driverId: mtAdminObj.driverId ? mtAdminObj.driverId : null,
-                            vehicleNo: mtAdminObj.vehicleNumber ? mtAdminObj.vehicleNumber : null, 
-                            startDate: mtAdminObj.startDate, 
-                            endDate: mtAdminObj.endDate, 
-                            groupId: -1,
-                            unitId: mtAdmin.unitId,
-                            activity: mtAdmin.activityName,
-                            purpose: mtAdmin.purpose,
-                            creator: req.cookies.userId
-                        })
-                    }
-                    let newLoanByTaskId2 = await loan.findOne({ where: { [Op.or]: [
-                        { taskId: `AT-${ mtAdminId }` },
-                        { taskId: `MT-${ mtAdminId }` }
-                      ] } })
-                    await TaskUtils.initOperationRecord(req.cookies.userId, 'AT-'+mtAdminId, loanByTaskId ? loanByTaskId.driverId : null, mtAdmin.driverId, loanByTaskId ? loanByTaskId.vehicleNo : null, mtAdmin.vehicleNumber, 'atms task assign')
-                    await OperationRecord.create({
-                        id: null,
-                        operatorId: req.cookies.userId,
-                        businessType: businessType,
-                        businessId: 'AT-'+mtAdminId,
-                        optType: 'Edit',
-                        beforeData: `${ JSON.stringify([loanByTaskId ? loanByTaskId : '', oldMtAdminObj]) }`,
-                        afterData: `${ JSON.stringify([newLoanByTaskId2, mtAdminObj]) }`,
-                        optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                        remarks: 'edit the loan.'
-                    })
-                }
+            let task = {
+                taskId: taskId,
+                dataFrom: 'MT-ADMIN',
+                driverId: mtAdmin.driverId ? mtAdmin.driverId : null, 
+                vehicleNumber: mtAdmin.vehicleNumber ? mtAdmin.vehicleNumber : null, 
+                activity: mtAdmin.activityName,
+                indentId: mtAdmin.id,
+                purpose: mtAdmin.purpose,
+                // creator: req.cookies.userId,
+                indentStartTime: mtAdmin.startDate,
+                indentEndTime: mtAdmin.endDate,
+                pickupDestination: mtAdmin.reportingLocation,
+                dropoffDestination: mtAdmin.destination,
+                pickupGPS: `${mtAdmin.reportingLocationLat ? mtAdmin.reportingLocationLat : '0.0'},${mtAdmin.reportingLocationLng ? mtAdmin.reportingLocationLng : '0.0'}`,
+                dropoffGPS: `${mtAdmin.destinationLat ? mtAdmin.destinationLat : '0.0'},${mtAdmin.destinationLng ? mtAdmin.destinationLng : '0.0'}`,
+                hub: unit ? unit.unit : '-',
+                node: unit ? unit.subUnit : '-',
+                updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
             }
-        
-            if(!taskObj){
-                if(mtAdminObj.driverNum > 0 && mtAdminObj.needVehicle > 0) await TaskUtils.initOperationRecord(req.cookies.userId, taskId, null, mtAdmin.driverId, null, mtAdmin.vehicleNumber, businessType)
-            }
+            await Task.update(task, { where: { taskId: task.taskId } });
+            await OperationRecord.create({
+                id: null,
+                operatorId: req.cookies.userId,
+                businessType: businessType,
+                businessId: task.taskId,
+                optType: 'Edit',
+                beforeData: `${ JSON.stringify([oldTask, oldMtAdminObj]) }`,
+                afterData: `${ JSON.stringify([task,mtAdminObj]) }`,
+                optTime: moment().format('YYYY-MM-DD HH:mm:ss'),
+                remarks: 'edit the task.'
+            })
             // Update vehicle-relation db
             if(mtAdmin.vehicleNumber) await vehicleService.createVehicleRelation(mtAdmin.driverId, mtAdmin.vehicleNumber)
         }).catch(error => {
             throw error
         })
-        if(task) {
-            if(mtAdmin.driverId != task.driverId) {
+
+        const initFirebaseNotificationAndOperationRecord = async function (){
+            if(mtAdmin.driverId != oldTask.driverId) {
                 await FirebaseService.createFirebaseNotification2([{
                     taskId,
                     token: '',
@@ -1497,8 +1364,6 @@ module.exports.updateMtAdminByMtAdminId = async function (req, res) {
                     vehicleNo: mtAdmin.vehicleNumber
                 }], 'INFO', 'New task assigned!')
             }
-        }
-        if(taskObj){
             if(mtAdmin.driverId) {
                 await FirebaseService.createFirebaseNotification2([{
                     taskId,
@@ -1506,9 +1371,12 @@ module.exports.updateMtAdminByMtAdminId = async function (req, res) {
                     driverId: mtAdmin.driverId,
                     vehicleNo: mtAdmin.vehicleNumber
                 }], 'INFO', 'Task update!')
-                if(taskObj.driverId != mtAdmin.driverId || taskObj.vehicleNumber != mtAdmin.vehicleNumber) TaskUtils.initOperationRecord(req.cookies.userId, taskId, taskObj.driverId, mtAdmin.driverId, taskObj.vehicleNumber, mtAdmin.vehicleNumber, businessType)
+                if(oldTask.driverId != mtAdmin.driverId || oldTask.vehicleNumber != mtAdmin.vehicleNumber) {
+                    TaskUtils.initOperationRecord(req.cookies.userId, taskId, oldTask.driverId, mtAdmin.driverId, oldTask.vehicleNumber, mtAdmin.vehicleNumber, businessType)
+                } 
             }
-        } 
+        }
+        await initFirebaseNotificationAndOperationRecord();
         return res.json(utils.response(1, true));
     } catch (error) {
         log.error('updateMtAdmin fail: ' + error);
@@ -1593,7 +1461,7 @@ module.exports.verifyVehicleType = async function (req, res) {
 module.exports.getVehicleTypeByGroup = async function (req, res) {
     try {
         let { purpose, editUserId, startDate, endDate } = req.body;
-        let newUserId = editUserId ? editUserId : req.cookies.userId;
+        let newUserId = editUserId || req.cookies.userId;
         let user = await User.findOne({ where: { userId: newUserId } })
         if(!user) return res.json(utils.response(0, `User ${ newUserId } does not exist.`));
         log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
@@ -1610,7 +1478,7 @@ module.exports.getVehicleTypeByGroup = async function (req, res) {
 module.exports.getVehicleNoByGroup = async function (req, res) {
     try {
         let { purpose, editUserId, vehicleType, startDate, endDate } = req.body;
-        let newUserId = editUserId ? editUserId : req.cookies.userId;
+        let newUserId = editUserId || req.cookies.userId;
         let user = await User.findOne({ where: { userId: newUserId } })
         if(!user) return res.json(utils.response(0, `User ${ newUserId } does not exist.`));
         log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
@@ -1627,7 +1495,7 @@ module.exports.getVehicleNoByGroup = async function (req, res) {
 module.exports.getDriverDatatByGroup = async function (req, res) {
     try {
         let { editUserId, vehicleType, startDate, endDate } = req.body;
-        let newUserId = editUserId ? editUserId : req.cookies.userId;
+        let newUserId = editUserId || req.cookies.userId;
         let user = await User.findOne({ where: { userId: newUserId } })
         if(!user) return res.json(utils.response(0, `User ${ newUserId } does not exist.`));
         log.info(`user groupId ${ JSON.stringify(user.unitId) }`)

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const jwtConf = require('../conf/jwt');
 const jsonfile = require('jsonfile')
 const CONTENT = require('../util/content');
+const path = require('path');
 
 const log = require('../log/winston').logger('Utils');
 
@@ -13,6 +14,10 @@ module.exports.response = function (code, respMessage) {
         "respCode": code,
         "respMessage": respMessage
     }
+};
+
+module.exports.stringNotEmpty = function (params) {
+    return params != null && params != undefined && params != '';
 };
 
 module.exports.generateDateTime = function (time) {
@@ -312,4 +317,14 @@ module.exports.getDateRangeRestdays = async function(startDate, endDate) {
         currentDate = currentDate.add(1, 'day');
     }
     return restdays;
+}
+
+module.exports.getSafePath = function (p) {
+    p = p.replace(/%2e/ig, '.')
+    p = p.replace(/%2f/ig, '/')
+    p = p.replace(/%5c/ig, '\\')
+    p = p.replace(/^[/\\]?/, '/')
+    p = p.replace(/[/\\]\.\.[/\\]/, '/')
+    p = path.normalize(p).replace(/\\/g, '/').slice(1)
+    return p
 }

@@ -30,7 +30,17 @@ const { OperationRecord } = require('../model/operationRecord.js');
  */
 
 module.exports.uploadVehicle = async function (req, res) {
-	const form = formidable({ multiples: true, maxFileSize: 10 * 1024 * 1024, keepExtensions: true });
+	let dirPath = conf.uploadFilePath + "\\vehicle"
+	if (!fs.existsSync(dirPath)) {
+		fs.mkdirSync(dirPath, {recursive: true});
+	}
+	const form = formidable({ 
+		multiples: true, 
+		maxFileSize: 10 * 1024 * 1024, 
+		keepExtensions: false, 
+		uploadDir: dirPath,
+		fileExt: /\.xlsx$|\.xls$/i
+	 });
 	form.parse(req, async (error, fields, files) => {
 		if (error) {
 			log.error(error)
@@ -71,7 +81,6 @@ module.exports.uploadVehicle = async function (req, res) {
 						if (!vehicleNo) {
 							log.info('Vehicle No is empty, jump this row!')
 							warnMsgHtml += `Row ${rowIndex + 1}: Vehicle No is empty, jump this row!<br/>`
-							continue;
 						} else if (!unit) {
 							warnMsgHtml += `Row ${rowIndex + 1}: Vehicle unit is empty, jump this row!<br/>`
 							continue;
@@ -97,7 +106,7 @@ module.exports.uploadVehicle = async function (req, res) {
 									vehicleNo: vehicleNo, 
 									unit: unit, 
 									subUnit: subUnit, 
-									deviceId: hardWareID ? hardWareID : null, 
+									deviceId: hardWareID || null, 
 									vehicleType: data[indexOfVehicleType].trim(), 
 									limitSpeed: limitSpeed.trim(), // While xlsx is null here
 									permitType: data[indexOfPermitType].trim(), 
@@ -108,7 +117,7 @@ module.exports.uploadVehicle = async function (req, res) {
 								})
 								uploadVehicleRelationList.push({ 
 									vehicleNo: vehicleNo, 
-									deviceId: hardWareID ? hardWareID : null, 
+									deviceId: hardWareID || null, 
 									limitSpeed: limitSpeed.trim(),  // While xlsx is null here
 									unit: unit, 
 									subUnit: subUnit
@@ -262,7 +271,7 @@ module.exports.uploadVehicle = async function (req, res) {
 					remarks: null
 				})
 
-				return res.json(utils.response(1, warnMsgHtml ? warnMsgHtml : 'Success'));
+				return res.json(utils.response(1, warnMsgHtml || 'Success'));
 			}).catch(error => {
 				log.error('(uploadVehicle) : ', error);
 				return res.json(utils.response(0, error));
@@ -276,7 +285,16 @@ module.exports.uploadVehicle = async function (req, res) {
 
 module.exports.uploadWaypoint = async function (req, res) {
     try {
-        const form = formidable({ multiples: true, maxFileSize: 10 * 1024 * 1024, keepExtensions: true });
+		let dirPath = conf.uploadFilePath + "\\waypoint"
+		if (!fs.existsSync(dirPath)) {
+			fs.mkdirSync(dirPath, {recursive: true});
+		}
+		const form = formidable({ 
+			multiples: true, 
+			maxFileSize: 10 * 1024 * 1024, 
+			keepExtensions: false, 
+			uploadDir: dirPath
+		});
 		form.parse(req, async (error, fields, files) => {
 			if (error) {
 				log.error(error)
@@ -309,7 +327,6 @@ module.exports.uploadWaypoint = async function (req, res) {
 
 						if (!data[indexOfWaypointName]) {
 							log.info('Waypoint is empty, jump this row!')
-							continue;
 						} else {
 							uploadWaypointList.push({ 
 								waypointName: data[indexOfWaypointName].trim(),
@@ -356,6 +373,7 @@ const checkFilePath = function (path) {
     try {
         if (!fs.existsSync(path)) fs.mkdirSync(path);
     } catch (error) {
+		log.error(error);
         throw error
     }
 }
@@ -363,13 +381,17 @@ const checkFileExist = function (filePath) {
     try {
         return fs.existsSync(filePath);
     } catch (error) {
+		log.error(error);
         throw error
     }
 }
 
 module.exports.uploadImage = async function (req, res) {
 	try {
-		const form = formidable({ multiples: false, maxFileSize: 10 * 1024 * 1024, keepExtensions: true });
+		let folderPath = './public/resources/upload/notification';
+		checkFilePath(folderPath);
+
+		const form = formidable({ multiples: false, maxFileSize: 10 * 1024 * 1024, keepExtensions: false, uploadDir: folderPath });
 		form.parse(req, async (error, fields, files) => {
 			if (error) {
 				log.error(error)
@@ -378,9 +400,6 @@ module.exports.uploadImage = async function (req, res) {
 			log.info('fields: ', JSON.stringify(fields))
 			log.info('files: ', JSON.stringify(files))
 
-			let folderPath = './public/resources/upload/notification';
-			checkFilePath(folderPath);
-	
 			try {
 				let newFileName = `${ utils.generateUniqueKey() }.${ files.file.type.split('/')[1] }`
 				let filePath = `${ folderPath }/${ newFileName }`

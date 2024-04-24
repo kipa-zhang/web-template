@@ -51,7 +51,7 @@ let TaskUtils = {
         );
         return typeOfVehicleList
     },
-    findOutHubNodeOption: function (hub, node) {
+    findOutHubNodeOption: async function (hub, node) {
         // Checkout limit option
         let option = {};
         if (!hub) {
@@ -60,13 +60,11 @@ let TaskUtils = {
             } else {
                 option.subUnit = node;
             }
+        } else if (!node) {
+            option.unit = hub;
         } else {
-            if (!node) {
-                option.unit = hub;
-            } else {
-                option.unit = hub;
-                option.subUnit = node;
-            }
+            option.unit = hub;
+            option.subUnit = node;
         }
         return option;
     },
@@ -91,25 +89,25 @@ let TaskUtils = {
             LEFT JOIN service_mode sm ON a.serviceModeId = sm.id
             LEFT JOIN service_type st ON st.id = sm.service_type_id
             where 1=1 and a.approve = 1 and lower(st.category) = 'mv' and b.taskStatus = 'assigned'`
-        if (status != "" && status != null) {
-            if (!driverStatus) {
-                sql += ` and b.taskStatus = ?`
-                replacements.push(status)
-            } else {
+        if (utils.stringNotEmpty(status)) {
+            if (driverStatus) {
                 // Mobius Driver Server (Available assign task)
                 sql += ` and (b.taskStatus = ? OR (b.driverStatus = ? OR b.driverStatus IS NULL ))`
                 replacements.push(status, driverStatus)
+            } else {
+                sql += ` and b.taskStatus = ?`
+                replacements.push(status)
             }
         }
-        if (vehicleType != "" && vehicleType != null) {
+        if (utils.stringNotEmpty(vehicleType)) {
             sql += ` and a.vehicleType = ?`
             replacements.push(vehicleType)
         }
-        if (created_date != "" && created_date != null) {
+        if (utils.stringNotEmpty(created_date)) {
             sql += ` and DATE_FORMAT(b.createdAt,'%Y-%m-%d') = ?`
             replacements.push(created_date)
         }
-        if (execution_date != "" && execution_date != null) {
+        if (utils.stringNotEmpty(execution_date)) {
             if (execution_date.indexOf('~') != -1) {
                 const dates = execution_date.split(' ~ ')
                 sql += ` and (b.executionDate >= ? and b.executionDate <= ?)`
@@ -121,7 +119,7 @@ let TaskUtils = {
             }
         }
     
-        if (tripNo != "" && tripNo != null) {
+        if (utils.stringNotEmpty(tripNo)) {
             sql += ` and a.tripNo like ?`
             replacements.push(`%${tripNo}%`)
         }

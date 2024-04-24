@@ -26,7 +26,6 @@ const initLoanUnitId = async function () {
             for (let result of resultList) {
                 if (result.id == loan.taskId) {
                     await loan.update({ unitId: result.mobiusUnit, activity: result.activity, purpose: result.purpose }, { where: { id: loan.id } })
-                    continue
                 }
             }
         }
@@ -50,7 +49,6 @@ const initLoanUnitId = async function () {
             for (let result of resultList) {
                 if (result.id == loan.taskId) {
                     await loan.update({ unitId: result.mobiusUnit, activity: result.activity, purpose: result.purpose }, { where: { id: loan.id } })
-                    continue
                 }
             }
         }
@@ -68,7 +66,6 @@ const initLoanUnitId = async function () {
             for (let mtAdmin of mtAdminList) {
                 if (('AT-' + mtAdmin.id) == loan.taskId) {
                     await loan.update({ unitId: mtAdmin.unitId, activity: mtAdmin.activityName, purpose: mtAdmin.purpose }, { where: { id: loan.id } })
-                    continue
                 }
             }
         }
@@ -86,7 +83,6 @@ const initLoanUnitId = async function () {
             for (let mtAdmin of mtAdminList) {
                 if (('AT-' + mtAdmin.id) == loan.taskId) {
                     await loan.update({ unitId: mtAdmin.unitId, activity: mtAdmin.activityName, purpose: mtAdmin.purpose }, { where: { id: loan.id } })
-                    continue
                 }
             }
         }

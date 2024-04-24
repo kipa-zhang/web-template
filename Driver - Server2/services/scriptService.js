@@ -26,16 +26,10 @@ const runScript = async function () {
 
                 newDriverPlatformConfList.push({
                     driverId: driver.driverId,
-                    permitType: permitType && permitType.permitType,
+                    permitType: permitType?.permitType,
                     vehicleType: vehicleType,
                     creator: user.userId,
                 })
-                // newDriverPlatformConfList.push({
-                //     driverId: driver.driverId,
-                //     permitType: permitType.permitType,
-                //     vehicleType: vehicleType,
-                //     creator: user.userId,
-                // })
             }
         }
         for (let driverPlatformConf of driverPlatformConfList) {

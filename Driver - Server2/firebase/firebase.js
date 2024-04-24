@@ -33,31 +33,33 @@ module.exports.createFirebaseNotification = async function (taskIdList, title, c
             return;
         }
         let notificationList = [];
-        for (let taskId of taskIdList) {
-            let task = await Task.findByPk(taskId);
-            if (task) {
-                if (!task.driverId) {
-                    log.info(`Task ${ taskId } has no driver, no need send firebase notification`)
-                } else {
-                    let user = await User.findOne({ where: { driverId: task.driverId } })
-                    if (user && user.firebaseToken) {
-                        notificationList.push({
-                            taskId,
-                            token: user.firebaseToken,
-                            driverId: task.driverId,
-                            vehicleNo: task.vehicleNumber
-                        })
+        async function buildNotificationDataList() {
+            for (let taskId of taskIdList) {
+                let task = await Task.findByPk(taskId);
+                if (task) {
+                    if (!task.driverId) {
+                        log.info(`Task ${ taskId } has no driver, no need send firebase notification`)
                     } else {
-                        log.warn(` DriverId ${ task.driverId } does not exist in user table or has no firebase token now ! `)
+                        let user = await User.findOne({ where: { driverId: task.driverId } })
+                        if (user?.firebaseToken) {
+                            notificationList.push({
+                                taskId,
+                                token: user.firebaseToken,
+                                driverId: task.driverId,
+                                vehicleNo: task.vehicleNumber
+                            })
+                        } else {
+                            log.warn(` DriverId ${ task.driverId } does not exist in user table or has no firebase token now ! `)
+                        }
+                        
                     }
-                    
+                } else {
+                    log.warn(` TaskId ${ taskId } does not exist ! `)
                 }
-            } else {
-                log.warn(` TaskId ${ taskId } does not exist ! `)
             }
         }
+        await buildNotificationDataList();
         if (notificationList.length) {
-            // sendNotification(notificationList, title, content);
             log.info(`Current Notification length => ${ notificationList.length }`)
             let count = Math.ceil(notificationList.length / 100);
             log.info(`Notification will be cut into parts => ${ count }`)
@@ -94,7 +96,6 @@ module.exports.createFirebaseNotification = async function (taskIdList, title, c
 module.exports.createFirebaseNotification2 = async function (notificationList, title, content) {
     try {
         if (notificationList.length) {
-            // sendNotification(notificationList, title, content);
             log.info(`Current Notification length => ${ notificationList.length }`)
             let count = Math.ceil(notificationList.length / 100);
             log.info(`Notification will be cut into parts => ${ count }`)

@@ -38,24 +38,22 @@ let TaskUtils = {
             unitId = unit.map(item => { return item.id });
             unitId = Array.from(new Set(unitId));
             unitId = (unitId.toString()).split(',')
-        } else {
-            if(node){
-                if(node.toLowerCase() == 'null'){
-                    let unit = await Unit.findOne({ where: { unit: hub, subUnit: { [Op.is]: null } } })
-                    unitId = []
-                    unitId.push(unit.id);
-                } else {
-                    let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
-                    unitId = []
-                    unitId.push(unit.id);
-                }
-                
+        } else if(node){
+            if(node.toLowerCase() == 'null'){
+                let unit = await Unit.findOne({ where: { unit: hub, subUnit: { [Op.is]: null } } })
+                unitId = []
+                unitId.push(unit.id);
             } else {
-                let unit = await Unit.findAll({ where: { unit: hub } })
-                unitId = unit.map(item => { return item.id });
-                unitId = Array.from(new Set(unitId));
-                unitId = (unitId.toString()).split(',')
+                let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
+                unitId = []
+                unitId.push(unit.id);
             }
+            
+        } else {
+            let unit = await Unit.findAll({ where: { unit: hub } })
+            unitId = unit.map(item => { return item.id });
+            unitId = Array.from(new Set(unitId));
+            unitId = (unitId.toString()).split(',')
         }
         
         return unitId
@@ -222,7 +220,6 @@ let TaskUtils = {
         return hotoVehicleList[0]
     },
     getStatusDriverOrVehicle: async function (vehicleNo, driverId, endDate) {
-        endDate = moment(endDate).format('YYYY-MM-DD')
         let statusDriver = null
         let statusVehicle = null
         if(vehicleNo) {
@@ -398,29 +395,9 @@ module.exports.getVehicleTypeList = async function (req, res) {
 module.exports.getVehicleList = async function (req, res) {
     try {
         let { formHub, formNode, dataType, requestId, vehicleType, vehicleNo, requestState, pageNum, pageLength } = req.body;
-        // let hub = null;
-        // let node = null;
-        // let user = await User.findOne({ where: { userId: req.cookies.userId } })
-        // if(user.unitId){
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     if(unit.subUnit) {
-        //         hub = unit.unit;
-        //         node = unit.subUnit
-        //     } else {
-        //         hub = unit.unit;
-        //         node = null
-        //     }
-        // } else {
-        //     hub = null
-        //     node = null
-        // }
         let unitIdList = []
         let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
         unitIdList = dataList.unitIdList;
-        // if(!formHub){
-        //     let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
-        //     unitIdList = dataList.unitIdList;
-        // } 
         if(formHub) {
             if(formNode){
                 let unit2 = await Unit.findOne({ where: { unit: formHub, subUnit: formNode } })
@@ -517,32 +494,12 @@ module.exports.getVehicleList = async function (req, res) {
                     sql += ` and 1=2`
                     sql2 += ` and 1=2`
                 }
-            } else {
-                if(notUnitId.length > 0){
-                    sql += ` and vv.id not in (?)`
-                    sql2 += ` and vv.id not in (?)`
-                    replacements.push(notUnitId.join(','))
-                    replacements2.push(notUnitId.join(','))
-                }
+            } else if(notUnitId.length > 0){
+                sql += ` and vv.id not in (?)`
+                sql2 += ` and vv.id not in (?)`
+                replacements.push(notUnitId.join(','))
+                replacements2.push(notUnitId.join(','))
             }
-            // if(hub){
-            //     if(node) {
-            //         sql += ` and vv.unit = '${ hub }' and vv.subUnit = '${ node }'`
-            //         sql2 += ` and vv.unit = '${ hub }' and vv.subUnit = '${ node }'`
-            //     } else {
-            //         sql += ` and vv.unit = '${ hub }'`
-            //         sql2 += ` and vv.unit = '${ hub }'`
-            //     }
-            // }
-            // if(formHub){
-            //     if(formNode){
-            //         sql += ` and vv.unit = '${ formHub }' and vv.subUnit = '${ formNode }'`
-            //         sql2 += ` and vv.unit = '${ formHub }' and vv.subUnit = '${ formNode }'`
-            //     } else {
-            //         sql += ` and vv.unit = '${ formHub }'`
-            //         sql2 += ` and vv.unit = '${ formHub }'`
-            //     }
-            // }
             
             if(vehicleNo) {
                 sql += ` and vv.vehicleNo like ?`
@@ -569,8 +526,8 @@ module.exports.getVehicleList = async function (req, res) {
         }
         let countResult = await sequelizeObj.query(sql2, { type: QueryTypes.SELECT, replacements: replacements2 })
         let totalRecord = countResult[0].total
-        pageLength = pageLength ? pageLength : 10
-        pageNum = pageNum ? pageNum : 0
+        pageLength = pageLength || 10
+        pageNum = pageNum || 0
         pageNum = Number(pageNum)
         pageLength = Number(pageLength)
         sql += ` GROUP BY vv.vehicleNo order by vv.hotoDateTime desc, vv.updatedAt desc `
@@ -616,29 +573,11 @@ module.exports.getVehicleList = async function (req, res) {
 module.exports.getVehicleListByReplace = async function (req, res) {
     try {
         let { formHub, formNode, dataType, requestId, vehicleType, vehicleNo } = req.body;
-        // let hub = null;
-        // let node = null;
-        // let user = await User.findOne({ where: { userId: req.cookies.userId } })
-        // if(user.unitId){
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     if(unit.subUnit) {
-        //         hub = unit.unit;
-        //         node = unit.subUnit
-        //     } else {
-        //         hub = unit.unit;
-        //         node = null
-        //     }
-        // } else {
-        //     hub = null
-        //     node = null
-        // }
+
         let unitIdList = []
         let userUnit = await UnitUtils.getPermitUnitList(req.cookies.userId);
         unitIdList = userUnit.unitIdList;
-        // if(!formHub){
-        //     let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
-        //     unitIdList = dataList.unitIdList;
-        // } 
+
         if(formHub) {
             if(formNode){
                 let unit2 = await Unit.findOne({ where: { unit: formHub, subUnit: formNode } })
@@ -650,20 +589,10 @@ module.exports.getVehicleListByReplace = async function (req, res) {
             }
         } 
         
-        // let unitId = []
         let hotoRequest = await HOTORequest.findOne({ where: { id: requestId } });
         let indentStartTime = hotoRequest.startTime ? moment(hotoRequest.startTime).format('YYYY-MM-DD HH:mm:ss') : null;
         let indentEndTime = hotoRequest.endTime ? moment(hotoRequest.endTime).format('YYYY-MM-DD HH:mm:ss') : null;
-        // let newhub = hotoRequest.hub;
-        // let newnode = hotoRequest.node;
-        // if(newnode) {
-        //     let unit = await Unit.findOne({ where: { unit: newhub, subUnit: newnode } })
-        //     unitId.push(unit.id)
-        // } else {
-        //    let unitList = await Unit.findAll({ where: { unit: newhub } })
-        //    let unitIdList = unitList.map(item => item.id)
-        //    unitId = unitIdList
-        // }
+
         let notUnitId = []
         let newhub = hotoRequest.hub;
         let newnode = hotoRequest.node;
@@ -714,28 +643,11 @@ module.exports.getVehicleListByReplace = async function (req, res) {
                 } else {
                     sql += ` and 1=2`
                 }
-            } else {
-                if(notUnitId.length > 0){
-                    sql += ` and vv.id not in (?)`
-                    replacements.push(notUnitId.join(','))
-                }
+            } else if(notUnitId.length > 0){
+                sql += ` and vv.id not in (?)`
+                replacements.push(notUnitId.join(','))
             }
-            // if(hub){
-            //     if(node) {
-            //         sql += ` and vv.unit = '${ hub }' and vv.subUnit = '${ node }'`
-            //     } else {
-            //         sql += ` and vv.unit = '${ hub }'`
-            //     }
-            // }
-            // if(formHub){
-            //     if(formNode){
-            //         sql += ` and vv.unit = '${ formHub }' and vv.subUnit = '${ formNode }'`
-            //     } else {
-            //         sql += ` and vv.unit = '${ formHub }'`
-            //     }
-            // }
 
-           
             if(vehicleNo) {
                 sql += ` and vv.vehicleNo like ?`
                 replacements.push(`%${ vehicleNo }%`)
@@ -762,30 +674,11 @@ module.exports.getVehicleListByReplace = async function (req, res) {
 module.exports.getDriverList = async function (req, res) {
     try {
         let { purpose, formHub, formNode, dataType, requestId, vehicleType, driverName, permitType, requestState, pageNum, pageLength } = req.body;
-        // let hub = null;
-        // let node = null;
-        // let unitId = [];
-        // let user = await User.findOne({ where: { userId: req.cookies.userId } })
-        // if(user.unitId){
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     if(unit.subUnit) {
-        //         hub = unit.unit;
-        //         node = unit.subUnit
-        //     } else {
-        //         hub = unit.unit;
-        //         node = null
-        //     }
-        // } else {
-        //     hub = null
-        //     node = null
-        // }
+
         let unitIdList = []
         let userUnit = await UnitUtils.getPermitUnitList(req.cookies.userId);
         unitIdList = userUnit.unitIdList;
-        // if(!formHub){
-        //     let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
-        //     unitIdList = dataList.unitIdList;
-        // } 
+
         if(formHub) {
             if(formNode){
                 let unit2 = await Unit.findOne({ where: { unit: formHub, subUnit: formNode } })
@@ -800,16 +693,7 @@ module.exports.getDriverList = async function (req, res) {
         let hotoRequest = await HOTORequest.findOne({ where: { id: requestId } });
         let indentStartTime = hotoRequest.startTime ? moment(hotoRequest.startTime).format('YYYY-MM-DD HH:mm:ss') : null;
         let indentEndTime = hotoRequest.endTime ? moment(hotoRequest.endTime).format('YYYY-MM-DD HH:mm:ss') : null;
-        // let newhub = hotoRequest.hub;
-        // let newnode = hotoRequest.node;
-        // if(newnode) {
-        //     let unit = await Unit.findOne({ where: { unit: newhub, subUnit: newnode } })
-        //     unitId.push(unit.id)
-        // } else {
-        //    let unitList = await Unit.findAll({ where: { unit: newhub } })
-        //    let unitIdList = unitList.map(item => item.id)
-        //    unitId = unitIdList
-        // }
+
         let notUnitId = []
         let newhub = hotoRequest.hub;
         let newnode = hotoRequest.node;
@@ -826,8 +710,6 @@ module.exports.getDriverList = async function (req, res) {
         } 
         if(purpose.toLowerCase() == 'familiarisation') {
             vehicleType = null
-            // hub = null;
-            // node = null;
             unitIdList = []
         }
         let replacements = []
@@ -916,32 +798,12 @@ module.exports.getDriverList = async function (req, res) {
                     sql += ` and 1=2`
                     sql2 += ` and 1=2`
                 }
-            } else {
-                if(notUnitId.length > 0){
-                    sql += ` and dd.id not in (?)`
-                    sql2 += ` and dd.id not in (?)`
-                    replacements.push(notUnitId.join(','))
-                    replacements2.push(notUnitId.join(','))
-                }
+            } else if(notUnitId.length > 0){
+                sql += ` and dd.id not in (?)`
+                sql2 += ` and dd.id not in (?)`
+                replacements.push(notUnitId.join(','))
+                replacements2.push(notUnitId.join(','))
             }
-            // if(hub){
-            //     if(node && node != '-'){
-            //         sql += `  and dd.subUnit = '${ node }'`
-            //         sql2 += `  and dd.subUnit = '${ node }'`
-            //     } else {
-            //         sql += `  and dd.unit = '${ hub }'`
-            //         sql2 += `  and dd.unit = '${ hub }'`
-            //     }
-            // }
-            // if(formHub){
-            //     if(formNode){
-            //         sql += ` and dd.unit = '${ formHub }' and dd.subUnit = '${ formNode }'`
-            //         sql2 += ` and dd.unit = '${ formHub }' and dd.subUnit = '${ formNode }'`
-            //     } else {
-            //         sql += ` and dd.unit = '${ formHub }'`
-            //         sql2 += ` and dd.unit = '${ formHub }'`
-            //     }
-            // }
             if (permitType) {
                 let permitTypeSql = []
                 let list = permitType.split(',')
@@ -980,8 +842,8 @@ module.exports.getDriverList = async function (req, res) {
         }
         let countResult = await sequelizeObj.query(sql2, { type: QueryTypes.SELECT, replacements: replacements2 })
         let totalRecord = countResult[0].total
-        pageLength = pageLength ? pageLength : 10
-        pageNum = pageNum ? pageNum : 0
+        pageLength = pageLength || 10
+        pageNum = pageNum || 0
         sql += ` GROUP BY dd.driverId order by dd.hotoDateTime desc, dd.updatedAt desc`
         if((pageNum || pageNum == 0) && pageLength){
             sql += ` limit ?,?`
@@ -1025,30 +887,10 @@ module.exports.getDriverList = async function (req, res) {
 module.exports.getDriverListByReplace = async function (req, res) {
     try {
         let { purpose, formHub, formNode, dataType, requestId, vehicleType, driverName, permitType } = req.body;
-        // let hub = null;
-        // let node = null;
-        // let unitId = [];
-        // let user = await User.findOne({ where: { userId: req.cookies.userId } })
-        // if(user.unitId){
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     if(unit.subUnit) {
-        //         hub = unit.unit;
-        //         node = unit.subUnit
-        //     } else {
-        //         hub = unit.unit;
-        //         node = null
-        //     }
-        // } else {
-        //     hub = null
-        //     node = null
-        // }
         let unitIdList = []
         let userUnit = await UnitUtils.getPermitUnitList(req.cookies.userId);
         unitIdList = userUnit.unitIdList;
-        // if(!formHub){
-        //     let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
-        //     unitIdList = dataList.unitIdList;
-        // } 
+
         if(formHub) {
             if(formNode){
                 let unit2 = await Unit.findOne({ where: { unit: formHub, subUnit: formNode } })
@@ -1063,16 +905,7 @@ module.exports.getDriverListByReplace = async function (req, res) {
         let hotoRequest = await HOTORequest.findOne({ where: { id: requestId } });
         let indentStartTime = hotoRequest.startTime ? moment(hotoRequest.startTime).format('YYYY-MM-DD HH:mm:ss') : null;
         let indentEndTime = hotoRequest.endTime ? moment(hotoRequest.endTime).format('YYYY-MM-DD HH:mm:ss') : null;
-        // let newhub = hotoRequest.hub;
-        // let newnode = hotoRequest.node;
-        // if(newnode) {
-        //     let unit = await Unit.findOne({ where: { unit: newhub, subUnit: newnode } })
-        //     unitId.push(unit.id)
-        // } else {
-        //    let unitList = await Unit.findAll({ where: { unit: newhub } })
-        //    let unitIdList = unitList.map(item => item.id)
-        //    unitId = unitIdList
-        // }
+
         let notUnitId = []
         let newhub = hotoRequest.hub;
         let newnode = hotoRequest.node;
@@ -1089,8 +922,6 @@ module.exports.getDriverListByReplace = async function (req, res) {
         } 
         if(purpose.toLowerCase() == 'familiarisation') {
             vehicleType = null
-            // hub = null;
-            // node = null;
         }
         let sql = `
         SELECT dd.driverId, dd.driverName, dd.unit, dd.subUnit, dd.toHub, dd.toNode, dd.requestId, dd.permitType,
@@ -1138,27 +969,11 @@ module.exports.getDriverListByReplace = async function (req, res) {
                 } else {
                     sql += ` and 1=2`
                 }
-            } else {
-                if(notUnitId.length > 0){
-                    sql += ` and dd.id not in (?)`
-                    replacements.push(notUnitId.join(','))
-                }
+            } else if(notUnitId.length > 0){
+                sql += ` and dd.id not in (?)`
+                replacements.push(notUnitId.join(','))
             }
 
-            // if(hub){
-            //     if(node && node != '-'){
-            //         sql += `  and dd.subUnit = '${ node }'`
-            //     } else {
-            //         sql += `  and dd.unit = '${ hub }'`
-            //     }
-            // }
-            // if(formHub){
-            //     if(formNode){
-            //         sql += ` and dd.unit = '${ formHub }' and dd.subUnit = '${ formNode }'`
-            //     } else {
-            //         sql += ` and dd.unit = '${ formHub }'`
-            //     }
-            // }
             if (permitType) {
                 let permitTypeSql = []
                 let list = permitType.split(',')
@@ -1196,7 +1011,7 @@ module.exports.getDriverListByReplace = async function (req, res) {
 
 module.exports.getRequestListByHistory = async function (req, res) {
     try {
-        let { formHub, formNode, dataType, requestId, vehicleType, vehicleNo, pageNum, pageLength } = req.body;
+        let { requestId, pageNum, pageLength } = req.body;
         let dataList = [];
         let operationRecord = await OperationRecord.findAll({ where: { businessId: requestId, optType: 'replace' } })
         for(let item of operationRecord){
@@ -1283,7 +1098,6 @@ module.exports.operateRequestById = async function (req, res) {
                 throw errorList
             }
             
-            let dataList = [];
             let remarksName = null;
             let statusName = null;
             if(operateType.toLowerCase() == 'rejected'){
@@ -1315,7 +1129,6 @@ module.exports.operateRequestById = async function (req, res) {
                     await HOTO.update({ status: operateType, updatedAt: moment().format('YYYY-MM-DD HH:mm:ss') }, { where: { requestId: requestId } })
                 }
                 remarksName = `hoto request ${ statusName ?? '' }`
-                dataList = [requestId]
             }
             if(operateType.toLowerCase() == 'approved'){
                 let HotoApproved = await HOTO.findAll({ where: { requestId: requestId, status: 'Approved' } })
@@ -1328,7 +1141,6 @@ module.exports.operateRequestById = async function (req, res) {
             }
             let newHotoRequest = await HOTORequest.findOne({ where: { id: requestId } })
             let newHotoList = await HOTO.findAll({ where: { requestId: requestId } })
-            // await TaskUtils.initOperationRecord(userId, requestId, statusName, remarksName, dataList)
             await OperationRecord.create({
                 id: null,
                 operatorId: userId,
@@ -1419,8 +1231,8 @@ const operateRequestById2 = async function (operateType, requestId, hotoIdList, 
                         let hoto = await HOTO.findOne({ where: { id: item } })
                         if(hoto.driverId){
                             remarksName = 'hoto driver'
-                        } else {
-                            if(hoto.vehicleNo) remarksName = 'hoto vehicle'
+                        } else if(hoto.vehicleNo) {
+                            remarksName = 'hoto vehicle'
                         }
                         dataList.push(hoto.driverId ? hoto.driverId : hoto.vehicleNo)
                     }
@@ -1547,8 +1359,8 @@ module.exports.createHoto = async function (req, res) {
                 requestId = item.requestId;
                 if(item.driverId){
                     remarksName = 'hoto driver'
-                } else {
-                    if(item.vehicleNo) remarksName = 'hoto vehicle'
+                } else if(item.vehicleNo) {
+                    remarksName = 'hoto vehicle'
                 }
             } 
             let oldHOTORequestObj = await HOTORequest.findOne({ where: { id: ultimatelyHotoList[0].requestId } });
@@ -1637,8 +1449,8 @@ module.exports.createHotoRecord = async function (req, res) {
                 requestId = hotoItem.requestId;
                 if(hotoItem.driverId){
                     remarksName = 'return driver'
-                } else {
-                    if(hotoItem.vehicleNo) remarksName = 'return vehicle'
+                } else if(hotoItem.vehicleNo) {
+                    remarksName = 'return vehicle'
                 }
             }
             await TaskUtils.initOperationRecord(userId, requestId, 'return', remarksName, dataList)
@@ -1753,22 +1565,9 @@ module.exports.getHotoRequest = async function (req, res) {
         let user = await User.findOne({ where: { userId: userId } })
         if(user.userType == CONTENT.USER_TYPE.CUSTOMER) return res.json({ data: [], recordsFiltered: 0, recordsTotal: 0 });
         if(!user)  return res.json(utils.response(0, `The user does not exist.`));
-        // let hub = null;
-        // let node = null;
-        // if(user.unitId) {
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     hub = unit.unit
-        //     node = unit.subUnit
-        // }
-        // hub = selectHub ? selectHub : hub;
-        // node = selectNode ? selectNode : node;
         let unitIdList = []
         let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
         unitIdList = dataList.unitIdList;
-        // if(!selectHub){
-        //     let dataList = await UnitUtils.getPermitUnitList(req.cookies.userId);
-        //     unitIdList = dataList.unitIdList;
-        // } 
         if(selectHub) {
             if(selectNode){
                 let unit2 = await Unit.findOne({ where: { unit: selectHub, subUnit: selectNode } })
@@ -1866,28 +1665,24 @@ module.exports.getHotoRequest = async function (req, res) {
             if(status.toLowerCase() == 'completed') {
                 sql += ` and (hr.status = 'Approved' and he.id is not null and h.id is null)`
                 sql2 += ` and (hr.status = 'Approved' and he.id is not null and h.id is null)`
+            } else if(status.toLowerCase() == 'approved') {
+                sql += ` and (hr.status = 'Approved' and h.id is not null)`
+                sql2 += ` and (hr.status = 'Approved' and h.id is not null)`
             } else {
-                if(status.toLowerCase() == 'approved') {
-                    // sql += ` and (hr.status = 'Approved' and he.id is null)`
-                    // sql2 += ` and (hr.status = 'Approved' and he.id is null)`
-                    sql += ` and (hr.status = 'Approved' and h.id is not null)`
-                    sql2 += ` and (hr.status = 'Approved' and h.id is not null)`
+                let newStatus = null;
+                if(status.toLowerCase() == 'pending endorse') {
+                    newStatus = `Submitted`
+                } else if(status.toLowerCase() == 'pending assign') {
+                    newStatus = `Endorsed`
+                } else if(status.toLowerCase() == 'pending approval') {
+                    newStatus = `Assigned`
                 } else {
-                    let newStatus = null;
-                    if(status.toLowerCase() == 'pending endorse') {
-                        newStatus = `Submitted`
-                    } else if(status.toLowerCase() == 'pending assign') {
-                        newStatus = `Endorsed`
-                    } else if(status.toLowerCase() == 'pending approval') {
-                        newStatus = `Assigned`
-                    } else {
-                        newStatus = status;
-                    }
-                    sql += ` and hr.status = ?`
-                    sql2 += ` and hr.status = ?`
-                    replacements.push(newStatus)
-                    replacements2.push(newStatus)
+                    newStatus = status;
                 }
+                sql += ` and hr.status = ?`
+                sql2 += ` and hr.status = ?`
+                replacements.push(newStatus)
+                replacements2.push(newStatus)
             }
         }
         if(idOrder) {
@@ -1976,11 +1771,6 @@ module.exports.cancelAssignHotoById = async function (req, res) {
             let hotoDriverOrVehicleList = await sequelizeObj.query(`
             SELECT id, driverId, vehicleNo, startDateTime, endDateTime, status FROM hoto WHERE id in(?) group by id
             `, { type: QueryTypes.SELECT, replacements: [hotoIdList.join(',')] })
-            // let hotoDriverOrVehicleList2 = await sequelizeObj.query(`
-            // SELECT driverId, vehicleNo, startDateTime, endDateTime FROM hoto 
-            // WHERE id not in(${ hotoIdList.join(',') }) and requestId = ${ requestId }
-            // group by id
-            // `, { type: QueryTypes.SELECT })
 
             for(let item of hotoDriverOrVehicleList){
                 let driver = null;
@@ -2016,9 +1806,7 @@ module.exports.cancelAssignHotoById = async function (req, res) {
                 throw errorList
             }
         
-            // if(hotoDriverOrVehicleList2.length <= 0) {
-                await HOTORequest.update({ status: 'Endorsed', updatedAt: moment().format('YYYY-MM-DD HH:mm:ss') }, { where: { id: requestId } })
-            // }
+            await HOTORequest.update({ status: 'Endorsed', updatedAt: moment().format('YYYY-MM-DD HH:mm:ss') }, { where: { id: requestId } })
             await HOTO.destroy({ where: { id: { [Op.in]: newHotoIdList } } });
             await OperationRecord.create({
                 id: null,
@@ -2135,7 +1923,6 @@ module.exports.replaceHotoByResource = async function (req, res) {
             if(loanOutByDriverOrVehicle) {
                 errorMessageList.push(`${ oldHoto.vehicleNo ? oldHoto.vehicleNo : oldHotoByDriver.driverName } It's been loaned out.`);
             }
-            // let state = await TaskUtils.verifyDriverOrVehicleByDate2(oldHoto.vehicleNo, oldHoto.driverId, oldHoto.startDateTime, oldHoto.endDateTime, 'true')
             let state = await TaskUtils.verifyDriverOrVehicleByDate(oldHoto.vehicleNo, oldHoto.driverId, oldHoto.startDateTime, oldHoto.endDateTime, 'true')
             if(state.length > 0){
                 errorMessageList.push(`${ oldHoto.vehicleNo ? oldHoto.vehicleNo : oldHotoByDriver.driverName } The task has started and cannot be replaced.`);
@@ -2389,12 +2176,10 @@ module.exports.replaceHotoByResource = async function (req, res) {
                         }
                     }
                 }
+            } else if(hotoObj.length > 0) {
+                errorMessageList.push(`Hoto already has ${ driver ? 'driver('+driver.driverName+')' : 'vehicle('+item.vehicleNo+')' }.`)
             } else {
-                if(hotoObj.length > 0) {
-                    errorMessageList.push(`Hoto already has ${ driver ? 'driver('+driver.driverName+')' : 'vehicle('+item.vehicleNo+')' }.`)
-                } else {
-                    errorMessageList.push(`The ${ driver ? 'driver('+driver.driverName+')' : 'vehicle('+item.vehicleNo+')' } was out of time.`)
-                }
+                errorMessageList.push(`The ${ driver ? 'driver('+driver.driverName+')' : 'vehicle('+item.vehicleNo+')' } was out of time.`)
             }
         } 
         if(errorMessageList.length > 0) {

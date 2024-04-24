@@ -15,6 +15,7 @@ router.post('/getTaskIdDriverAndVehicle', assignService.getTaskIdDriverAndVehicl
 router.post('/getDriverListByTaskId', assignService.getDriverListByTaskId);
 router.post('/getVehicleList', assignService.getVehicleList);
 
+// old atms (mb task)
 // router.post('/assignTask', assignService.assignTask);
 // router.post('/re-assignTask', assignService.assignTask);
 // router.post('/checkTaskRoute', assignService.checkTaskRoute);

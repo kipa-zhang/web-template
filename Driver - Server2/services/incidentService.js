@@ -25,7 +25,7 @@ module.exports.getIncidentList = async function (req, res) {
             let user = await userService.getUserDetailInfo(userId)
 			if (!user) {
 				log.warn(`User ${ userId } does not exist.`);
-				throw `User ${ userId } does not exist.`
+				throw new Error(`User ${ userId } does not exist.`)
 			}
 			return user;
 		}
@@ -98,26 +98,11 @@ module.exports.createIncident = async function (req, res) {
                 incident.state = CONTENT.INCIDENT_STATUS.NEW;
                 return await Incident.create(incident, { returning: true })
             }
-            const bindUserZone = async function (newIncident, creator) {
-                // Only CA user has userZone, but if ACE create userZone
-                let userZone = await UserZone.findAll({ owner: creator })
-                if (!userZone) {
-                    log.warn(`UserId ${ creator } do not has userZone.`)
-                    return;
-                }
-                await Incident.update({ userZoneId: userZone.id }, { where: { incidentNo: newIncident.incidentNo } })
-            }
 
             incident.creator = req.cookies.userId;
             let user = await User.findByPk(incident.creator)
             incident.unitId = user.unitId;
-            let newIncident = await createIncident(incident)
-            // await bindUserZone(newIncident, req.cookies.userId);
-
-            // send incident position to activeMQ
-            // ActiveMQ.publicIncident('Obstacle:' + CONTENT.INCIDENT_STATUS.NEW + ',' + incident.incidentNo);
-            // SOCKET.publicSocketMsg(CONTENT.BROADCAST_EVENT.INCIDENT_UPDATE, incident.incidentNo);
-
+            await createIncident(incident)
         }).catch(error => {
             throw error
         });

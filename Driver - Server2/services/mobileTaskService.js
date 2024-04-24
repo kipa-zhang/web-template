@@ -31,7 +31,7 @@ module.exports = {
 
             let mobileTrip = await MobileTrip.findByPk(tripId);
             if (!mobileTrip) {
-                throw `Trip:${ tripId } does not exist!`
+                throw new Error(`Trip:${ tripId } does not exist!`)
             }
 
             let task = await Task.findByPk(taskId);
@@ -53,7 +53,7 @@ module.exports = {
                 }
                 await OperationRecord.create(operationRecord);
             } else {
-                throw `Task:${ taskId } current status is ${ task.driverStatus }, can not cancel.`
+                throw new Error(`Task:${ taskId } current status is ${ task.driverStatus }, can not cancel.`)
             }
             return res.json(utils.response(1, 'success'));
         } catch (error) {
@@ -73,11 +73,11 @@ module.exports = {
             }
             let trip = await MobileTrip.findByPk(tripId);
             if (!trip) {
-                throw `Trip:${ tripId } does not exist!`
+                throw new Error(`Trip:${ tripId } does not exist!`)
             }
 
             if (trip.status != 'Pending Approval') {
-                throw `Trip:${ tripId } status is ${trip.status}, can't approve!`
+                throw new Error(`Trip:${ tripId } status is ${trip.status}, can't approve!`)
             }
 
             let tripUnitId = trip.unitId;
@@ -237,10 +237,7 @@ module.exports = {
             
             let driverId = mobileTrip.driverId;
             let driverUser = await User.findOne({where: {driverId: driverId}});
-            let unitId = '';
-            if (driverUser && driverUser.role == 'DV') {
-                unitId = driverUser.unitId;
-
+            if (driverUser?.role == 'DV') {
                 let reportingLocationObj = await _SystemLocation.Location.findOne({where: {locationName: reportingLocation}});
                 let destinationObj = await _SystemLocation.Location.findOne({where: {locationName: destination}});
                 let pickupGPS = "0.0,0.0";

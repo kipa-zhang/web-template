@@ -31,7 +31,7 @@ module.exports.getUserZoneList = async function (req, res) {
         const checkUser = async function (userId) {
             let user = await User.findByPk(userId);
             if (!user) {
-                throw `User ${ userId } does not exist.`;
+                throw new Error(`User ${ userId } does not exist.`);
             }
             return user;
         }
@@ -62,15 +62,6 @@ module.exports.getUserZoneList = async function (req, res) {
 
 module.exports.getUserZoneUserList = async function (req, res) {
     try {
-        const checkUser = async function (userId) {
-            let user = await User.findByPk(userId);
-            if (!user) {
-                throw `User ${ userId } does not exist.`;
-            }
-            return user;
-        }
-
-        let userId = req.cookies.userId;
         let userList = await sequelizeObj.query(`
             SELECT u.userId, u.username FROM \`user\` u
             WHERE u.userId NOT IN ( SELECT \`owner\` FROM user_zone )
@@ -113,10 +104,10 @@ module.exports.updateUserZone = async function (req, res) {
             await UserZone.update({ zoneName: userZone.zoneName, color: userZone.color, polygon: userZone.polygon }, { where: { id: userZone.id } })
             
             // send mq
-            let polygonStr = userZone.polygon.map(position => { return `${ position[0] }:${ position[1] }` });
-            polygonStr = polygonStr.join(',');
-            polygonStr = 'CreateCAZone:' + userZone.owner + '=';
-            ActiveMQ.publicCreateUserZone(Buffer.from(JSON.stringify(polygonStr)));
+            // let polygonStr = userZone.polygon.map(position => { return `${ position[0] }:${ position[1] }` });
+            // polygonStr = polygonStr.join(',');
+            // polygonStr = 'CreateCAZone:' + userZone.owner + '=';
+            // ActiveMQ.publicCreateUserZone(Buffer.from(JSON.stringify(polygonStr)));
         }).catch(error => {
             throw error
         });
@@ -134,7 +125,7 @@ module.exports.deleteUserZone = async function (req, res) {
             const checkUserZone = async function (userZone) {
                 let userZoneResult = await UserZone.findByPk(userZone.id);
                 if (!userZoneResult) {
-                    throw `UserZone ${ userZone.id } does not exist.`
+                    throw new Error(`UserZone ${ userZone.id } does not exist.`)
                 }
             }
 
@@ -216,7 +207,7 @@ module.exports.getNogoZoneList = async function (req, res) {
                 replacements.push(user.unitId)
                 replacements.push(CONTENT.USER_TYPE.CUSTOMER)
             } else if ([ CONTENT.USER_TYPE.ADMINISTRATOR ].includes(user.userType)) {
-
+                sql += ` AND 1=1 `
             } else if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
                 let tempSqlList = []
                 if (unitIdList.length) {
@@ -420,7 +411,7 @@ module.exports.deleteNogoZone = async function (req, res) {
             const checkNogoZone = async function (nogoZone) {
                 let nogoZoneResult = await NogoZone.findByPk(nogoZone.id);
                 if (!nogoZoneResult) {
-                    throw `NogoZone ${ nogoZone.id } does not exist.`
+                    throw new Error(`NogoZone ${ nogoZone.id } does not exist.`)
                 }
             }
 

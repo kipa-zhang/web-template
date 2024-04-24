@@ -92,6 +92,7 @@ const generateSOSData = async function (list) {
             }
         }
     } catch (error) {
+        log.error(error);
         throw error
     }
 }
@@ -109,7 +110,7 @@ module.exports = {
             let userId = req.cookies.userId;
             let user = await UserUtils.getUserDetailInfo(userId);
             if (!user) {
-                throw `UserID => ${ userId } does not exist.`
+                throw new Error(`UserID => ${ userId } does not exist.`)
             }
 
             let pageList = await userService.getUserPageList(userId, 'SOS')

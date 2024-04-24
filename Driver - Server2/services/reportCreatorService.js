@@ -42,7 +42,7 @@ let reportUtils = {
         }
         sql += ` GROUP BY m.driverId, veh.permitType`
         let driverPermitTaskMileageList = await sequelizeObj.query(sql, { 
-            type: QueryTypes.SELECT, replacements: []
+            type: QueryTypes.SELECT, replacements
         });
             
         let driverMileageStatList = await sequelizeObj.query(`
@@ -60,27 +60,24 @@ let reportUtils = {
     
             let totalMileage = 0;
             if (driverPermitTypeTaskMileage) {
-                totalMileage += driverPermitTypeTaskMileage.permitMileage ? driverPermitTypeTaskMileage.permitMileage : 0;
+                totalMileage += driverPermitTypeTaskMileage.permitMileage || 0;
             }
             if (driverPermitTypeBaseMileage) {
-                totalMileage += driverPermitTypeBaseMileage.baseMileage ? driverPermitTypeBaseMileage.baseMileage : 0;
+                totalMileage += driverPermitTypeBaseMileage.baseMileage || 0;
             }
     
             driverTotalMileage += totalMileage;
     
             let permitTypeConf = await PermitType.findOne({ where: { permitType : itemDriver.permitType } });
-            if (permitTypeConf && permitTypeConf.parent) {
+            if (permitTypeConf?.parent) {
                 let parentPermitType = permitTypeConf.parent;
                 let parentMileageObj = statResult.find(item => item.permitType == parentPermitType && item.driverId == itemDriver.driverId);
                 if (parentMileageObj) {
                     parentMileageObj.totalMileage += totalMileage;
                     continue;
-                } else {
-                    if(permitTypeConf.parent && permitTypeConf.parent != '') {
-                        statResult.push({ driverId: itemDriver.driverId, permitType: permitTypeConf.parent, totalMileage: totalMileage });
-                        continue;
-                    }
-                }
+                } 
+                statResult.push({ driverId: itemDriver.driverId, permitType: permitTypeConf.parent, totalMileage: totalMileage });
+                continue;
             }
             statResult.push({ driverId: itemDriver.driverId, permitType: itemDriver.permitType, totalMileage: totalMileage });
         }
@@ -298,9 +295,6 @@ let reportUtils = {
                     ) vv where 1=1
                 `
             }
-            // if(user.userType.toUpperCase() == 'CUSTOMER' && user.unitId){
-            //     sql += ` and vv.groupId = ${ user.unitId }`
-            // }
             if(user.userType.toUpperCase() == 'CUSTOMER'){
                 if(user.unitId) {
                     sql += ` and vv.groupId = ?`
@@ -336,9 +330,6 @@ let reportUtils = {
                 sql += ` and FIND_IN_SET(?, vv.permitType)`
                 replacements.push(permitType)
             }
-            // if(unitIdList){
-            //     sql += ` and vv.unitIds in(${ unitIdList.join(",") })`
-            // }
 
             if(vehicleStatus){
                 sql += ` and vv.status = ?`
@@ -549,17 +540,6 @@ let reportUtils = {
                     group by d.driverId
                 ) dd where 1=1
             `
-            // if(user.userType.toUpperCase() == 'CUSTOMER'){
-            //     if(user.unitId) sql += ` and dd.groupId = ${ user.unitId }`
-            // } else if(user.userType.toUpperCase() != 'ADMINISTRATOR'){
-            //     if(unitIdList.length > 0){
-            //         if(newGroup){
-            //             sql += ` and dd.groupId in(${ newGroup })`
-            //         } else {
-            //             sql += ` and dd.unitIds in(${ unitIdList.join(",") })`
-            //         }
-            //     }
-            // }
             if(!newGroup) {
                 if(unitIdList.length > 0) {
                     sql += ` and dd.unitIds in(?)`
@@ -578,9 +558,6 @@ let reportUtils = {
                 sql += ` and dd.groupId in(?)`
                 replacements.push(newGroup)
             }
-            // if(driverStatus) {
-            //     sql += ` and dd.status = '${ driverStatus }'`
-            // }
             if(driverCategory) {
                 sql += ` and FIND_IN_SET(?, dd.assessmentType)`
                 replacements.push(driverCategory)
@@ -645,7 +622,6 @@ const getSystemGroup = async function () {
 
 const getTaskReportList = async function (req, res) {
     try {
-        // let { selectedDate, taskStatus, taskId, driverName, vehicleNo, hub, node, group, purpose, activity } = req.body;
         let reportGroupSelectionTitle = req.body.reportGroupSelectionTitle
         let filter = req.body.filter
         let { taskType, reportDateRange, group } = req.body.filter
@@ -660,17 +636,12 @@ const getTaskReportList = async function (req, res) {
             return res.json(utils.response(0, `UserId ${userId} does not exist!`));
         }
 
-        // let hubNodeIdList = []
-        // if (user.userType.toLowerCase() == 'unit') {
-        //     hubNodeIdList = await UnitUtils.getUnitIdByUnitAndSubUnit(user.hub, user.node);
-        // } 
         let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(userId)
-        hubNodeIdList = unitIdList
+        let hubNodeIdList = unitIdList
         let result = []
         if (taskType == "") {
             let taskList = await getTaskList(user, group, filter, hubNodeIdList, groupIdList)
             let urgentIndentList = await getUrgentIndentList(user, group, filter, hubNodeIdList, groupIdList)
-            // result = taskList.concat(urgentIndentList)
 
             let loanList = await getLoanList(user, group, filter, hubNodeIdList)
             result = taskList.concat(urgentIndentList, loanList)
@@ -691,11 +662,9 @@ const getTaskReportList = async function (req, res) {
                         item.driverStatus = 'System Expired'
                     }
                 }
-                if(item.driverNric) {
-                    if(item.driverNric.length > 9) {
-                        item.driverNric = utils.decodeAESCode(item.driverNric);
-                        item.driverNric= ((item.driverNric).toString()).substr(0, 1) + '****' + ((item.driverNric).toString()).substr(((item.driverNric).toString()).length-4, 4)
-                    } 
+                if(item?.length > 9) {
+                    item.driverNric = utils.decodeAESCode(item.driverNric);
+                    item.driverNric= ((item.driverNric).toString()).substr(0, 1) + '****' + ((item.driverNric).toString()).substr(((item.driverNric).toString()).length-4, 4)
                 }
             }
         }
@@ -741,30 +710,17 @@ const getTaskList = async function (user, group, filter, hubNodeIdList, groupIdL
     if (user.userType.toLowerCase() == 'customer') {
         limitCondition.push(` t.groupId = ? `)
         replacements.push(user.unitId)
-    // } else if (user.userType.toLowerCase() != 'hq' || user.userType.toLowerCase() == 'administrator') {
-    //     if (group) {
-    //         limitCondition.push(` t.groupId = ${group} `)
-    //     }
-    // } else if (user.userType.toLowerCase() == 'unit') {
-    //     if (hubNodeIdList.length) {
-    //         // Maybe not more than 1000 node in one hub
-    //         limitCondition.push(` ( u.id IN (?) AND t.groupId IS NULL ) `)
-    //         replacements.push(hubNodeIdList);
-    //     }
-    // }
     } else if (user.userType.toLowerCase() != 'administrator') {
         if(supportedUnit){
             limitCondition.push(` t.groupId = ? `)
             replacements.push(supportedUnit)
-        } else {
-            if (hubNodeIdList.length) {
-                if(groupIdList){
-                    limitCondition.push(` (u.id IN (?) or t.groupId in(?)) `)
-                    replacements.push(hubNodeIdList, groupIdList);
-                } else {
-                    limitCondition.push(` (u.id IN (?) and t.groupId is null) `)
-                    replacements.push(hubNodeIdList);
-                }
+        } else if (hubNodeIdList.length) {
+            if(groupIdList){
+                limitCondition.push(` (u.id IN (?) or t.groupId in(?)) `)
+                replacements.push(hubNodeIdList, groupIdList);
+            } else {
+                limitCondition.push(` (u.id IN (?) and t.groupId is null) `)
+                replacements.push(hubNodeIdList);
             }
         }
     }
@@ -868,9 +824,6 @@ const getTaskList = async function (user, group, filter, hubNodeIdList, groupIdL
         limitCondition.push(` ml.endOdometer <= ? `)
         replacements.push(endOdometer)
     }
-    // if (supportedUnit) {
-    //     limitCondition.push(` t.groupId = ${supportedUnit} `)
-    // }
 
     if (limitCondition.length) {
         taskSql += ' WHERE ' + limitCondition.join(' AND ');
@@ -882,8 +835,7 @@ const getTaskList = async function (user, group, filter, hubNodeIdList, groupIdL
 
 module.exports.getKeyPressReportList = async function (req, res) {
     try {
-        let reportGroupSelectionTitle = req.body.reportGroupSelectionTitle
-        let filter = req.body.filter
+        let reportGroupSelectionTitle = req.body.reportGroupSelectionTitle;
         let { reportDateRange, boxName, location, transactionType } = req.body.filter
         if(req.cookies.userType == 'CUSTOMER')  return res.json(utils.response(0, 'Report data is empty!'));
         let userId = req.cookies.userId;
@@ -999,30 +951,17 @@ const getUrgentIndentList = async function (user, group, filter, hubNodeIdList, 
     if (user.userType.toLowerCase() == 'customer') {
         limitCondition.push(` t.groupId = ? `)
         replacements.push(user.unitId)
-    // } else if (user.userType.toLowerCase() == 'hq' || user.userType.toLowerCase() == 'administrator') {
-    //     if (group) {
-    //         limitCondition.push(` t.groupId = ${group} `)
-    //     }
-    // } else if (user.userType.toLowerCase() == 'unit') {
-    //     if (hubNodeIdList.length) {
-    //         // Maybe not more than 1000 node in one hub
-    //         limitCondition.push(` ( u.id IN (?) AND t.groupId IS NULL ) `)
-    //         replacements.push(hubNodeIdList);
-    //     }
-    // }
     } else if (user.userType.toLowerCase() != 'administrator') {
         if(supportedUnit){
             limitCondition.push(` t.groupId = ? `)
             replacements.push(supportedUnit)
-        } else {
-            if (hubNodeIdList.length) {
-                if(groupIdList){
-                    limitCondition.push(` (u.id IN (?) or t.groupId in(?)) `)
-                    replacements.push(hubNodeIdList, groupIdList);
-                } else {
-                    limitCondition.push(` (u.id IN (?) and t.groupId is null) `)
-                    replacements.push(hubNodeIdList);
-                }
+        } else if (hubNodeIdList.length) {
+            if(groupIdList){
+                limitCondition.push(` (u.id IN (?) or t.groupId in(?)) `)
+                replacements.push(hubNodeIdList, groupIdList);
+            } else {
+                limitCondition.push(` (u.id IN (?) and t.groupId is null) `)
+                replacements.push(hubNodeIdList);
             }
         }
     }
@@ -1113,9 +1052,6 @@ const getUrgentIndentList = async function (user, group, filter, hubNodeIdList, 
         limitCondition.push(` ml.endOdometer <= ? `)
         replacements.push(endOdometer)
     }
-    // if (supportedUnit) {
-    //     limitCondition.push(` t.groupId = ${supportedUnit} `)
-    // }
 
     if (limitCondition.length) {
         taskSql += ' WHERE ' + limitCondition.join(' AND ');
@@ -1127,8 +1063,8 @@ const getUrgentIndentList = async function (user, group, filter, hubNodeIdList, 
 
 const getLoanList = async function (user, group, filter, hubNodeIdList) {
     let { taskStatus, taskID, hub, node, actualTime, driverName, mobileNumber, executionTime,
-        purpose, remarks, reportDateRange, vehicleNumber, vehicleType, activity,
-        indentID, mileageCaptured, startOdometer, endOdometer, supportedUnit } = filter
+        purpose, reportDateRange, vehicleNumber, vehicleType, activity,
+        indentID, supportedUnit } = filter
 
     let taskSql = `
         SELECT l.taskId, l.indentId, 'SYSTEM' AS dataFrom, l.unitId, l.groupId, u.unit AS hub, IFNULL(u.subUnit, '-') AS node, d.driverName, d.nric AS driverNric, d.contactNumber, 
@@ -1218,12 +1154,6 @@ const getLoanList = async function (user, group, filter, hubNodeIdList) {
     if (taskStatus) {
         limitCondition.push(` 1 = 2 `)
     }
-    // if (taskStatus) {
-    //     let taskStatusList = taskStatus.split(',').map(val => {
-    //         return ` t.status LIKE '%${val}%' `
-    //     }).join('or')
-    //     limitCondition.push(` (${taskStatusList}) `)
-    // }
 
     if (actualTime) {
         limitCondition.push(` 1 = 2 `)
@@ -1259,22 +1189,10 @@ const getLoanList = async function (user, group, filter, hubNodeIdList) {
         limitCondition.push(` t.contactNumber like ? `)
         replacements.push('%'+mobileNumber+'%')
     }
-    // if (remarks) {
-    //     limitCondition.push(` t.cancelledCause like '%${remarks}%' `)
-    // }
     if (indentID) {
         limitCondition.push(` t.indentId like ? `)
         replacements.push('%'+indentID+'%')
     }
-    // if (mileageCaptured) {
-    //     limitCondition.push(` ml.mileageTraveled >= ${mileageCaptured} `)
-    // }
-    // if (startOdometer) {
-    //     limitCondition.push(` ml.startMileage >= ${startOdometer} `)
-    // }
-    // if (endOdometer) {
-    //     limitCondition.push(` ml.endOdometer <= ${endOdometer} `)
-    // }
     if (supportedUnit) {
         limitCondition.push(` t.groupId = ? `)
         replacements.push(supportedUnit)
@@ -1344,7 +1262,7 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
                 row.push(hub)
             }
             else if (title == 'Node') {
-                row.push(node ? node : '-')
+                row.push(node || '-')
             }
             else if (title == 'Task ID') {
                 row.push(taskId)
@@ -1357,7 +1275,7 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
                 row.push(driverStatus)
             }
             else if (title == 'Driver Name') {
-                row.push(driverName ? driverName : '-')
+                row.push(driverName || '-')
             }
             else if (title == 'Mobile Number') {
                 row.push(contactNumber)
@@ -1366,7 +1284,7 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
                 row.push(vehicleType)
             }
             else if (title == 'Vehicle Number') {
-                row.push(vehicleNumber ? vehicleNumber : '-')
+                row.push(vehicleNumber || '-')
             }
             else if (title == 'Purpose') {
                 row.push(purpose)
@@ -1393,10 +1311,10 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
                 row.push(indentId)
             }
             else if (title == 'Start Odometer') {
-                row.push(startMileage ? startMileage : "")
+                row.push(startMileage || "")
             }
             else if (title == 'End Odometer') {
-                row.push(endMileage ? endMileage : "")
+                row.push(endMileage || "")
             }
             else if (title == "Mileage Captured") {
                 row.push(mileageTraveled)
@@ -1443,7 +1361,7 @@ const ExportDataToExcel = async function (reportGroupSelectionTitle, datas, repo
     }
     reportDateRange = reportDateRange.replaceAll('-', '')
     let filename = `Task Report(${reportDateRange}).xlsx`
-    let filepath = downloadFolder + filename
+    let filepath = downloadFolder + utils.getSafePath(filename);
     let buffer = xlsx.build([
         {
             name: 'sheet1',
@@ -1461,7 +1379,7 @@ const ExportKeypressDataToExcel = async function (reportGroupSelectionTitle, dat
     excelList.push(titleList)
     datas.forEach((r, index) => {
         let row = []
-        let { locationName, boxName, vehicleNo, vehicleType, keyTagId, keySlotLocation, userName, driverName, transactionType, transactionTime, reason } = r
+        let { locationName, boxName, vehicleNo, vehicleType, keySlotLocation, userName, driverName, transactionType, transactionTime, reason } = r
         titleList.forEach(title => {
             if (title == 'Keypress Location') {
                 row.push(locationName);
@@ -1497,7 +1415,7 @@ const ExportKeypressDataToExcel = async function (reportGroupSelectionTitle, dat
     }
     reportDateRange = reportDateRange.replaceAll('-', '')
     let filename = `KeypressReport(${reportDateRange}).xlsx`
-    let filepath = downloadFolder + filename
+    let filepath = downloadFolder + utils.getSafePath(filename);
     let buffer = xlsx.build([
         {
             name: 'sheet1',
@@ -1592,13 +1510,13 @@ const ExportTelematicsDataToExcel = async function (reportGroupSelectionTitle, d
 
     if (!reportDateRange) {
         // 2023-12-09 00:00:00 ~ 2024-01-09 23:59:59
-        reportDateRange = `${ moment(dataList[0]).format(`YYYYMMDD`) } ~ ${ moment(dataList.at(-1)).format(`YYYYMMDD`) }`
+        reportDateRange = moment(dataList[0]).format(`YYYYMMDD`) +"~"+moment(dataList.at(-1)).format(`YYYYMMDD`);
     } else {
         reportDateRange = reportDateRange.split('~').map(item => item.trim())
-        reportDateRange = `${ moment(reportDateRange[0]).format(`YYYYMMDD`) } ~ ${ moment(reportDateRange.at(-1)).format(`YYYYMMDD`) }`
+        reportDateRange = moment(reportDateRange[0]).format(`YYYYMMDD`) + "~" + moment(reportDateRange.at(-1)).format(`YYYYMMDD`);
     }
     let filename = `Telematics Report(${ reportDateRange }).xlsx`
-    let filepath = downloadFolder + filename
+    let filepath = downloadFolder + utils.getSafePath(filename);
     let buffer = xlsx.build([
         {
             name: 'sheet1',
@@ -1653,7 +1571,7 @@ const ExportOBDDataToExcel = async function (reportGroupSelectionTitle, dataList
                     }
                 } else {
                     row.push(hub)
-                    row.push(node ? node : '')
+                    row.push(node || '')
                     row.push('')
                 }
             } else if (title == 'Location Data') {
@@ -1686,13 +1604,7 @@ const ExportOBDDataToExcel = async function (reportGroupSelectionTitle, dataList
 
 module.exports.DownloadExcel = async function (req, res) {
     let { filename } = req.query
-    // let filepath = downloadFolder + filename
-    // res.set({
-    //     'Content-Type': 'application/octet-stream',
-    //     'Content-Disposition': 'attachment;filename=' + encodeURI(filename)
-    // })
-    // fs.createReadStream(filepath).pipe(res)
-
+    filename = utils.getSafePath(filename);
     let rs = fs.createReadStream(downloadFolder + filename);
     res.writeHead(200, {
         'Content-Type': 'application/force-download',
@@ -1704,15 +1616,7 @@ module.exports.DownloadExcel = async function (req, res) {
 module.exports.getTelematicReportList = async function (req, res) {
     try {
         let reportGroupSelectionTitle = req.body.reportGroupSelectionTitle
-        let { occTimeRange, dataFrom, violationType, vehicleNumber, vehicleType, hub, node, driverName, taskId, transmittedDate } = req.body.filter
-
-        // 2023-12-19
-        // if transmittedDate has value, only export obd data, and also limit last days
-        // transmittedDate = Number.parseInt(transmittedDate)
-        // if (transmittedDate) {
-        //     dataFrom = 'obd'
-        //     log.warn(`transmittedDate => ${ transmittedDate }, only export obd data`)
-        // }
+        let { occTimeRange, dataFrom, violationType, vehicleNumber, vehicleType, hub, node, driverName, taskId } = req.body.filter
 
         let userId = req.cookies.userId;
         let user = await userService.UserUtils.getUserDetailInfo(userId);
@@ -1785,9 +1689,6 @@ module.exports.getTelematicReportList = async function (req, res) {
             replacements.push('%'+taskId+'%')
             replacements.push('%'+taskId+'%')
         }
-        // if (transmittedDate) {
-        //     limitCondition.push(` AND (th.occTime BETWEEN '${ moment().subtract(transmittedDate, 'days').format('YYYY-MM-DD HH:mm:ss') }' AND '${ moment().format('YYYY-MM-DD HH:mm:ss') }') `)
-        // }
         if (hub) {
             if (node) {
                 limitCondition.push(` AND ((t1.hub = ? AND t1.node = ?) OR (t2.hub = ? AND t2.node = ?)) `)
@@ -1835,7 +1736,7 @@ module.exports.getTelematicReportList = async function (req, res) {
             }
         }
         
-        let baseSQL = ``
+        let baseSQL;
         if (dataFrom.toLowerCase() == 'mobile') {
             baseSQL = mobileSql
             if (limitCondition.length) {
@@ -1859,9 +1760,6 @@ module.exports.getTelematicReportList = async function (req, res) {
 
         log.info(baseSQL)
         let telematicsReportList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements: replacements })
-        // if (!telematicsReportList || telematicsReportList.length == 0) {
-        //     return res.json(utils.response(0, 'Report data is empty!'));
-        // }
         
         let filename = await ExportTelematicsDataToExcel(reportGroupSelectionTitle, telematicsReportList, occTimeRange)
         return res.json(utils.response(1, filename));
@@ -2000,20 +1898,18 @@ const driverReportExcel = async function (reportGroupSelectionTitle, datas, repo
                     if(item2 && item2 != '') newTitleList.push(item2)
                 }
             }
+        } else if (item == 'Hub/Node') {
+            newTitleList.push('Hub')
+            newTitleList.push('Node')
         } else {
-            if (item == 'Hub/Node') {
-                newTitleList.push('Hub')
-                newTitleList.push('Node')
-            } else {
-                newTitleList.push(item)
-            }
+            newTitleList.push(item)
         }
     }
     excelList.push(newTitleList)
     datas.forEach((r, index) => {
         let row = []
         let {
-            driverId, driverName, vocation, enlistmentDate, operationallyReadyDate, nric, birthday,
+            driverName, vocation, enlistmentDate, operationallyReadyDate, nric, birthday,
             contactNumber, permitNo, permitIssueDate, role, driverDemeritPoints, assessmentType,
             permitType, vehicleType, groupName, unit, subUnit, status, mileageList, lastDrivenDate
         } = r
@@ -2072,18 +1968,16 @@ const driverReportExcel = async function (reportGroupSelectionTitle, datas, repo
                 row.push(driverDemeritPoints)
             } else if(title == 'Last Driven Date'){
                 row.push(lastDrivenDate)
-            } else {
-                if(classStatus) {
-                    if(newMileageList.length > 0){
-                        for(let item of newMileageList){
-                            if(title == item.permitType){
-                               row.push(item.totalMileage ?? 0)
-                            } 
-                        }
-                    } else {
-                        row.push(0)
+            } else if(classStatus) {
+                if(newMileageList.length > 0){
+                    for(let item of newMileageList){
+                        if(title == item.permitType){
+                            row.push(item.totalMileage ?? 0)
+                        } 
                     }
-                } 
+                } else {
+                    row.push(0)
+                }
             }
         })
         excelList.push(row)
@@ -2096,7 +1990,8 @@ const driverReportExcel = async function (reportGroupSelectionTitle, datas, repo
             }
         });
     }
-    let filename = reportDateRange ? `driverReport(${reportDateRange}).xlsx` : `Driver Report(${ moment().format('YYYY-MM-DD') }).xlsx`
+
+    let filename = reportDateRange ? `driverReport(${utils.getSafePath(reportDateRange)}).xlsx` : `Driver Report(${ moment().format('YYYY-MM-DD') }).xlsx`
     let filepath = downloadFolder + filename
     let buffer = xlsx.build([
         {
@@ -2138,7 +2033,7 @@ module.exports.getDriverReportList = async function (req, res) {
         }  
         log.warn(`driverList unitIdList ==> ${ JSON.stringify(unitIdList) }`)
         let groupList = await sequelizeSystemObj.query(` SELECT id, groupName FROM \`group\` `, { type: QueryTypes.SELECT })
-        let newGroup = dataList.groupIdList ? dataList.groupIdList.length > 0 ? dataList.groupIdList.join(',') : dataList.groupIdList : null
+        let newGroup = dataList.groupIdList?.length > 0 ? dataList.groupIdList.join(',') : dataList.groupIdList;
         if(hub && hub != '') newGroup = null
         if(groupId) newGroup = groupId
         log.warn(`driverList Group ==> ${ JSON.stringify(newGroup) }`)
@@ -2211,13 +2106,11 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
             newTitleList.push('AVI completion date')
             newTitleList.push('AVI due date')
             newTitleList.push('AVI lapsed days')
+        } else if (item == 'Hub/Node') {
+            newTitleList.push('Hub')
+            newTitleList.push('Node')
         } else {
-            if (item == 'Hub/Node') {
-                newTitleList.push('Hub')
-                newTitleList.push('Node')
-            } else {
-                newTitleList.push(item)
-            }
+            newTitleList.push(item)
         }
     }
     excelList.push(newTitleList)
@@ -2305,7 +2198,7 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
         });
     }
     let filename = reportDateRange ? `vehicleReport(${reportDateRange}).xlsx` : `Vehicle Report(${ moment().format('YYYY-MM-DD') }).xlsx`
-    let filepath = downloadFolder + filename
+    let filepath = downloadFolder + utils.getSafePath(filename);
     let buffer = xlsx.build([
         {
             name: 'sheet1',
@@ -2343,7 +2236,7 @@ module.exports.getVehicleReportList = async function (req, res) {
             unitIdList = dataList.unitIdList;
         }
         log.warn(` vehicle unitId ==> ${ unitIdList }`)
-        let newGroup = dataList.groupIdList ? dataList.groupIdList.length > 0 ? dataList.groupIdList.join(',') : dataList.groupIdList : null
+        let newGroup = dataList.groupIdList?.length > 0 ? dataList.groupIdList.join(',') : dataList.groupIdList
         if(hub) newGroup = null
         log.warn(` vehicle group ==> ${ newGroup }`)
         let vehicleData = []

@@ -40,8 +40,6 @@ let TaskUtils = {
 
 module.exports.GetAllUnits = async function (req, res) {
     try {
-        // let units = await Unit.findAll();
-        // let hubs = [...new Set(units.map(item => item.unit))]
         let userId = req.body.userId;
         let unitListObj = await TaskUtils.getUnitAndUnitId(userId)
         let unitList = unitListObj.unitList;
@@ -60,15 +58,6 @@ module.exports.GetMilitaryVehicleAndIndents = async function (req, res) {
         let userId = req.cookies.userId;
         let unitIds = []
         
-        // if (userType.toUpperCase() == 'UNIT') {
-        //     let unitListObj = await TaskUtils.getUnitAndUnitId(userId)
-        //     unitIds = unitListObj.unitIdList
-        // } else if (userType.toUpperCase() == 'HQ' || userType.toUpperCase() == 'ADMINISTRATOR') {
-        //     if (hub && hub != "") {
-        //         let rows = await Unit.findAll({ where: { unit: hub } })
-        //         unitIds = rows.map(item => item.id)
-        //     }
-        // }
         if(hub){
             let rows = await Unit.findAll({ where: { unit: hub } })
             unitIds = rows.map(item => item.id)
@@ -218,11 +207,9 @@ const GetTodayMilitaryTasks = async function (unitIds, userId, userType) {
     if (userType.toUpperCase() == 'CUSTOMER') {
         filter += ` and r.groupId = ?`
         replacements.push(user.unitId)
-    } else {
-        if (unitIds.length > 0) {
-            filter += ` and a.mobiusUnit in (?)`
-            replacements.push(unitIds)
-        }
+    } else if (unitIds.length > 0) {
+        filter += ` and a.mobiusUnit in (?)`
+        replacements.push(unitIds)
     }
     let sql = `SELECT
                     a.taskStatus,
@@ -324,16 +311,20 @@ const GetTodayMilitaryTasks = async function (unitIds, userId, userType) {
             })
         }
     }
-    for (let row of rows1) {
-        let taskStatus = row.driverStatus.toLowerCase()
-        if (taskStatus == 'completed') {
-            result.completed = result.completed + 1
-        } else if (taskStatus == 'started') {
-            result.ongoing = result.ongoing + 1
-        } else if (taskStatus == 'waitcheck') {
-            result.pending = result.pending + 1
+
+    const initStatusNumber = function (){
+        for (let row of rows1) {
+            let taskStatus = row.driverStatus.toLowerCase()
+            if (taskStatus == 'completed') {
+                result.completed = result.completed + 1
+            } else if (taskStatus == 'started') {
+                result.ongoing = result.ongoing + 1
+            } else if (taskStatus == 'waitcheck') {
+                result.pending = result.pending + 1
+            }
         }
     }
+    initStatusNumber()
     result.total = result.total + rows1.length
     return result
 }
@@ -346,11 +337,9 @@ const GetIndentsCount = async function (unitIds, userId, userType) {
     if (userType.toUpperCase() == 'CUSTOMER') {
         filter += ` and r.groupId = ?`
         replacements.push(user.unitId)
-    } else {
-        if (unitIds.length > 0) {
-            filter += ` and a.mobiusUnit in (?)`
-            replacements.push(unitIds)
-        }
+    } else if (unitIds.length > 0) {
+        filter += ` and a.mobiusUnit in (?)`
+        replacements.push(unitIds)
     }
 
     let sql = `SELECT
@@ -379,14 +368,12 @@ const GetIndentsCount = async function (unitIds, userId, userType) {
         total: total,
     }
     for (let row of rows) {
-        let { vehicleNumber, status, taskStatus } = row
+        let { vehicleNumber, status } = row
         if (vehicleNumber) {
             result.assigned += 1
-        }
-        else if (!vehicleNumber && status.toLowerCase() == "approved") {
+        } else if (status.toLowerCase() == "approved") {
             result.pendingAssignment += 1
-        }
-        else if (!vehicleNumber && status.toLowerCase().startsWith('pending')){
+        } else if (status.toLowerCase().startsWith('pending')){
             result.pendingApproval += 1
         }
     }
@@ -505,24 +492,23 @@ const GetDateArr = function (dateStart, dateEnd) {
 module.exports.getIndentAllocationGraph = async function (req, res) {
     try {
         let { hub, type, vehicle, dateRange } = req.body
-        // let node = null;
         let replacements = []
         let filter = ""
 
         let userType = req.cookies.userType;
         let userId = req.cookies.userId;
+        let typeArr = PurposeTypes
+        if (utils.stringNotEmpty(type)) {
+            typeArr = [type]
+        }
+        let queryTypeCount = []
+        typeArr.forEach((val, index) => {
+            queryTypeCount.push(`sum( IF ( c.purposeType like ?, 1, 0 ) ) as count${index}`)
+            replacements.push(val+'%')
+        });
         let unitIds = []
         
-        // if (userType.toUpperCase() == 'UNIT') {
-        //     let unitListObj = await TaskUtils.getUnitAndUnitId(userId)
-        //     unitIds = unitListObj.unitIdList
-        // } else if (userType.toUpperCase() == 'HQ' || userType.toUpperCase() == 'ADMINISTRATOR') {
-        //     if (hub && hub != "") {
-        //         let rows = await Unit.findAll({ where: { unit: hub } })
-        //         unitIds = rows.map(item => item.id)
-        //     }
-        // }
-        if (hub && hub != "") {
+        if (utils.stringNotEmpty(hub)) {
             let rows = await Unit.findAll({ where: { unit: hub } })
             unitIds = rows.map(item => item.id)
         } else {
@@ -531,31 +517,15 @@ module.exports.getIndentAllocationGraph = async function (req, res) {
         }
 
         let user =  await User.findOne({ where: { userId } })
-        // if(user.unitId){
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     if(unit.unit){
-        //         hub = unit.unit
-        //         if(unit.subUnit){
-        //             node = unit.subUnit
-        //         }
-        //     }
-        // }
         if (userType.toUpperCase() == 'CUSTOMER') {
             filter += ` and c.groupId = ?`
             replacements.push(user.unitId)
-        } else {
-            if (unitIds.length > 0) {
-                filter += ` and a.mobiusUnit in (?)`
-                replacements.push(unitIds)
-            }
+        } else if (unitIds.length > 0) {
+            filter += ` and a.mobiusUnit in (?)`
+            replacements.push(unitIds)
         }
 
-        let typeArr = PurposeTypes
-        if (type && type != "") {
-            typeArr = [type]
-        }
-
-        if (vehicle && vehicle != "") {
+        if (utils.stringNotEmpty(vehicle)) {
             filter += ` and b.vehicleType = ?`
             replacements.push(vehicle)
         }
@@ -566,10 +536,7 @@ module.exports.getIndentAllocationGraph = async function (req, res) {
         replacements.push(dateStart)
         replacements.push(dateEnd)
 
-        let queryTypeCount = []
-        typeArr.forEach((val, index) => {
-            queryTypeCount.push(`sum( IF ( c.purposeType like '${val}%', 1, 0 ) ) as count${index}`)
-        });
+
         let sql = `SELECT
                         a.executionDate,
                         ${queryTypeCount.join(',')}
@@ -589,12 +556,14 @@ module.exports.getIndentAllocationGraph = async function (req, res) {
             replacements: replacements,
             type: QueryTypes.SELECT
         })
-       
+
+        let replacements1 = []
         let queryTypeCount1 = []
         typeArr.forEach((val, index) => {
-            queryTypeCount1.push(`sum( IF ( purpose like '${val}%', 1, 0 ) ) as count${index}`)
+            queryTypeCount1.push(`sum( IF ( purpose like ?, 1, 0 ) ) as count${index}`)
+            replacements1.push(val+'%')
         });
-        let replacements1 = []
+        
         let sql1 = `
             SELECT DATE_FORMAT(t.indentStartTime, '%Y-%m-%d') as executionDate,
                 ${queryTypeCount1.join(',')}
@@ -607,11 +576,9 @@ module.exports.getIndentAllocationGraph = async function (req, res) {
                 sql1 += ` and t.taskId LIKE 'MT-%' and un.id in(?)`
                 replacements1.push(unitIds)
             }
-        } else {
-            if(user.unitId) {
-                sql1 += ` and t.taskId LIKE 'CU-%' and t.groupId = ?`
-                replacements1.push(user.unitId)
-            }
+        } else if(user.unitId) {
+            sql1 += ` and t.taskId LIKE 'CU-%' and t.groupId = ?`
+            replacements1.push(user.unitId)
         }
         if(vehicle){
             sql1 += ` and t.vehicleNumber in (select vehicleNo from vehicle where vehicleType = ?)`
@@ -676,30 +643,6 @@ module.exports.GetVehicleAvailabilityGraph = async function (req, res) {
         let filter = ""
         let unitIds = []
         let userType = req.cookies.userType ;
-        // if(userType.toUpperCase() == 'CUSTOMER'){
-        //     let user = await User.findOne({ where: { userId: req.cookies.userId } })
-        //     filter += ` and r.groupId = ?`
-        //     replacements.push(user.unitId)
-        // } else if(userType.toUpperCase() == 'UNIT'){
-        //     let user = await User.findOne({ where: { userId: req.cookies.userId } })
-        //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-        //     if(unit.subUnit) {
-        //         filter += ` and a.mobiusUnit in (?)`
-        //         replacements.push(unit.id)
-        //     } else {
-        //         let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
-        //         newUnit = newUnit.map(item => item.id)
-        //         filter += ` and a.mobiusUnit in (?)`
-        //         replacements.push(newUnit)
-        //     }
-        // } else {
-        //     if (hub && hub != "") {
-        //         let rows = await Unit.findAll({ where: { unit: hub } })
-        //         unitIds = rows.map(item => item.id)
-        //         filter += ` and a.mobiusUnit in (?)`
-        //         replacements.push(unitIds)
-        //     }
-        // }
 
         let queryDemand = `sum( IF ( b.vehicleType = ?, 1, 0 ) ) as demandCount`
         replacements.push(vehicle)
@@ -713,26 +656,24 @@ module.exports.GetVehicleAvailabilityGraph = async function (req, res) {
             let user = await User.findOne({ where: { userId: req.cookies.userId } })
             filter += ` and r.groupId = ?`
             replacements.push(user.unitId)
+        } else if (utils.stringNotEmpty(hub)) {
+            let rows = await Unit.findAll({ where: { unit: hub } })
+            unitIds = rows.map(item => item.id)
+            if(unitIds.length > 0){
+                filter += ` and a.mobiusUnit in (?)`
+                replacements.push(unitIds)
+            }
         } else {
-            if (hub && hub != "") {
-                let rows = await Unit.findAll({ where: { unit: hub } })
-                unitIds = rows.map(item => item.id)
-                if(unitIds.length > 0){
-                    filter += ` and a.mobiusUnit in (?)`
-                    replacements.push(unitIds)
-                }
-            } else {
-                let userUnit = await unitService.UnitUtils.getPermitUnitList(req.cookies.userId);
-                unitIds = userUnit.unitIdList
-                if(unitIds.length > 0){
-                    filter += ` and a.mobiusUnit in (?)`
-                    replacements.push(unitIds)
-                }
+            let userUnit = await unitService.UnitUtils.getPermitUnitList(req.cookies.userId);
+            unitIds = userUnit.unitIdList
+            if(unitIds.length > 0){
+                filter += ` and a.mobiusUnit in (?)`
+                replacements.push(unitIds)
             }
         }
         
         
-        if (vehicle && vehicle != "") {
+        if (utils.stringNotEmpty(vehicle)) {
             filter += ` and b.vehicleType = ?`
             replacements.push(vehicle)
         }
@@ -796,27 +737,11 @@ module.exports.GetVehicleAvailabilityGraph = async function (req, res) {
 //2023-07-11 vehicle deployable number
 const getVehicleDeployable = async function (userType, date, unitIdList, type, vehicle, userId) {
     let vehicleData = null
-    // let newHub = null;
-    // let newNode = null;
     if(userType.toUpperCase() == 'CUSTOMER') {
         let user = await User.findOne({ where: { userId: userId } })
         vehicleData = await TaskUtils.getVehicleByGroup(user.unitId);
         if(vehicleData.length < 1) return 0
     }
-    // } else if(userType.toUpperCase() == 'UNIT') {
-    //     let user = await User.findOne({ where: { userId: userId } })
-    //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-    //     if(unit){
-    //         newHub = unit.unit
-    //         if(unit.subUnit) {
-    //             newNode = unit.subUnit
-    //         } else {
-    //             newNode = null
-    //         }
-    //     } 
-    // } else {
-    //     newHub = hub
-    // }
     let sqlTaskVehicle = `
         SELECT tt.vehicleNumber FROM task tt 
         WHERE tt.vehicleStatus not in ('Cancelled', 'completed')  
@@ -942,54 +867,28 @@ module.exports.GetTOAvailabilityGraph = async function (req, res) {
             
             
             let userType = req.cookies.userType ;
-            // if(userType.toUpperCase() == 'CUSTOMER'){
-            //     let user = await User.findOne({ where: { userId: req.cookies.userId } })
-            //     filter += ` and r.groupId = ?`
-            //     replacements.push(user.unitId)
-            // } else if(userType.toUpperCase() == 'UNIT'){
-            //     let user = await User.findOne({ where: { userId: req.cookies.userId } })
-            //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-            //     if(unit.subUnit) {
-            //         filter += ` and a.mobiusUnit in (?)`
-            //         replacements.push(unit.id)
-            //     } else {
-            //         let newUnit = await Unit.findAll({ where: { unit: unit.unit } })
-            //         newUnit = newUnit.map(item => item.id)
-            //         filter += ` and a.mobiusUnit in (?)`
-            //         replacements.push(newUnit)
-            //     }
-            // } else {
-            //     if (hub && hub != "") {
-            //         let rows = await Unit.findAll({ where: { unit: hub } })
-            //         unitIds = rows.map(item => item.id)
-            //         filter += ` and a.mobiusUnit in (?)`
-            //         replacements.push(unitIds)
-            //     }
-            // }
             if(userType.toUpperCase() == 'CUSTOMER'){
                 let user = await User.findOne({ where: { userId: req.cookies.userId } })
                 filter += ` and r.groupId = ?`
                 replacements.push(user.unitId)
+            } else if (utils.stringNotEmpty(hub)) {
+                let rows = await Unit.findAll({ where: { unit: hub } })
+                unitIds = rows.map(item => item.id)
+                if(unitIds.length > 0) {
+                    filter += ` and a.mobiusUnit in (?)`
+                    replacements.push(unitIds)
+                }
             } else {
-                if (hub && hub != "") {
-                    let rows = await Unit.findAll({ where: { unit: hub } })
-                    unitIds = rows.map(item => item.id)
-                    if(unitIds.length > 0) {
-                        filter += ` and a.mobiusUnit in (?)`
-                        replacements.push(unitIds)
-                    }
-                } else {
-                    let userUnit = await unitService.UnitUtils.getPermitUnitList(req.cookies.userId);
-                    unitIds = userUnit.unitIdList
-                    if(unitIds.length > 0){
-                        filter += ` and a.mobiusUnit in (?)`
-                        replacements.push(unitIds)
-                    }
+                let userUnit = await unitService.UnitUtils.getPermitUnitList(req.cookies.userId);
+                unitIds = userUnit.unitIdList
+                if(unitIds.length > 0){
+                    filter += ` and a.mobiusUnit in (?)`
+                    replacements.push(unitIds)
                 }
             }
 
 
-            if (vehicle && vehicle != "") {
+            if (utils.stringNotEmpty(vehicle)) {
                 filter += ` and b.vehicleType = ?`
                 replacements.push(vehicle)
             }
@@ -1069,27 +968,11 @@ module.exports.GetTOAvailabilityGraph = async function (req, res) {
 
 //2023-07-11 driver deployable number
 const getDriverDeployable = async function (userType, date, unitIdList, type, vehicle, userId) {
-    // let newHub = null;
-    // let newNode = null;
     let newUnitId = null
     if(userType.toUpperCase() == 'CUSTOMER') {
         let user = await User.findOne({ where: { userId: userId } })
         newUnitId = user.unitId
     }
-    // } else if(userType.toUpperCase() == 'UNIT') {
-    //     let user = await User.findOne({ where: { userId: userId } })
-    //     let unit = await Unit.findOne({ where: { id: user.unitId } })
-    //     if(unit){ 
-    //         newHub = unit.unit
-    //         if(unit.subUnit) {
-    //             newNode = unit.subUnit
-    //         } else {
-    //             newNode = null
-    //         }
-    //     } 
-    // } else {
-    //     newHub = hub
-    // }
     let taskDriverSql = `
         SELECT tt.driverId FROM task tt
         WHERE tt.driverStatus not in ('Cancelled', 'completed') 
@@ -1226,19 +1109,12 @@ module.exports.GetWPTDueThisWeek = async function (req, res) {
     let loanOutVehicleNoList = await sequelizeObj.query(sqlloanOutVehicleNoList, { type: QueryTypes.SELECT, replacements: replacementsByloanOutVehicleNoList });
     let currentLoanOutVehiclenos = loanOutVehicleNoList.map(item => item.vehicleNo)
 
-    // let unitList = [];
-    // let unitIdList = null;
-    // if (!hub) {
-    //     unitList = await TaskUtils.getUnitAndUnitId(userId);
-    //     unitIdList = unitList.unitIdList.join(',');
-    // }
     let unitIdList = null;
     if(!hub){
         let userUnit = await unitService.UnitUtils.getPermitUnitList(userId);
         unitIdList = userUnit.unitIdList
     }
     
-    //let date = moment().weekday(1).format('YYYY-MM-DD')
     let date2 = moment().weekday(1).add(6, 'day').format('YYYY-MM-DD')
     let sql = `
         SELECT
@@ -1259,16 +1135,9 @@ module.exports.GetWPTDueThisWeek = async function (req, res) {
         hub = null;
         sql += ` and a.vehicleNo in (?) `;
         replacements.push(`'${ currentLoanOutVehiclenos.join("','") }'`)
-    // } else if (user.userType == CONTENT.USER_TYPE.UNIT) {
-    //     if (currentLoanOutVehiclenos && currentLoanOutVehiclenos.length > 0) {
-    //         sql += ` and a.vehicleNo not in ('${ currentLoanOutVehiclenos.join("','") }') `;
-    //     }
-    // }
-    } else {
-        if (currentLoanOutVehiclenos && currentLoanOutVehiclenos.length > 0) {
-            sql += ` and a.vehicleNo not in (?) `;
-            replacements.push(`'${ currentLoanOutVehiclenos.join("','") }'`)
-        }
+    } else if (currentLoanOutVehiclenos?.length > 0) {
+        sql += ` and a.vehicleNo not in (?) `;
+        replacements.push(`'${ currentLoanOutVehiclenos.join("','") }'`)
     }
     if (hub) {
         sql += ` and b.unit = ? `;
@@ -1330,12 +1199,6 @@ module.exports.GetVehicleServicingGraph = async function (req, res) {
         let loanOutVehicleNoList = await sequelizeObj.query(sqlloanOutVehicleNoList, { type: QueryTypes.SELECT, replacements: replacementsByloanOutVehicleNoList });
         let currentLoanOutVehiclenos = loanOutVehicleNoList.map(item => item.vehicleNo)
 
-        // let unitList = [];
-        // let unitIdList = null;
-        // if (!hub) {
-        //     unitList = await TaskUtils.getUnitAndUnitId(userId);
-        //     unitIdList = unitList.unitIdList.join(',');
-        // }
         let unitIdList = null;
         if(!hub){
             let userUnit = await unitService.UnitUtils.getPermitUnitList(userId);
@@ -1356,16 +1219,9 @@ module.exports.GetVehicleServicingGraph = async function (req, res) {
             hub = null;
             sql += ` and a.vehicleNo in (?) `;
             replacements.push(`'${ currentLoanOutVehiclenos.join("','") }'`)
-        // } else if (user.userType == CONTENT.USER_TYPE.UNIT) {
-        //     if (currentLoanOutVehiclenos && currentLoanOutVehiclenos.length > 0) {
-        //         sql += ` and a.vehicleNo not in ('${ currentLoanOutVehiclenos.join("','") }') `;
-        //     }
-        // }
-        } else {
-            if (currentLoanOutVehiclenos && currentLoanOutVehiclenos.length > 0) {
-                sql += ` and a.vehicleNo not in (?) `;
-                replacements.push(`'${ currentLoanOutVehiclenos.join("','") }'`)
-            }
+        } else if (currentLoanOutVehiclenos?.length > 0) {
+            sql += ` and a.vehicleNo not in (?) `;
+            replacements.push(`'${ currentLoanOutVehiclenos.join("','") }'`)
         }
         if (hub) {
             sql += ` and b.unit = ? `;

@@ -77,7 +77,6 @@ module.exports.getHubNodeList = async function (req, res) {
 
 module.exports.getPermitUnitList = async function (req, res) {
     try {
-        let userId = req.cookies.userId;
         let result = await UnitUtils.getPermitUnitList2()
         return res.json(utils.response(1, result));
     } catch (error) {
@@ -159,7 +158,6 @@ module.exports.getUnitPermissionList = async function (req, res) {
                 replacements: [ `${ user.hq }` ]
             })
         } else if (user.userType === CONTENT.USER_TYPE.UNIT) {
-            let unitId = user.unitId;
             allUnitList = await Unit.findAll({
                 where: {
                     unit: user.unit,
@@ -328,6 +326,7 @@ const getPermitUnitList2 = async function (userId = null) {
         result.user = user
         return result
     } catch (error) {
+        log.error(error);
         throw error
     }
 } 
@@ -385,6 +384,7 @@ const UnitUtils = {
 
             return result
         } catch (error) {
+            log.error(error);
             throw error
         }
     },
@@ -395,15 +395,13 @@ const UnitUtils = {
             let unit = await Unit.findAll()
             unitId = unit.map(item => { return item.id });
             unitId = Array.from(new Set(unitId));
+        } else if(node){
+            let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
+            unitId = [ unit.id ];
         } else {
-            if(node){
-                let unit = await Unit.findOne({ where: { unit: hub, subUnit: node } })
-                unitId = [ unit.id ];
-            } else {
-                let unit = await Unit.findAll({ where: { unit: hub } })
-                unitId = unit.map(item => { return item.id });
-                unitId = Array.from(new Set(unitId));
-            }
+            let unit = await Unit.findAll({ where: { unit: hub } })
+            unitId = unit.map(item => { return item.id });
+            unitId = Array.from(new Set(unitId));
         }
         
         return unitId

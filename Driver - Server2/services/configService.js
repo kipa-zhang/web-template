@@ -37,7 +37,7 @@ module.exports = {
                 let user = await userService.getUserDetailInfo(userId)
                 if (!user) {
                     log.warn(`User ${ userId } does not exist.`);
-                    throw `User ${ userId } does not exist.`
+                    throw new Error(`User ${ userId } does not exist.`)
                 }
                 return user;
             }
@@ -46,7 +46,7 @@ module.exports = {
             let user = await checkUser(userId);
             if (![ CONTENT.USER_TYPE.HQ, CONTENT.USER_TYPE.ADMINISTRATOR ].includes(user.userType)) {
                 log.warn(`${ user.userType } can not edit hub config.`);
-                throw `${ user.userType } can not edit hub config.`
+                throw new Error(`${ user.userType } can not edit hub config.`)
             }
 
             let newConfList = req.body;

@@ -27,11 +27,7 @@ const checkFileExist = function (filePath) {
 const checkDataExist = async function (deviceId, vehicleNo, date, timezone) {
     try {
         let result = await readFile(deviceId, vehicleNo, date, timezone);
-        if (result.length) {
-            return true;
-        } else {
-            return false;
-        }
+        return result.length > 0;
     } catch (error) {
         log.error(error);
         return false;
@@ -61,6 +57,7 @@ const readFile = function (deviceId, vehicleNo, date, timezone) {
         if (!Array.isArray(timezone) || timezone.length !== 2){
             throw Error(`Wrong timezone ${ JSON.stringify(timezone) }`)
         }
+        
         let filePath = `${ conf.dataPath }/${ deviceId }/${ date }.txt`
         if (!checkFileExist(filePath)) {
             log.error(`${ filePath } does not exist.`);
@@ -138,6 +135,8 @@ module.exports = {
     },
     readFromFile: async function (deviceId, vehicleNo, timezone) {
         try {
+            if (deviceId) deviceId = utils.getSafePath(deviceId);
+            if (vehicleNo) vehicleNo = utils.getSafePath(vehicleNo);
             let dateLength = utils.getDateLength(timezone[0], timezone[1]);
             log.warn(`Prepare read deviceId => ${ deviceId }, timezone => ${ JSON.stringify(timezone) }, dateLength => ${ dateLength } `)
             let dateList = []

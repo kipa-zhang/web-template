@@ -18,7 +18,7 @@ router.use(async (req, res, next) => {
         //default check ip white list.
         needCheekIP = true;
     }
-    if (needCheekIP == false || needCheekIP == 'false') {
+    if (!needCheekIP || needCheekIP == 'false') {
         next();
         return;
     }

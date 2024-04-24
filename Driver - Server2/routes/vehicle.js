@@ -46,9 +46,6 @@ router.post('/markAsUnavailable', vehicleService.markAsUnavailable);
 router.post('/cancelMarkAsUnavailable', vehicleService.cancelMarkAsUnavailable);
 router.post('/getLeaveRecordByDate', vehicleService.getLeaveRecordByDate);
 router.post('/getVehicleLeaveDays', vehicleService.getVehicleLeaveDays);
-router.post('/getVehicleListByGroup', vehicleService.getVehicleListByGroup);
-
-// router.post('/releaseVehicle', vehicleService.releaseVehicle);
 
 router.post('/reactivateVehicle', vehicleService.reactivateVehicle);
 

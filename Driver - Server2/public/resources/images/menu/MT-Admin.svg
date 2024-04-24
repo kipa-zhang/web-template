@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="26" height="25" viewBox="0 0 26 25">
-  <g id="MT-Admin" transform="translate(0.171 0.282)">
-    <path id="a" d="M9.583-.058V-5.811q0-.631.076-1.93H9.62a7.532,7.532,0,0,1-.29,1.135L6.87-.058H5.5L3.01-6.549a10.747,10.747,0,0,1-.29-1.192H2.675q.069,1.028.069,2.233v5.45H1.111V-9.344H3.7l2.17,5.784a6.64,6.64,0,0,1,.36,1.274h.044q.139-.549.391-1.287L8.851-9.344h2.511V-.058Zm10.206-7.79H17.133v7.79h-1.8v-7.79H12.68V-9.344h7.109Z" transform="translate(2.404 17.193)" fill="#8bffc9"/>
-    <g id="a-2" data-name="a" transform="translate(-0.171 -0.282)" fill="none" stroke="#8bfec9" stroke-width="1">
-      <rect width="26" height="25" rx="2" stroke="none"/>
-      <rect x="0.5" y="0.5" width="25" height="24" rx="1.5" fill="none"/>
-    </g>
-  </g>
-</svg>

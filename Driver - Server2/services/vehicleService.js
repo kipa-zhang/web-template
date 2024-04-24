@@ -34,6 +34,15 @@ const { UrgentDuty } = require('../model/urgent/urgentDuty.js');
 const { UrgentIndent } = require('../model/urgent/urgentIndent.js');
 const { DriverPlatformConf } = require('../model/driverPlatformConf.js');
 
+const checkUser = async function (userId) {
+    let user = await userService.getUserDetailInfo(userId)
+    if (!user) {
+        log.warn(`User ${ userId } does not exist.`);
+        throw Error(`User ${ userId } does not exist.`);
+    }
+    return user;
+}
+
 const getVehicleList = async function (option = {}) {
     // If need history info, use api getVehicleInfo from driverService
     try {
@@ -99,6 +108,35 @@ const getVehicleList = async function (option = {}) {
     }
 }
 
+const checkEditVehicleParams = async function(vehicleNo, action, vehicleHub, vehicleGroup) {
+    let errorMsg;
+    if (!vehicleNo) {
+        return res.json(utils.response(0, `Params vehicleNo is empty.`));
+    }
+    let oldVehicle = await Vehicle.findOne({ where: { vehicleNo: vehicleNo}});
+    if (action.toLowerCase() == 'create') {
+        if (oldVehicle) {
+            errorMsg = `Vehicle ${ vehicleNo } has exist.`;
+        }
+    }
+    //check unique key tag id
+    if (vehicleKeyTagId) {
+        let existVehicles = await Vehicle.findAll({where: {keyTagId: vehicleKeyTagId}});
+        if (existVehicles?.length > 0) {
+            let existVehicle = existVehicles.find(item => item.vehicleNo != vehicleNo);
+            if (existVehicle) {
+                errorMsg = `Vehicle KeyTagID[${vehicleKeyTagId}] has config for vehicle[${existVehicle.vehicleNo}].`;
+            }
+        }
+    }
+
+    if (!vehicleHub && !vehicleGroup) {
+        errorMsg = `Hub or Unit is required.`;
+    }
+
+    return errorMsg;
+}
+
 module.exports.editVehicle = async function (req, res) {
 	try {
         let userId = req.cookies.userId
@@ -108,24 +146,10 @@ module.exports.editVehicle = async function (req, res) {
             return res.json(utils.response(0, `User ${ userId } does not exist.`));
         }
         let {vehicleNo, pmType, vehiclePmMaxMileage, vehiclePmMonths, vehicleHub, vehicleNode, vehicleGroup, vehicleMileage, vehicleKeyTagId, vehicleCategory, vehicleType, vehicleDimensions, permitType, vehicleSpeedlimit, aviDate, action} = req.body;
-        if (!vehicleNo) {
-            return res.json(utils.response(0, `Params vehicleNo is empty.`));
-        }
-        let oldVehicle = await Vehicle.findOne({ where: { vehicleNo: vehicleNo}});
-        if (action.toLowerCase() == 'create') {
-            if (oldVehicle) {
-                return res.json(utils.response(0, `Vehicle ${ vehicleNo } has exist.`));
-            }
-        }
-        //check unique key tag id
-        if (vehicleKeyTagId) {
-            let existVehicles = await Vehicle.findAll({where: {keyTagId: vehicleKeyTagId}});
-            if (existVehicles && existVehicles.length > 0) {
-                let existVehicle = existVehicles.find(item => item.vehicleNo != vehicleNo);
-                if (existVehicle) {
-                    return res.json(utils.response(0, `Vehicle KeyTagID[${vehicleKeyTagId}] has config for vehicle[${existVehicle.vehicleNo}].`));
-                }
-            }
+        
+        let paramsCheckError = await checkEditVehicleParams(vehicleNo, action);
+        if (paramsCheckError) {
+            return res.json(utils.response(0, paramsCheckError));
         }
 
         let newVehicle = {vehicleNo, totalMileage: vehicleMileage, keyTagId: vehicleKeyTagId, vehicleCategory, vehicleType, dimensions: vehicleDimensions, permitType, limitSpeed: vehicleSpeedlimit, creator: userId }
@@ -145,9 +169,7 @@ module.exports.editVehicle = async function (req, res) {
         if (!vehicleKeyTagId) {
             newVehicle.keyTagId = null;
         }
-        if (!vehicleHub && !vehicleGroup) {
-            return res.json(utils.response(0, `Hub or Unit is required.`));
-        } else if (!vehicleHub && vehicleGroup) {
+        if (!vehicleHub && vehicleGroup) {
             newVehicle.groupId = vehicleGroup;
         }
 
@@ -158,7 +180,7 @@ module.exports.editVehicle = async function (req, res) {
                     let selectedUnit = await sequelizeObj.query(`
                         select id from unit where unit = ? and (subUnit is null or subUnit = '')
                     `, { type: QueryTypes.SELECT, replacements: [vehicleHub]})
-                    if (selectedUnit && selectedUnit.length > 0) {
+                    if (selectedUnit?.length > 0) {
                         unitObj = selectedUnit[0];
                     }
                 } else {
@@ -280,7 +302,7 @@ module.exports.getVehicleDetail = async function (req, res) {
  
         let currentVehicle = null;
         let vehicleList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements: [vehicleNo] })
-        if (vehicleList && vehicleList.length > 0) {
+        if (vehicleList?.length > 0) {
             currentVehicle = vehicleList[0];
         }
 
@@ -292,8 +314,8 @@ module.exports.getVehicleDetail = async function (req, res) {
             and (now() BETWEEN tt.indentStartTime and tt.indentEndTime OR tt.driverStatus = 'started')
         `;
         let currentAssignedTasks = await sequelizeObj.query(currentAssignedVehicleNoBaseSql, { type: QueryTypes.SELECT, replacements: [vehicleNo] })
-        if (currentAssignedTasks && currentAssignedTasks.length > 0) {
-            if (currentVehicle && currentVehicle.currentStatus == 'Deployable') {
+        if (currentAssignedTasks?.length > 0) {
+            if (currentVehicle?.currentStatus == 'Deployable') {
                 currentVehicle.currentStatus = 'Deployed'
             }
         }
@@ -315,7 +337,7 @@ module.exports.getVehicleDetail = async function (req, res) {
  
         let assignedTaskList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements: [vehicleNo] })
         let assignedTaskNum = 0;
-        if (assignedTaskList && assignedTaskList.length > 0) {
+        if (assignedTaskList?.length > 0) {
             assignedTaskNum = assignedTaskList[0].assignedTaskNum;
         }
         //stat odd count
@@ -334,7 +356,7 @@ module.exports.getVehicleDetail = async function (req, res) {
         }
         let oddList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements: [vehicleNo] })
         let vehicleOddNum = 0;
-        if (oddList && oddList.length > 0) {
+        if (oddList?.length > 0) {
             vehicleOddNum = oddList[0].vehicleOddNum;
         }
 
@@ -343,22 +365,7 @@ module.exports.getVehicleDetail = async function (req, res) {
         currentVehicle.maintenanceOperation = maintenanceOperationList;
 
         //maintenance warning
-        let maintenanceWarningStr = '';
-        let vehicle = await Vehicle.findByPk(vehicleNo);
-        if (vehicle) {
-            let todayDateStr = moment().format("YYYY-MM-DD");
-            let wpt1DateStr = vehicle.nextWpt1Time ? moment(vehicle.nextWpt1Time).format("YYYY-MM-DD") : '';
-            let wpt2DateStr = vehicle.nextWpt2Time ? moment(vehicle.nextWpt2Time).format("YYYY-MM-DD") : '';
-            let wpt3DateStr = vehicle.nextWpt3Time ? moment(vehicle.nextWpt3Time).format("YYYY-MM-DD") : '';
-            let mptDateStr = vehicle.nextMptTime ? moment(vehicle.nextMptTime).format("YYYY-MM-DD") : '';
-            let aviDateStr = vehicle.nextAviTime ? moment(vehicle.nextAviTime).format("YYYY-MM-DD") : '';
-            if ((wpt1DateStr && wpt1DateStr < todayDateStr) || (wpt2DateStr && wpt2DateStr < todayDateStr) || (wpt3DateStr && wpt3DateStr < todayDateStr)
-                || (mptDateStr && mptDateStr < todayDateStr) || (aviDateStr && aviDateStr < todayDateStr)) {
-                    maintenanceWarningStr = "!";
-            }
-        }
-
-        currentVehicle.maintenanceWarningStr = maintenanceWarningStr;
+        currentVehicle.maintenanceWarningStr = await buildMaintenanceWarningStr(vehicleNo);
  
         // get vehicleScheduleCount
         let mtScheduleList = await getMTScheduleList(moment().format('YYYY-MM'), null, vehicleNo);
@@ -369,6 +376,28 @@ module.exports.getVehicleDetail = async function (req, res) {
 		log.error(error)
 		return res.json(utils.response(0, error));
 	}
+
+    async function buildMaintenanceWarningStr(vehicleNo) {
+        let maintenanceWarningStr = '';
+        let vehicle = await Vehicle.findByPk(vehicleNo);
+        if (vehicle) {
+            let todayDateStr = moment().format("YYYY-MM-DD");
+            let wpt1DateStr = vehicle.nextWpt1Time ? moment(vehicle.nextWpt1Time).format("YYYY-MM-DD") : '';
+            let wpt2DateStr = vehicle.nextWpt2Time ? moment(vehicle.nextWpt2Time).format("YYYY-MM-DD") : '';
+            let wpt3DateStr = vehicle.nextWpt3Time ? moment(vehicle.nextWpt3Time).format("YYYY-MM-DD") : '';
+            let mptDateStr = vehicle.nextMptTime ? moment(vehicle.nextMptTime).format("YYYY-MM-DD") : '';
+            let aviDateStr = vehicle.nextAviTime ? moment(vehicle.nextAviTime).format("YYYY-MM-DD") : '';
+            if (isWarn(todayDateStr, wpt1DateStr, wpt2DateStr, wpt3DateStr, mptDateStr, aviDateStr)) {
+                maintenanceWarningStr = "!";
+            }
+        }
+        return maintenanceWarningStr;
+    }
+
+    function isWarn(todayDateStr, wpt1DateStr, wpt2DateStr, wpt3DateStr, mptDateStr, aviDateStr) {
+        return (wpt1DateStr && wpt1DateStr < todayDateStr) || (wpt2DateStr && wpt2DateStr < todayDateStr) || (wpt3DateStr && wpt3DateStr < todayDateStr)
+                || (mptDateStr && mptDateStr < todayDateStr) || (aviDateStr && aviDateStr < todayDateStr);
+    }
 }
 
 module.exports.getVehicleOdd = async function (req, res) {
@@ -507,47 +536,16 @@ module.exports.getVehicleSchedule = async function (req, res) {
         } else if (user.userType == 'UNIT') {
             baseTaskSql += ` and t.taskId not like 'CU-%' `
         }
-
-        let baseLeaveSql = `
-            SELECT
-                startTime as indentStartTime, date_add(endTime, interval 1 second) as indentEndTime, reason
-            FROM vehicle_leave_record dl
-            where vehicleNo=? and status=1 and DATE_FORMAT(startTime, '%Y-%m-%d') BETWEEN ? and ? order by dl.startTime asc
-        `
         let replacements = [vehicleNo, startDate, endDate, startDate, endDate, startDate, endDate];
         if (purpose) {
             replacements.push(purpose);
         }
-        let vehicleTaskList = await sequelizeObj.query(baseTaskSql, { type: QueryTypes.SELECT, replacements: replacements })
-        let tempLeaveList = await sequelizeObj.query(baseLeaveSql, { type: QueryTypes.SELECT, replacements: [vehicleNo, startDate, endDate] })
 
         let resultList = [];
-        let vehicleLeaveList = [];
-        for (let temp of tempLeaveList) {
-            temp.indentStartTime = moment(temp.indentStartTime).format('YYYY-MM-DD HH:mm:ss')
-            temp.indentEndTime = moment(temp.indentEndTime).format('YYYY-MM-DD HH:mm:ss')
-            // vehicle leave
-            if (vehicleLeaveList.length > 0) {
-                let preLeave = tempLeaveList[vehicleLeaveList.length - 1];
-                if (preLeave.indentEndTime == temp.indentStartTime) {
-                    preLeave.indentEndTime = temp.indentEndTime;
-                } else {
-                    vehicleLeaveList.push(temp);
-                }
-            } else {
-                vehicleLeaveList.push(temp);
-            }
-        }
-        let onEventIndex = 1;
-        for (let temp of vehicleLeaveList) {
-            temp.taskId='onEvent-' +  onEventIndex;
-            let entTimeStr = moment(temp.indentEndTime).format('HH:mm:ss');
-            if (entTimeStr == '00:00:00') {
-                let endDateTime = moment(temp.indentEndTime).add(-1, 'minute');
-                temp.indentEndTime = endDateTime.format('YYYY-MM-DD HH:mm:ss');
-            }
-            onEventIndex++;
-        }
+        let vehicleTaskList = await sequelizeObj.query(baseTaskSql, { type: QueryTypes.SELECT, replacements: replacements })
+
+        let vehicleLeaveList = await buildVehicleLeaveInfo(vehicleNo, startDate, endDate);
+
         resultList = resultList.concat(vehicleTaskList)
         resultList = resultList.concat(vehicleLeaveList);
 
@@ -567,15 +565,6 @@ module.exports.getVehicleSchedule = async function (req, res) {
 
 module.exports.getVehicleList = async function (req, res) {
 	try {
-		const checkUser = async function (userId) {
-			let user = await userService.getUserDetailInfo(userId)
-			if (!user) {
-				log.warn(`User ${ userId } does not exist.`);
-				throw Error(`User ${ userId } does not exist.`);
-			}
-			return user;
-		}
-
 		let user = await checkUser(req.cookies.userId);
 		let vehicleList = [];
         if (user.userType === CONTENT.USER_TYPE.HQ || user.userType === CONTENT.USER_TYPE.ADMINISTRATOR) {
@@ -709,7 +698,7 @@ module.exports.getVehicleTasks = async function (req, res) {
         let operationList = pageList.map(item => `${ item.action }`).join(',')
 
         let permissionPageList = await userService.getUserPageList(userId, 'Vehicle', 'Indent')
-        if (permissionPageList && permissionPageList.length > 0) {
+        if (permissionPageList.length > 0) {
             operationList += ',ViewIndent';
         }
 
@@ -733,6 +722,8 @@ module.exports.getVehicleTasks = async function (req, res) {
         let customerGroupId = '';
         if(user.userType.toUpperCase() == CONTENT.USER_TYPE.CUSTOMER) {
             customerGroupId = user.unitId;
+            unit = null;
+            subUnit = null;
             
             log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
             let loanOutVehicleNoList = await sequelizeObj.query(`
@@ -745,8 +736,6 @@ module.exports.getVehicleTasks = async function (req, res) {
             `, { type: QueryTypes.SELECT });
             groupVehicleNoList = groupVehicleNoList.map(item => item.vehicleNo)
 
-            unit = null;
-            subUnit = null;
             let customerNoList = loanOutVehicleNoList.concat(groupVehicleNoList);
             if(customerNoList.length > 0){ 
                 paramList.push(` vv.vehicleNo in ('${ customerNoList.join("','") }')`)
@@ -754,122 +743,152 @@ module.exports.getVehicleTasks = async function (req, res) {
                 return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
             }
         } else if (user.userType == CONTENT.USER_TYPE.HQ) {
-            if (selectGroup == '1') {
-                unit = null;
-                subUnit = null;
-                if (groupId) {
-                    paramList.push(` vv.groupId = ? `);
-                    replacements.push(groupId)
-                } else {
-                    let groupList = await unitService.UnitUtils.getGroupListByHQUnit(user.hq);
-                    let hqUserGroupIds = groupList.map(item => item.id);
-                    if (hqUserGroupIds && hqUserGroupIds.length > 0) {
-                        paramList.push(` vv.groupId in(${hqUserGroupIds}) `);
+            async function buildHQParams() {
+                if (selectGroup == '1') {
+                    unit = null;
+                    subUnit = null;
+                    if (groupId) {
+                        paramList.push(` vv.groupId = ? `);
+                        replacements.push(groupId)
                     } else {
-                        return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
+                        let groupList = await unitService.UnitUtils.getGroupListByHQUnit(user.hq);
+                        let hqUserGroupIds = groupList.map(item => item.id);
+                        if (hqUserGroupIds && hqUserGroupIds.length > 0) {
+                            paramList.push(` vv.groupId in(${hqUserGroupIds}) `);
+                        } else {
+                            return false;
+                        }
                     }
+                } else if (selectGroup == '0') {
+                    paramList.push(` vv.groupId is null `);
                 }
-            } else if (selectGroup == '0') {
-                paramList.push(` vv.groupId is null `);
+                return true;
             }
-        } else if (user.userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
-            if (selectGroup == '1') {
-                unit = null;
-                subUnit = null;
-                if (groupId) {
-                    paramList.push(` vv.groupId = ? `);
-                    replacements.push(groupId)
-                } else {
-                    paramList.push(` vv.groupId is not null `);
-                }
-            } else if (selectGroup == '0') {
-                paramList.push(` vv.groupId is null `);
-            }
-        }
-
-        if (unit) {
-            paramList.push(` (vv.currentUnit =? or vv.unit = ?) `);
-            replacements.push(unit)
-            replacements.push(unit)
-        } else if (selectGroup == '0' && user.userType == CONTENT.USER_TYPE.HQ) {
-            let userUnitList = await unitService.UnitUtils.getUnitListByHQUnit(user.hq);
-            let hqUserUnitNameList = userUnitList.map(item => item.unit);
-            if (hqUserUnitNameList && hqUserUnitNameList.length > 0) {
-                hqUserUnitNameList = Array.from(new Set(hqUserUnitNameList));
-            }
-            if (hqUserUnitNameList && hqUserUnitNameList.length > 0) {
-                paramList.push(` vv.currentUnit in('${hqUserUnitNameList.join("','")}') `);
-            } else {
+            let buildResult = await buildHQParams();
+            if (!buildResult) {
                 return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
             }
+        } else if (user.userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
+            function buildAdminParams() {
+                if (selectGroup == '1') {
+                    unit = null;
+                    subUnit = null;
+                    if (groupId) {
+                        paramList.push(` vv.groupId = ? `);
+                        replacements.push(groupId)
+                    } else {
+                        paramList.push(` vv.groupId is not null `);
+                    }
+                } else if (selectGroup == '0') {
+                    paramList.push(` vv.groupId is null `);
+                }
+            }
+            buildAdminParams();
         }
-        if (subUnit) {
-            if (subUnit == 'null') {
-                paramList.push(` (vv.currentSubUnit is null or vv.subUnit is null) `)
-            } else {
-                paramList.push(` (vv.currentSubUnit =? or vv.subUnit =?) `)
-                replacements.push(subUnit)
-                replacements.push(subUnit)
+
+        async function buildUnitParams() {
+            if (unit) {
+                paramList.push(` (vv.currentUnit =? or vv.unit = ?) `);
+                replacements.push(unit)
+                replacements.push(unit)
+            } else if (selectGroup == '0' && user.userType == CONTENT.USER_TYPE.HQ) {
+                let userUnitList = await unitService.UnitUtils.getUnitListByHQUnit(user.hq);
+                let hqUserUnitNameList = userUnitList.map(item => item.unit);
+                if (hqUserUnitNameList && hqUserUnitNameList.length > 0) {
+                    hqUserUnitNameList = Array.from(new Set(hqUserUnitNameList));
+                }
+                if (hqUserUnitNameList && hqUserUnitNameList.length > 0) {
+                    paramList.push(` vv.currentUnit in('${hqUserUnitNameList.join("','")}') `);
+                } else {
+                    return false;
+                }
+            }
+            if (subUnit) {
+                if (subUnit == 'null') {
+                    paramList.push(` (vv.currentSubUnit is null or vv.subUnit is null) `)
+                } else {
+                    paramList.push(` (vv.currentSubUnit =? or vv.subUnit =?) `)
+                    replacements.push(subUnit)
+                    replacements.push(subUnit)
+                }
+            }
+            return true;
+        }
+        let buildResult = await buildUnitParams();
+        if (!buildResult) {
+            return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
+        }
+        
+        function buildCommonParams1() {
+            // paramList.push(` veh.vehicleNo != 'NNNNNNNN' `)
+            if (vehicleStatus) {
+                paramList.push(` FIND_IN_SET(vv.currentStatus, ?)`)
+                replacements.push(vehicleStatus)
+            }
+            if (searchParam) {
+                let likeCondition = sequelizeObj.escape("%" + searchParam + "%");
+                paramList.push(` (vv.vehicleNo like `+likeCondition+` or vv.vehicleType like `+likeCondition + `) `)
+            }
+          
+            if (executionDate != "" && executionDate != null) {
+                if (executionDate.indexOf('~') != -1) {
+                    const dates = executionDate.split(' ~ ')
+    
+                    paramList.push(` vv.indentStartTime >= ? `)
+                    paramList.push(` vv.indentStartTime <= ? `)
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
+                } else {
+                    paramList.push(` vv.indentStartTime = ? `)
+                    replacements.push(executionDate)
+                }
+            }
+    
+            if (aviDate != "" && aviDate != null) {
+                if (aviDate.indexOf('~') != -1) {
+                    const dates = aviDate.split(' ~ ')
+    
+                    paramList.push(` vv.nextAviTime >= ? `)
+                    paramList.push(` vv.nextAviTime <= ? `)
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
+                } else {
+                    paramList.push(` vv.nextAviTime = ? `);
+                    replacements.push(aviDate)
+                }
             }
         }
-        // paramList.push(` veh.vehicleNo != 'NNNNNNNN' `)
-        if (vehicleStatus) {
-            paramList.push(` FIND_IN_SET(vv.currentStatus, ?)`)
-            replacements.push(vehicleStatus)
-        }
-        if (searchParam) {
-            let likeCondition = sequelizeObj.escape("%" + searchParam + "%");
-            paramList.push(` (vv.vehicleNo like `+likeCondition+` or vv.vehicleType like `+likeCondition + `) `)
-        }
-      
-        if (executionDate != "" && executionDate != null) {
-            if (executionDate.indexOf('~') != -1) {
-                const dates = executionDate.split(' ~ ')
-
-                paramList.push(` vv.indentStartTime >= '${dates[0]}' `)
-                paramList.push(` vv.indentStartTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.indentStartTime = ? `)
-                replacements.push(executionDate)
+        function buildCommonParams2() {
+            if (pmDate != "" && pmDate != null) {
+                if (pmDate.indexOf('~') != -1) {
+                    const dates = pmDate.split(' ~ ')
+    
+                    paramList.push(` vv.nextPmTime >= ? `)
+                    paramList.push(` vv.nextPmTime <= ? `)
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
+                } else {
+                    paramList.push(` vv.nextPmTime = ? `)
+                    replacements.push(pmDate)
+                }
+            }
+    
+            if (wptDate != "" && wptDate != null) {
+                if (wptDate.indexOf('~') != -1) {
+                    const dates = wptDate.split(' ~ ')
+    
+                    paramList.push(` vv.nextWpt1Time >= ? `)
+                    paramList.push(` vv.nextWpt1Time <= '? `)
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
+                } else {
+                    paramList.push(` vv.nextWpt1Time = ? `)
+                    replacements.push(wptDate)
+                }
             }
         }
-
-        if (aviDate != "" && aviDate != null) {
-            if (aviDate.indexOf('~') != -1) {
-                const dates = aviDate.split(' ~ ')
-
-                paramList.push(` vv.nextAviTime >= '${dates[0]}' `)
-                paramList.push(` vv.nextAviTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextAviTime = ? `);
-                replacements.push(aviDate)
-            }
-        }
-
-        if (pmDate != "" && pmDate != null) {
-            if (pmDate.indexOf('~') != -1) {
-                const dates = pmDate.split(' ~ ')
-
-                paramList.push(` vv.nextPmTime >= '${dates[0]}' `)
-                paramList.push(` vv.nextPmTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextPmTime = ? `)
-                replacements.push(pmDate)
-            }
-        }
-
-        if (wptDate != "" && wptDate != null) {
-            if (wptDate.indexOf('~') != -1) {
-                const dates = wptDate.split(' ~ ')
-
-                paramList.push(` vv.nextWpt1Time >= '${dates[0]}' `)
-                paramList.push(` vv.nextWpt1Time <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextWpt1Time = ? `)
-                replacements.push(wptDate)
-            }
-        }
-
+        buildCommonParams1();
+        buildCommonParams2();
         //vehicle current task
         let currentTaskList = await sequelizeObj.query(`
             SELECT DISTINCT tt.vehicleNumber as vehicleNumber
@@ -878,10 +897,8 @@ module.exports.getVehicleTasks = async function (req, res) {
             and (now() BETWEEN tt.indentStartTime and tt.indentEndTime OR tt.driverStatus = 'started')
         `, { type: QueryTypes.SELECT , replacements: []})
         let currentVehicleNumStr = '';
-        if (currentTaskList && currentTaskList.length > 0) {
-            for (let temp of currentTaskList) {
-                currentVehicleNumStr += temp.vehicleNumber + ','
-            }
+        for (let temp of currentTaskList) {
+            currentVehicleNumStr += temp.vehicleNumber + ','
         }
 
         //loan out driver
@@ -889,10 +906,8 @@ module.exports.getVehicleTasks = async function (req, res) {
             select l.vehicleNo from loan l where l.vehicleNo IS NOT NULL and now() BETWEEN l.startDate and l.endDate
         `, { type: QueryTypes.SELECT , replacements: []})
         let currentLoanOutVehicleNos = '';
-        if (currentLoanOutVehicleList && currentLoanOutVehicleList.length > 0) {
-            for (let temp of currentLoanOutVehicleList) {
-                currentLoanOutVehicleNos += temp.vehicleNo + ','
-            }
+        for (let temp of currentLoanOutVehicleList) {
+            currentLoanOutVehicleNos += temp.vehicleNo + ','
         }
 
         let baseSQL = `
@@ -959,28 +974,33 @@ module.exports.getVehicleTasks = async function (req, res) {
         let countResult = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements })
         let totalRecord = countResult.length
 
-        let vehicleNoOrder = req.body.vehicleNoOrder;
-        let orderList = [];
-        if (vehicleNoOrder) {
-            orderList.push(` vv.vehicleNo ` + vehicleNoOrder);
+        function buildOrderInfo() {
+            let vehicleNoOrder = req.body.vehicleNoOrder;
+            let orderList = [];
+            if (vehicleNoOrder) {
+                orderList.push(` vv.vehicleNo ` + (vehicleNoOrder.toLowerCase() == 'desc' ? 'DESC' : 'ASC'));
+            }
+            let hubOrder = req.body.hubOrder;
+            if (hubOrder) {
+                orderList.push(` vv.unit ` + (hubOrder.toLowerCase() == 'desc' ? 'DESC' : 'ASC'));
+            }
+            if (orderList.length) {
+                baseSQL += ' ORDER BY ' + orderList.join(' , ')
+            } else {
+                baseSQL += ' ORDER BY vv.createdAt desc'
+            }
         }
-        let hubOrder = req.body.hubOrder;
-        if (hubOrder) {
-            orderList.push(` vv.unit ` + hubOrder);
-        }
-        if (orderList.length) {
-            baseSQL += ' ORDER BY ' + orderList.join(' , ')
-        } else {
-            baseSQL += ' ORDER BY vv.createdAt desc'
-        }
+        buildOrderInfo();
 
         baseSQL += ` limit ?, ?`
         replacements.push(pageNum);
         replacements.push(pageLength);
+        console.log(baseSQL)
         let vehicleInfoList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements })
 
-        // upcoming event
         let upcomingEventRecords = []
+        let vehicleMileageWaringTaskNums = [];
+        // upcoming event
         if(vehicleInfoList.length > 0){
             let vehicleNoList = vehicleInfoList.map(a=>a.vehicleNo)
             upcomingEventRecords = await sequelizeObj.query(`
@@ -994,12 +1014,7 @@ module.exports.getVehicleTasks = async function (req, res) {
                 ) b on a.endTime = b.startTime and a.vehicleNo = b.vehicleNo
                 ORDER BY a.vehicleNo, a.startTime;
             `, { type: QueryTypes.SELECT, replacements: [vehicleNoList, vehicleNoList] })
-        }
 
-        //vehicle has mileage warning task
-        let vehicleMileageWaringTaskNums = [];
-        if(vehicleInfoList && vehicleInfoList.length > 0){
-            let vehicleNoList = vehicleInfoList.map(a=>a.vehicleNo)
             vehicleMileageWaringTaskNums = await sequelizeObj.query(`
                 SELECT t.vehicleNumber, COUNT(*) AS taskNum
                 FROM mileage m
@@ -1017,29 +1032,32 @@ module.exports.getVehicleTasks = async function (req, res) {
                 order by t.indentEndTime desc
                 LIMIT 1
             `, { type: QueryTypes.SELECT , replacements: [ vehicleTask.vehicleNo ]})
-            if (latestTask.length > 0) {
-                vehicleTask.taskId = latestTask[0].taskId
-                vehicleTask.indentId = latestTask[0].indentId
-                vehicleTask.indentStartTime = latestTask[0].indentEndTime
-                vehicleTask.purpose = latestTask[0].purpose
-            } else {
-                vehicleTask.taskId = ''
-                vehicleTask.indentId = ''
-                vehicleTask.indentStartTime = ''
-                vehicleTask.purpose = ''
-            }
-            // upcoming event
-            let records = upcomingEventRecords.filter(a=>a.vehicleNo == vehicleTask.vehicleNo)
-            vehicleTask.upcomingEvent = getUpcomingEvent(records)
-
-            vehicleTask.operation = operationList
-
-            if (vehicleMileageWaringTaskNums) {
-                let vehicleMileageWaringTaskNum = vehicleMileageWaringTaskNums.find(item => item.vehicleNumber == vehicleTask.vehicleNo);
-                if (vehicleMileageWaringTaskNum) {
-                    vehicleTask.vehicleMileageWaringTaskNum = vehicleMileageWaringTaskNum.taskNum
+           function buildVehicleData() {
+                if (latestTask.length > 0) {
+                    vehicleTask.taskId = latestTask[0].taskId
+                    vehicleTask.indentId = latestTask[0].indentId
+                    vehicleTask.indentStartTime = latestTask[0].indentEndTime
+                    vehicleTask.purpose = latestTask[0].purpose
+                } else {
+                    vehicleTask.taskId = ''
+                    vehicleTask.indentId = ''
+                    vehicleTask.indentStartTime = ''
+                    vehicleTask.purpose = ''
                 }
-            }
+                // upcoming event
+                let records = upcomingEventRecords.filter(a=>a.vehicleNo == vehicleTask.vehicleNo)
+                vehicleTask.upcomingEvent = getUpcomingEvent(records)
+    
+                vehicleTask.operation = operationList
+    
+                if (vehicleMileageWaringTaskNums) {
+                    let vehicleMileageWaringTaskNum = vehicleMileageWaringTaskNums.find(item => item.vehicleNumber == vehicleTask.vehicleNo);
+                    if (vehicleMileageWaringTaskNum) {
+                        vehicleTask.vehicleMileageWaringTaskNum = vehicleMileageWaringTaskNum.taskNum
+                    }
+                }
+           }
+           buildVehicleData();
         }
 
         return res.json({respMessage: vehicleInfoList, recordsFiltered: totalRecord, recordsTotal: totalRecord});
@@ -1088,12 +1106,12 @@ const getDeactivateVehicle = async function(req) {
         let vehicleNoOrder = req.body.vehicleNoOrder;
         let orderList = [];
         if (vehicleNoOrder) {
-            orderList.push(` veh.vehicleNo ` + vehicleNoOrder);
+            orderList.push(` veh.vehicleNo ` + (vehicleNoOrder.toLowerCase() == 'desc' ? 'DESC' : 'ASC'));
         }
 
         let hubOrder = req.body.hubOrder;
         if (hubOrder) {
-            orderList.push(` veh.unit ` + hubOrder);
+            orderList.push(` veh.unit ` + (hubOrder.toLowerCase() == 'desc' ? 'DESC' : 'ASC'));
         }
         if (orderList.length) {
             baseSQL += ' ORDER BY ' + orderList.join(' , ')
@@ -1246,15 +1264,6 @@ const doGetVehicalLastPosition = async function(vehicalNoArray) {
 
 module.exports.getDriverAndDevicePosition = async function (req, res) {
     try {
-		const checkUser = async function (userId) {
-            let user = await userService.getUserDetailInfo(userId)
-			if (!user) {
-				log.warn(`User ${ userId } does not exist.`);
-				throw Error(`User ${ userId } does not exist.`);
-			}
-			return user;
-		}
-
         const getDriverList = async function (user) {
             let driverList = []
             let baseSQL = `
@@ -1556,7 +1565,7 @@ module.exports.deleteVehicle = async function (req, res) {
 
             //clear system data
             await sequelizeSystemObj.transaction(async transaction => {
-                if (vehicleTaskList && vehicleTaskList.length > 0) {
+                if (vehicleTaskList?.length > 0) {
                     for (let task of vehicleTaskList) {
                         if (task.dataFrom == 'SYSTEM') {
                              //clear tms vehicle table
@@ -1565,12 +1574,10 @@ module.exports.deleteVehicle = async function (req, res) {
                              await sequelizeSystemObj.query(`
                                 DELETE FROM vehicle where taskId='${ systemTaskId }'
                             `, { type: QueryTypes.DELETE, replacements: [] })
-                        } else if (task.dataFrom == 'DUTY') {
-                            if (task.urgentIndentId) {
-                                await sequelizeSystemObj.query(`
-                                    DELETE FROM vehicle where taskId='${ task.urgentIndentId }'
-                                `, { type: QueryTypes.DELETE, replacements: [] })
-                            }
+                        } else if (task.dataFrom == 'DUTY' && task.urgentIndentId) {
+                            await sequelizeSystemObj.query(`
+                                DELETE FROM vehicle where taskId='${ task.urgentIndentId }'
+                            `, { type: QueryTypes.DELETE, replacements: [] })
                         }
                     }
                 }
@@ -1662,33 +1669,31 @@ module.exports.createVehicleRelation = async function (driverId, vehicleNo) {
             { driverId: { [Op.eq]: null }, vehicleNo: vehicleNo },
             { vehicleNo: { [Op.eq]: null }, driverId: driverId }
         ] } })
+        let vehicle = await Vehicle.findOne({ where: { vehicleNo: vehicleNo } });
+        let vehicleRelation = await VehicleRelation.findOne({ where: { vehicleNo: vehicleNo } })
+        let deviceId = vehicleRelation ? vehicleRelation.deviceId : null;
+        let limitSpeed = vehicle ? vehicle.limitSpeed : 60;
         if (result1.length) {
             // If exist, destroy and create new one with current driverId & vehicleNo
             let idList = result1.map(item => item.id)
-            let vehicle = await Vehicle.findOne({ where: { vehicleNo: vehicleNo } });
-            let vehicleRelation = await VehicleRelation.findOne({ where: { vehicleNo: vehicleNo } })
+            
             await VehicleRelation.destroy({ where: { id: idList } });
             // Create new relation
             await VehicleRelation.create({
                 driverId: driverId, 
                 vehicleNo: vehicleNo,
-                deviceId: vehicleRelation ? vehicleRelation.deviceId : null,
-                limitSpeed: vehicle.limitSpeed,
+                deviceId: deviceId,
+                limitSpeed: limitSpeed,
             })
 
         } else {
             let result = await VehicleRelation.findAll({ where: { driverId: driverId, vehicleNo: vehicleNo } })
             if (!result.length) {
-                let vehicle = await Vehicle.findOne({ where: { vehicleNo: vehicleNo } });
-                let vehicleRelation = await VehicleRelation.findOne({ where: { vehicleNo: vehicleNo } })
-                await VehicleRelation.create({ driverId: driverId, vehicleNo: vehicleNo, 
-                    deviceId: vehicleRelation ? vehicleRelation.deviceId : null, limitSpeed: vehicle ? vehicle.limitSpeed : 60 })
+                await VehicleRelation.create({ driverId: driverId, vehicleNo: vehicleNo, deviceId: deviceId, limitSpeed: limitSpeed })
             } else {
                 log.info(`Already exist relation, will update deviceId!`)
-                let vehicle = await Vehicle.findOne({ where: { vehicleNo: vehicleNo } });
-                let vehicleRelation = await VehicleRelation.findOne({ where: { vehicleNo: vehicleNo } })
                 await VehicleRelation.update({ 
-                        deviceId: vehicleRelation ? vehicleRelation.deviceId : null, limitSpeed: vehicle ? vehicle.limitSpeed : 60 
+                        deviceId: deviceId, limitSpeed: limitSpeed
                     }, { where: {
                         driverId: driverId, vehicleNo: vehicleNo, 
                     } })
@@ -1743,13 +1748,17 @@ module.exports.markAsUnavailable = async function (req, res) {
         }
         let startTimeStr = startDate + ' 00:00:00';
         let endTimeStr = endDate + ' 23:59:59';
-        if (startDate == endDate) {
-            if (dayType == 'am') {
-                endTimeStr = endDate + ' 12:00:00';
-            } else if (dayType == 'pm') {
-                startTimeStr = startDate + ' 12:00:00';
+        let isOneDay = (startDate == endDate);
+        function buildDateInfo() {
+            if (isOneDay) {
+                if (dayType == 'am') {
+                    endTimeStr = endDate + ' 12:00:00';
+                } else if (dayType == 'pm') {
+                    startTimeStr = startDate + ' 12:00:00';
+                }
             }
         }
+        buildDateInfo();
         //check has assigned task
         let assignedTaskList = await sequelizeObj.query(`
             SELECT
@@ -1769,11 +1778,11 @@ module.exports.markAsUnavailable = async function (req, res) {
                 OR (indentStartTime < '${startTimeStr}' AND indentEndTime > '${endTimeStr}')
             )`, { type: QueryTypes.SELECT, replacements: [vehicleNo] });
 
-        if (assignedTaskList && assignedTaskList.length > 0) {
+        if (assignedTaskList.length > 0) {
             return res.json(utils.response(0, 'Please reassign the task executionTime during ' + startTimeStr + ' - ' + endTimeStr));  
         } else {
             let vehicleLeaveRecords = [];
-            if (startDate == endDate) {
+            if (isOneDay) {
                 //query exist leave record
                 let exitLeaveReocrds = await sequelizeObj.query(`
                     SELECT
@@ -1782,7 +1791,7 @@ module.exports.markAsUnavailable = async function (req, res) {
                     WHERE dl.vehicleNo = ? AND status=1 AND DATE_FORMAT(startTime, '%Y-%m-%d') = ?
                 `, { type: QueryTypes.SELECT, replacements: [vehicleNo, startDate] })
                 let recordId = null;
-                if (exitLeaveReocrds && exitLeaveReocrds.length > 0) {
+                if (exitLeaveReocrds.length > 0) {
                     recordId = exitLeaveReocrds[0].id
                 }
 
@@ -1791,31 +1800,32 @@ module.exports.markAsUnavailable = async function (req, res) {
                     dayType: dayType, reason: reason, remarks: additionalNotes, creator: req.cookies.userId
                 });
             } else {
-                let leaveDays = momentEndDate.diff(momentStartDate, 'day');
-                let index = 0;
-                let exitLeaveReocrds = await sequelizeObj.query(`
-                    SELECT
-                        id, DATE_FORMAT(startTime, '%Y-%m-%d') as startTime
-                    FROM vehicle_leave_record dl
-                    WHERE dl.vehicleNo = ? AND status=1 AND DATE_FORMAT(startTime, '%Y-%m-%d') BETWEEN ? and ?
-                `, { type: QueryTypes.SELECT, replacements: [vehicleNo, startDate, endDate] });
-                while(index <= leaveDays) {
-                    momentStartDate = index == 0 ? momentStartDate : momentStartDate.add(1, 'day');
-                    let currentDateStr = momentStartDate.format('YYYY-MM-DD');
-                    let tempStartDateStr = currentDateStr + ' 00:00:00';
-                    let tempEndDateStr = currentDateStr + ' 23:59:59';
-
-                    let recordId = null;
-                    if (exitLeaveReocrds && exitLeaveReocrds.length > 0) {
+                async function buildLeaveRecords() {
+                    let leaveDays = momentEndDate.diff(momentStartDate, 'day');
+                    let index = 0;
+                    let exitLeaveReocrds = await sequelizeObj.query(`
+                        SELECT
+                            id, DATE_FORMAT(startTime, '%Y-%m-%d') as startTime
+                        FROM vehicle_leave_record dl
+                        WHERE dl.vehicleNo = ? AND status=1 AND DATE_FORMAT(startTime, '%Y-%m-%d') BETWEEN ? and ?
+                    `, { type: QueryTypes.SELECT, replacements: [vehicleNo, startDate, endDate] });
+                    while(index <= leaveDays) {
+                        momentStartDate = index == 0 ? momentStartDate : momentStartDate.add(1, 'day');
+                        let currentDateStr = momentStartDate.format('YYYY-MM-DD');
+                        let tempStartDateStr = currentDateStr + ' 00:00:00';
+                        let tempEndDateStr = currentDateStr + ' 23:59:59';
+    
                         let currentDateRecord = exitLeaveReocrds.find(item => item.startTime == currentDateStr);
-                        recordId = currentDateRecord ? currentDateRecord.id : null;
+                        let recordId = currentDateRecord ? currentDateRecord.id : null;
+    
+                        vehicleLeaveRecords.push({id: recordId,
+                            vehicleNo: vehicleNo, startTime: tempStartDateStr, endTime: tempEndDateStr,
+                            dayType: 'all', reason: reason, remarks: additionalNotes, creator: req.cookies.userId
+                        });
+                        index++;
                     }
-                    vehicleLeaveRecords.push({id: recordId,
-                        vehicleNo: vehicleNo, startTime: tempStartDateStr, endTime: tempEndDateStr,
-                        dayType: 'all', reason: reason, remarks: additionalNotes, creator: req.cookies.userId
-                    });
-                    index++;
                 }
+                await buildLeaveRecords();
             }
             //opt log
             let operationRecord = {
@@ -1837,7 +1847,7 @@ module.exports.markAsUnavailable = async function (req, res) {
         }
     } catch(error) {
         log.error(error);
-        return res.json(utils.response(0, error && error.message ? error.message : 'MarkAsUnavailable exec fail!'));  
+        return res.json(utils.response(0, error?.message ? error.message : 'MarkAsUnavailable exec fail!'));  
     }
 }
 
@@ -1876,7 +1886,7 @@ module.exports.cancelMarkAsUnavailable = async function (req, res) {
         return res.json(utils.response(1, 'Cancel MarkAsUnavailable Success!'));  
     } catch(error) {
         log.error(error);
-        return res.json(utils.response(0, error && error.message ? error.message : 'Cancel MarkAsUnavailable exec fail!'));  
+        return res.json(utils.response(0, error?.message ? error.message : 'Cancel MarkAsUnavailable exec fail!'));  
     }
 }
 
@@ -1894,7 +1904,7 @@ const resetWptMptOnVehicleEventChange = async function (vehicleNo) {
                     where vehicleNo=? and dl.status = 1 order by endTime desc limit 1
                 `, { type: QueryTypes.SELECT, replacements: [vehicleNo] });
                 let lastLeaveDate = null;
-                if (vehicleLastLeaveRecords && vehicleLastLeaveRecords.length > 0) {
+                if (vehicleLastLeaveRecords?.length > 0) {
                     let vehicleLastLeaveRecord = vehicleLastLeaveRecords[0];
                     lastLeaveDate = moment(vehicleLastLeaveRecord.endTime).add(-1, 'minute').format('YYYY-MM-DD');
                     let currentDate = moment().format('YYYY-MM-DD');
@@ -1956,230 +1966,7 @@ module.exports.getLeaveRecordByDate = async function (req, res) {
         return res.json(utils.response(1, {leaveRecord, operation: operationList}));  
     } catch(error) {
         log.error(error);
-        return res.json(utils.response(0, error && error.message ? error.message : 'getLeaveRecordByDate exec fail!'));  
-    }
-}
-
-module.exports.getVehicleListByGroup = async function (req, res) {
-    const getUpcomingEvent = function(list){
-        let data = []
-        for(let row of list){
-            data.push(row)
-            if(!row.nextTime){
-                break
-            }
-        }
-        if(data.length > 0){
-            let startTime = moment(data[0].startTime).format("YYYY-MM-DD HH:mm")
-            let endTime = moment(data[data.length-1].endTime).format("YYYY-MM-DD HH:mm")
-            return {
-                startTime: startTime,
-                endTime: endTime,
-            }
-        }
-        return null
-    }
-    try {
-        let { userId, vehicleStatus, executionDate, searchParam, aviDate, pmDate, wptDate, mptDate, pageNum, pageLength } = req.body;
-        let user = await User.findOne({ where: { userId: userId } })
-        if(!user) return res.json(utils.response(0, `User ${ userId } does not exist.`));
-        log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
-        let vehicleNoList = await sequelizeSystemObj.query(`
-        select v.vehicleNumber from vehicle v
-        LEFT JOIN job_task jt ON jt.id = v.taskId
-        LEFT JOIN job j ON j.requestId = jt.requestId
-		LEFT JOIN service_type st ON j.serviceTypeId = st.id
-        LEFT JOIN request r ON r.id = jt.requestId
-        where r.groupId = ${ user.unitId } and j.driver = 0 
-        and jt.taskStatus = 'Assigned'
-		and st.category = 'MV'
-        and (now() >= DATE_FORMAT(jt.startDate, '%Y-%m-%d %H:%i:%s') and now() <= DATE_FORMAT(jt.endDate, '%Y-%m-%d %H:%i:%s'))
-        GROUP BY v.vehicleNumber
-        `, {
-            type: QueryTypes.SELECT,
-        });
-
-        let paramList = []
-        let replacements = [];
-        vehicleNoList = vehicleNoList.map(item => item.vehicleNumber)
-        if(vehicleNoList.length > 0){ 
-            paramList.push(` vv.vehicleNo in ('${ vehicleNoList.join("','") }')`)
-        } else {
-            return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
-        }
-        if (vehicleStatus) {
-            paramList.push(` FIND_IN_SET(vv.currentStatus, ?)`)
-            replacements.push(vehicleStatus)
-        }
-        if (searchParam) {
-            let likeCondition = sequelizeObj.escape("%" + searchParam + "%");
-            paramList.push(` (vv.vehicleNo like `+likeCondition+` or vv.vehicleType like `+likeCondition+`) `)
-        }
-        
-      
-        if (executionDate != "" && executionDate != null) {
-            if (executionDate.indexOf('~') != -1) {
-                const dates = executionDate.split(' ~ ')
-
-                paramList.push(` vv.indentStartTime >= '${dates[0]}' `)
-                paramList.push(` vv.indentStartTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.indentStartTime = ? `)
-                replacements.push(executionDate)
-            }
-        }
-
-        if (aviDate != "" && aviDate != null) {
-            if (aviDate.indexOf('~') != -1) {
-                const dates = aviDate.split(' ~ ')
-
-                paramList.push(` vv.nextAviTime >= '${dates[0]}' `)
-                paramList.push(` vv.nextAviTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextAviTime = ? `)
-                replacements.push(aviDate)
-            }
-        }
-
-        if (mptDate != "" && mptDate != null) {
-            if (mptDate.indexOf('~') != -1) {
-                const dates = mptDate.split(' ~ ')
-
-                paramList.push(` vv.nextMptTime >= '${dates[0]}' `)
-                paramList.push(` vv.nextMptTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextMptTime = ? `)
-                replacements.push(mptDate)
-            }
-        }
-
-        if (pmDate != "" && pmDate != null) {
-            if (pmDate.indexOf('~') != -1) {
-                const dates = pmDate.split(' ~ ')
-
-                paramList.push(` vv.nextPmTime >= '${dates[0]}' `)
-                paramList.push(` vv.nextPmTime <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextPmTime = ? `)
-                replacements.push(pmDate)
-            }
-        }
-
-        if (wptDate != "" && wptDate != null) {
-            if (wptDate.indexOf('~') != -1) {
-                const dates = wptDate.split(' ~ ')
-
-                paramList.push(` vv.nextWpt1Time >= '${dates[0]}' `)
-                paramList.push(` vv.nextWpt1Time <= '${dates[1]}' `)
-            } else {
-                paramList.push(` vv.nextWpt1Time = ? `)
-                replacements.push(wptDate)
-            }
-        }
-
-        //vehicle current task
-        let currentTaskList = await sequelizeObj.query(`
-            SELECT
-                GROUP_CONCAT(DISTINCT tt.vehicleNumber) as todayAssignedVehicleNoStr
-            FROM task tt
-            WHERE tt.driverStatus != 'Cancelled' and tt.driverStatus != 'completed' and now() BETWEEN tt.indentStartTime and tt.indentEndTime
-        `, { type: QueryTypes.SELECT , replacements: []})
-
-        let currentVehicleNumStr = currentTaskList && currentTaskList.length > 0 ? currentTaskList[0].todayAssignedVehicleNoStr : '';
-
-        let baseSQL = `
-            select * from (
-                SELECT
-                    veh.vehicleNo, veh.createdAt, veh.onhold,
-                    veh.vehicleType,veh.permitType,veh.totalMileage,
-                    veh.nextAviTime, veh.nextPmTime, veh.nextWpt1Time, veh.nextMptTime, veh.status, veh.overrideStatus,
-                    un.unit, un.subUnit, hh.toHub as hotoUnit,hh.toNode as hotoSubUnit,
-                    IF(hh.toHub is NULL, un.unit, hh.toHub) as currentUnit, IF(hh.toHub is NULL, un.subUnit, hh.toNode) as currentSubUnit,
-                    IF(hh.toHub is NULL, veh.unitId, hh.unitId) as unitId,
-                    IF(ll.reason != '' and ll.reason is not null, ll.reason, if(FIND_IN_SET(veh.vehicleNo, '${currentVehicleNumStr}'), 'Deployed', 'Deployable')) as currentStatus
-                FROM
-                    vehicle veh
-                left join unit un on un.id = veh.unitId
-                left join (select ho.vehicleNo, ho.toHub, ho.toNode, ho.unitId from hoto ho where ho.status = 'Approved' and NOW() BETWEEN ho.startDateTime AND ho.endDateTime) hh ON hh.vehicleNo = veh.vehicleNo
-                left join (select vl.vehicleNo, vl.reason from vehicle_leave_record vl where vl.status=1 and NOW() BETWEEN vl.startTime AND vl.endTime) ll ON ll.vehicleNo = veh.vehicleNo
-                GROUP BY veh.vehicleNo
-            ) vv
-        `;
-       
-        if (paramList.length) {
-            baseSQL += ' WHERE ' + paramList.join(' AND ')
-        }
-
-        let countResult = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements })
-        let totalRecord = countResult.length
-
-        let vehicleNoOrder = req.body.vehicleNoOrder;
-        let orderList = [];
-        if (vehicleNoOrder) {
-            orderList.push(` vv.vehicleNo ` + vehicleNoOrder);
-        }
-        let hubOrder = req.body.hubOrder;
-        if (hubOrder) {
-            orderList.push(` vv.unit ` + hubOrder);
-        }
-        if (orderList.length) {
-            baseSQL += ' ORDER BY ' + orderList.join(' , ')
-        } else {
-            baseSQL += ' ORDER BY vv.createdAt desc'
-        }
-
-        baseSQL += ` limit ?, ?`
-        replacements.push(pageNum)
-        replacements.push(pageLength)
-        let vehicleInfoList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements })
-
-        // upcoming event
-        let upcomingEventRecords = []
-        if(vehicleInfoList.length > 0){
-            let vehicleNoList = vehicleInfoList.map(a=>a.vehicleNo)
-            upcomingEventRecords = await sequelizeObj.query(`
-                select a.*, b.startTime as nextTime from 
-                (
-                    select vehicleNo, startTime, endTime from vehicle_leave_record where status = 1 and DATE_FORMAT(startTime, '%Y-%m-%d') >= DATE_FORMAT(NOW(), '%Y-%m-%d') and vehicleNo in (?)
-                ) a 
-                LEFT JOIN 
-                (
-                select vehicleNo, startTime, endTime from vehicle_leave_record where status = 1 and DATE_FORMAT(startTime, '%Y-%m-%d') >= DATE_FORMAT(NOW(), '%Y-%m-%d') and vehicleNo in (?)
-                ) b on a.endTime = b.startTime and a.vehicleNo = b.vehicleNo
-                ORDER BY a.vehicleNo, a.startTime;
-            `, { type: QueryTypes.SELECT, replacements: [vehicleNoList, vehicleNoList] })
-        }
-
-        for (let vehicleTask of vehicleInfoList) {
-            //find out upcoming task
-            let latestTask = await sequelizeObj.query(`
-                SELECT * FROM task t
-                WHERE t.vehicleNumber = ? AND t.driverStatus != 'Cancelled' 
-                and DATE_FORMAT(NOW(), '%Y-%m-%d') BETWEEN DATE_FORMAT(t.indentStartTime, '%Y-%m-%d') and DATE_FORMAT(t.indentEndTime, '%Y-%m-%d')
-                order by t.indentEndTime desc
-                LIMIT 1
-            `, { type: QueryTypes.SELECT , replacements: [ vehicleTask.vehicleNo ]})
-            if (latestTask.length > 0) {
-                vehicleTask.taskId = latestTask[0].taskId
-                vehicleTask.indentId = latestTask[0].indentId
-                vehicleTask.indentStartTime = latestTask[0].indentEndTime
-                vehicleTask.purpose = latestTask[0].purpose
-            } else {
-                vehicleTask.taskId = ''
-                vehicleTask.indentId = ''
-                vehicleTask.indentStartTime = ''
-                vehicleTask.purpose = ''
-            }
-            // upcoming event
-            let records = upcomingEventRecords.filter(a=>a.vehicleNo == vehicleTask.vehicleNo)
-            vehicleTask.upcomingEvent = getUpcomingEvent(records)
-        }
-
-        return res.json({respMessage: vehicleInfoList, recordsFiltered: totalRecord, recordsTotal: totalRecord});
-    
-    } catch (error) {
-        log.error(error)
-        return res.json(utils.response(0, error));
+        return res.json(utils.response(0, error?.message ? error.message : 'getLeaveRecordByDate exec fail!'));  
     }
 }
 
@@ -2193,7 +1980,7 @@ module.exports.getUserVehicleSummaryList = async function (req, res) {
     }
 
     try {
-        let sql = ``;
+        let sql;
         if (currentUser.userType == "CUSTOMER") {
             sql = `
                 SELECT l.vehicleNo
@@ -2284,7 +2071,7 @@ module.exports.getVehicleEffectiveData = async function (req, res) {
         return res.json(utils.response(1, {taskList: effectiveTaskList, hotoList: effectiveHotoList, loanList: effectiveLoanList}));
     } catch (error) {
         log.error(error)
-        return res.json(utils.response(0, error && error.message ? error.message : 'getDriverEffectiveData fail!'));
+        return res.json(utils.response(0, error?.message ? error.message : 'getDriverEffectiveData fail!'));
     }
 }
 
@@ -2359,42 +2146,48 @@ module.exports.updateVehicleType = async function (req, res) {
         let belongTo = req.body.belongTo;
         let baseLineQty = req.body.baseLineQty;
 
-        let emptyField = '';
-        if (!vehicleName) {
-            emptyField = 'Vehicle Name';
-        }
-        if (!category) {
-            emptyField += emptyField ? ', Vehicle Category' : 'Vehicle Category';
-        }
-        if (!description) {
-            emptyField += emptyField ? ', Description' : 'Description';
-        }
-        if (!vehicleClass) {
-            emptyField += emptyField ? ', Permit Type' : 'Permit Type';
-        }
-        if (!belongTo) {
-            emptyField += emptyField ? ', For ATMS' : 'For ATMS';
-        }
-        if (belongTo == 'atms') {
-            if (!baseLineQty) {
-                emptyField += emptyField ? ', BaseLine Qty' : 'BaseLine Qty';
+        function checkParams() {
+            let emptyField = '';
+            if (!vehicleName) {
+                emptyField = 'Vehicle Name,';
             }
-        }
-        let errorMsg = ``;
-        if (emptyField) {
-            errorMsg = emptyField + ' is required;'
-        }
-        if (belongTo == 'atms') {
-            baseLineQty = Number(baseLineQty);
-            if (baseLineQty <= 0) {
-                errorMsg += `No of BaseLine Qty must more than 0;`;
+            if (!category) {
+                emptyField += 'Vehicle Category,';
             }
-        } else {
-            baseLineQty = null;
-        }
+            if (!description) {
+                emptyField += 'Description,';
+            }
+            if (!vehicleClass) {
+                emptyField += 'Permit Type,';
+            }
+            if (!belongTo) {
+                emptyField += 'For ATMS,';
+            }
+            if (belongTo == 'atms') {
+                if (!baseLineQty) {
+                    emptyField += 'BaseLine Qty,';
+                }
+            }
+            let errorMsg = ``;
+            if (emptyField) {
+                errorMsg = emptyField.substring(0, emptyField.length - 1) + ' is required;'
+            }
 
+            if (belongTo == 'atms') {
+                baseLineQty = Number(baseLineQty);
+                if (baseLineQty <= 0) {
+                    errorMsg += `No of BaseLine Qty must more than 0;`;
+                }
+            }
+
+            return errorMsg;
+        }
+        let errorMsg = checkParams();
         if (errorMsg) {
             return res.json(utils.response(0, errorMsg));
+        }
+        if (belongTo != 'atms') {
+            baseLineQty = null;
         }
         await sequelizeObj.transaction(async transaction => {
             if (id) {
@@ -2549,30 +2342,30 @@ const returnVehicleLoan = async function(vehicleNo, loanList, userId) {
     let errorMsg = '';
     try {
         for (let loanOut of loanList) {
-            loanOut = await loan.findByPk(loanOut.id);
-            if (loanOut) {
+            let dbloanOut = await loan.findByPk(loanOut.id);
+            if (dbloanOut) {
                 await sequelizeObj.transaction(async transaction => {
                     let newLoanRecord = {
-                        driverId: loanOut.driverId,
-                        vehicleNo: loanOut.vehicleNo,
-                        indentId: loanOut.indentId, 
-                        taskId: loanOut.taskId,
-                        startDate: loanOut.startDate,
-                        endDate: loanOut.endDate, 
-                        groupId: loanOut.groupId,
+                        driverId: dbloanOut.driverId,
+                        vehicleNo: dbloanOut.vehicleNo,
+                        indentId: dbloanOut.indentId, 
+                        taskId: dbloanOut.taskId,
+                        startDate: dbloanOut.startDate,
+                        endDate: dbloanOut.endDate, 
+                        groupId: dbloanOut.groupId,
                         returnDate: moment().format('YYYY-MM-DD HH:mm:ss'),
                         returnBy: userId,
-                        creator: loanOut.creator,
+                        creator: dbloanOut.creator,
                         returnRemark: 'System auto return when driver deactivate.',
-                        actualStartTime: loanOut.actualStartTime,
-                        actualEndTime: loanOut.actualEndTime,
-                        unitId: loanOut.unitId,
-                        activity: loanOut.activity,
-                        purpose: loanOut.purpose,
-                        createdAt: loanOut.createdAt
+                        actualStartTime: dbloanOut.actualStartTime,
+                        actualEndTime: dbloanOut.actualEndTime,
+                        unitId: dbloanOut.unitId,
+                        activity: dbloanOut.activity,
+                        purpose: dbloanOut.purpose,
+                        createdAt: dbloanOut.createdAt
                     };
                     await loanRecord.create(newLoanRecord);
-                    await loan.destroy({ where: { id: loanOut.id } });
+                    await loan.destroy({ where: { id: dbloanOut.id } });
                     await OperationRecord.create({
                         id: null,
                         operatorId: userId,
@@ -2589,13 +2382,13 @@ const returnVehicleLoan = async function(vehicleNo, loanList, userId) {
                 })
 
                 await sequelizeSystemObj.transaction(async transaction => {
-                    if(loanOut.groupId > 0){
+                    if(dbloanOut.groupId > 0){
                         await sequelizeSystemObj.query(`
-                            update job_task set taskStatus = 'Completed' where id = ${ loanOut.taskId }
+                            update job_task set taskStatus = 'Completed' where id = ${ dbloanOut.taskId }
                         `, { type: QueryTypes.UPDATE, replacements: [] })
                         let sysTask = await sequelizeSystemObj.query(`
                             SELECT tripId FROM job_task
-                            WHERE id = ${ loanOut.taskId } 
+                            WHERE id = ${ dbloanOut.taskId } 
                         `, { type: QueryTypes.SELECT })
                         let tripStatus = await sequelizeSystemObj.query(`
                             SELECT jt.taskStatus FROM job_task jt
@@ -2629,4 +2422,41 @@ const returnVehicleLoan = async function(vehicleNo, loanList, userId) {
     }
 
     return errorMsg;
+}
+
+const buildVehicleLeaveInfo = async function(vehicleNo, startDate, endDate) {
+    let vehicleLeaveList = [];
+    let baseLeaveSql = `
+            SELECT
+                startTime as indentStartTime, date_add(endTime, interval 1 second) as indentEndTime, reason
+            FROM vehicle_leave_record dl
+            where vehicleNo=? and status=1 and DATE_FORMAT(startTime, '%Y-%m-%d') BETWEEN ? and ? order by dl.startTime asc
+        `;
+    let tempLeaveList = await sequelizeObj.query(baseLeaveSql, { type: QueryTypes.SELECT, replacements: [vehicleNo, startDate, endDate] });
+    for (let temp of tempLeaveList) {
+        temp.indentStartTime = moment(temp.indentStartTime).format('YYYY-MM-DD HH:mm:ss');
+        temp.indentEndTime = moment(temp.indentEndTime).format('YYYY-MM-DD HH:mm:ss');
+        // vehicle leave
+        if (vehicleLeaveList.length > 0) {
+            let preLeave = tempLeaveList[vehicleLeaveList.length - 1];
+            if (preLeave.indentEndTime == temp.indentStartTime) {
+                preLeave.indentEndTime = temp.indentEndTime;
+            } else {
+                vehicleLeaveList.push(temp);
+            }
+        } else {
+            vehicleLeaveList.push(temp);
+        }
+    }
+    let onEventIndex = 1;
+    for (let temp of vehicleLeaveList) {
+        temp.taskId = 'onEvent-' + onEventIndex;
+        let entTimeStr = moment(temp.indentEndTime).format('HH:mm:ss');
+        if (entTimeStr == '00:00:00') {
+            let endDateTime = moment(temp.indentEndTime).add(-1, 'minute');
+            temp.indentEndTime = endDateTime.format('YYYY-MM-DD HH:mm:ss');
+        }
+        onEventIndex++;
+    }
+    return vehicleLeaveList;
 }

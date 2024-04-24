@@ -18,8 +18,6 @@ const creditService = require('../services/creditService');
 const taskService = require('../services/taskService');
 const userService = require('../services/userService');
 
-// router.post('/getDriverAndVehicleDeployedTotal', taskService.getDriverAndVehicleDeployedTotal);
-
 router.get('/getPurposeTypeList', creditService.getPurposeTypeList);
 router.post('/getCreditInfo', creditService.getCreditInfo);
 router.post('/getCreditInfoByYear', creditService.getCreditInfoByYear);
@@ -29,7 +27,6 @@ router.post('/getHubByPurpose', taskService.getHubByPurpose2)
 router.post('/getNodeByPurpose', taskService.getNodeByPurpose2)
 
 router.post('/getTodayOffenceList', taskService.getTodayOffenceList)
-router.post('/getAllOffenceDashboard', taskService.getAllOffenceDashboard)
 router.post('/getTodayOffenceDashboard', taskService.getTodayOffenceDashboard)
 router.post('/getTodayInTaskVehicleList', taskService.getTodayInTaskVehicleList)
 router.post('/getDriverStateSos', taskService.getDriverStateSos)

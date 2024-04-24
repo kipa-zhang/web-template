@@ -42,59 +42,29 @@ let NoticeUtils = {
                 `
 
                 let limitCondition = [], replacements = [ user.userId ]
-                let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
 
-                if ([CONTENT.USER_TYPE.HQ].includes(user.userType)) {
-                    let tempSqlList = []
-                    if (unitIdList.length) {
-                        for (let unitId of unitIdList) {
-                            tempSqlList.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
-                            replacements.push(unitId)
-                        }
-                    } 
-                    if (groupIdList.length) {
-                        tempSqlList.push(` n.groupId IN ( ? ) `)
-                        replacements.push(groupIdList)
-                    }
+                const getPermitSql = async function () {
+                    let { unitIdList, groupIdList } = await UnitUtils.getPermitUnitList(user.userId)
 
-                    if (tempSqlList.length) {
-                        limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
-                    } else {
-                        limitCondition.push(` 1=2 `);
-                    }
-                } else if ([CONTENT.USER_TYPE.UNIT].includes(user.userType)) {
-                    if (user.node) {
-                        limitCondition.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
+                    if ([CONTENT.USER_TYPE.HQ].includes(user.userType)) {
+                        let result = getSql1(unitIdList, groupIdList)
+                        limitCondition = limitCondition.concat(result.limitCondition)
+                        replacements = replacements.concat(result.replacements)
+                    } else if ([CONTENT.USER_TYPE.UNIT].includes(user.userType)) {
+                        let result = getSql2(user, unitList)
+                        limitCondition = limitCondition.concat(result.limitCondition)
+                        replacements = replacements.concat(result.replacements)
+                    } else if ([CONTENT.USER_TYPE.MOBILE].includes(user.userType)) {
+                        let result = getSql3(user, unitList)
+                        limitCondition = limitCondition.concat(result.limitCondition)
+                        replacements = replacements.concat(result.replacements)
+                    } else if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
+                        // Customer user can only see notice that in groupId
+                        limitCondition.push(` n.groupId = ? `)
                         replacements.push(user.unitId)
-                    } else {
-                        let tempSql = []
-                        for (let unit of unitList) {
-                            tempSql.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
-                            replacements.push(unit.id)
-                        }
-                        if (tempSql.length) {
-                            limitCondition.push(` ( ${ tempSql.join(' OR ') } ) `)
-                        }
                     }
-                } else if ([CONTENT.USER_TYPE.MOBILE].includes(user.userType)) {
-                    if (user.node) {
-                        limitCondition.push(` FIND_IN_SET(?, n.driverHubNodeList) `)
-                        replacements.push(user.unitId)
-                    } else {
-                        let tempSql = []
-                        for (let unit of unitList) {
-                            tempSql.push(` FIND_IN_SET(?, n.driverHubNodeList) `)
-                            replacements.push(unit.id)
-                        }
-                        if (tempSql.length) {
-                            limitCondition.push(` ( ${ tempSql.join(' OR ') } ) `)
-                        }
-                    }
-                } else if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                    // Customer user can only see notice that in groupId
-                    limitCondition.push(` n.groupId = ? `)
-                    replacements.push(user.unitId)
                 }
+                await getPermitSql();
 
                 if (limitCondition.length) {
                     sql += ' AND ' + limitCondition.join(' AND ');
@@ -136,7 +106,7 @@ let NoticeUtils = {
                 `
 
                 let limitCondition = [], replacements = []
-                // for mobile get effective notice list.(Need check datetime)
+                // for mobile get effective notice list.(Need check date time)
                 if (option.selectedDateTime) {
                     limitCondition.push(` ( ? >= n.startDateTime AND ? <= n.endDateTime ) `)
                     replacements.push(option.selectedDateTime)
@@ -150,71 +120,42 @@ let NoticeUtils = {
                     replacements.push(option.selectedDate)
                 }
 
-                if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
-                    let tempSqlList = []
-                    if (unitIdList.length) {
-                        for (let unitId of unitIdList) {
-                            tempSqlList.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
-                            replacements.push(unitId)
-                        }
-                    } 
-                    if (groupIdList.length) {
-                        tempSqlList.push(` n.groupId IN ( ? ) `)
-                        replacements.push(groupIdList)
-                    }
-
-                    if (tempSqlList.length) {
-                        limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
-                    } else {
-                        limitCondition.push(` 1=2 `);
-                    }
-                } else if ([CONTENT.USER_TYPE.UNIT].includes(user.userType)) {
-                    if (user.node) {
-                        limitCondition.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
+                const getPermitSql = function () {
+                    if ([ CONTENT.USER_TYPE.HQ ].includes(user.userType)) {
+                        let result = getSql1(unitIdList, groupIdList)
+                        limitCondition = limitCondition.concat(result.limitCondition)
+                        replacements = replacements.concat(result.replacements)
+                    } else if ([CONTENT.USER_TYPE.UNIT].includes(user.userType)) {
+                        let result = getSql2(user, unitList)
+                        limitCondition = limitCondition.concat(result.limitCondition)
+                        replacements = replacements.concat(result.replacements)
+                    } else if ([CONTENT.USER_TYPE.MOBILE].includes(user.userType)) {
+                        let result = getSql3(user, unitList)
+                        limitCondition = limitCondition.concat(result.limitCondition)
+                        replacements = replacements.concat(result.replacements)
+                    } else if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
+                        // Customer user can only see notice that in groupId
+                        limitCondition.push(` n.groupId = ? `)
                         replacements.push(user.unitId)
-                    } else {
-                        let tempSql = []
-                        for (let unit of unitList) {
-                            tempSql.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
-                            replacements.push(unit.id)
-                        }
-                        if (tempSql.length) {
-                            limitCondition.push(` ( ${ tempSql.join(' OR ') } ) `)
-                        }
                     }
-                } else if ([CONTENT.USER_TYPE.MOBILE].includes(user.userType)) {
-                    // Mobile user can only see notice that in driverHubNodeList
-                    if (user.node) {
-                        limitCondition.push(` FIND_IN_SET(?, n.driverHubNodeList) `)
-                        replacements.push(user.unitId)
-                    } else {
-                        let tempSql = []
-                        for (let unit of unitList) {
-                            tempSql.push(` FIND_IN_SET(?, n.driverHubNodeList) `)
-                            replacements.push(unit.id)
-                        }
-                        if (tempSql.length) {
-                            limitCondition.push(` ( ${ tempSql.join(' OR ') } ) `)
-                        }
+                }
+                getPermitSql()
+
+                const getSearchSql = function () {
+                    if (option.createdAt) {
+                        limitCondition.push(` DATE(n.createdAt) = ? `)
+                        replacements.push(option.createdAt)
                     }
-                } else if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-                    // Customer user can only see notice that in groupId
-                    limitCondition.push(` n.groupId = ? `)
-                    replacements.push(user.unitId)
+    
+                    if (option.title) {
+                        limitCondition.push(` n.title like ` + sequelizeObj.escape("%" + option.title + "%"))
+                    }
+                    if (option.type) {
+                        limitCondition.push(` n.type = ? `)
+                        replacements.push(option.type)
+                    }
                 }
-
-                if (option.createdAt) {
-                    limitCondition.push(` DATE(n.createdAt) = ? `)
-                    replacements.push(option.createdAt)
-                }
-
-                if (option.title) {
-                    limitCondition.push(` n.title like ` + sequelizeObj.escape("%" + option.title + "%"))
-                }
-                if (option.type) {
-                    limitCondition.push(` n.type = ? `)
-                    replacements.push(option.type)
-                }
+                getSearchSql()
 
                 if (limitCondition.length) {
                     sql += ' AND ' + limitCondition.join(' AND ');
@@ -280,6 +221,67 @@ let NoticeUtils = {
         }
     }
 }
+
+const getSql1 = function (unitIdList, groupIdList) {
+    let limitCondition = [], replacements = []
+    let tempSqlList = []
+    if (unitIdList.length) {
+        for (let unitId of unitIdList) {
+            tempSqlList.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
+            replacements.push(unitId)
+        }
+    } 
+    if (groupIdList.length) {
+        tempSqlList.push(` n.groupId IN ( ? ) `)
+        replacements.push(groupIdList)
+    }
+
+    if (tempSqlList.length) {
+        limitCondition.push(` (${ tempSqlList.join(' OR ') }) `);
+    } else {
+        limitCondition.push(` 1=2 `);
+    }
+    return { limitCondition, replacements }
+}
+const getSql2 = function (user, unitList) {
+    let limitCondition = [], replacements = []
+
+    if (user.node) {
+        limitCondition.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
+        replacements.push(user.unitId)
+    } else {
+        let tempSql = []
+        for (let unit of unitList) {
+            tempSql.push(` FIND_IN_SET(?, n.laptopHubNodeList) `)
+            replacements.push(unit.id)
+        }
+        if (tempSql.length) {
+            limitCondition.push(` ( ${ tempSql.join(' OR ') } ) `)
+        }
+    }
+
+    return { limitCondition, replacements }
+}
+const getSql3 = function (user, unitList) {
+    let limitCondition = [], replacements = []
+
+    if (user.node) {
+        limitCondition.push(` FIND_IN_SET(?, n.driverHubNodeList) `)
+        replacements.push(user.unitId)
+    } else {
+        let tempSql = []
+        for (let unit of unitList) {
+            tempSql.push(` FIND_IN_SET(?, n.driverHubNodeList) `)
+            replacements.push(unit.id)
+        }
+        if (tempSql.length) {
+            limitCondition.push(` ( ${ tempSql.join(' OR ') } ) `)
+        }
+    }
+
+    return { limitCondition, replacements }
+}
+
 
 module.exports = {
     readNotice: async function (req, res) {
@@ -387,7 +389,7 @@ module.exports = {
             }
 
             if (notification.coverImage) {
-                notification.coverImageBase64 = fs.readFileSync(`./public/resources/${ notification.coverImage }`, 'base64')
+                notification.coverImageBase64 = fs.readFileSync(`./public/resources/${ utils.getSafePath(notification.coverImage) }`, 'base64')
             }
             if (!notification.coverImage) {
                 notification.coverImageBase64 = fs.readFileSync(`./public/resources/upload/notification/notification-default.png`, 'base64')
@@ -395,7 +397,7 @@ module.exports = {
             }
 
             if (notification.mainImage) {
-                notification.mainImageBase64 = fs.readFileSync(`./public/resources/${ notification.mainImage }`, 'base64')
+                notification.mainImageBase64 = fs.readFileSync(`./public/resources/${ utils.getSafePath(notification.mainImage) }`, 'base64')
             } else {
                 notification.mainImageBase64 = null;
                 notification.mainImage = null;

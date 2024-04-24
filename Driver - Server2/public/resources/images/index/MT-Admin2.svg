@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="53" height="53" viewBox="0 0 53 53">
-  <g id="MT-Admin" transform="translate(-4370 -3528)">
-    <g id="a" transform="translate(4370 3528)" fill="none" stroke="#dbb227" stroke-width="1">
-      <circle cx="26.5" cy="26.5" r="26.5" stroke="none"/>
-      <circle cx="26.5" cy="26.5" r="26" fill="none"/>
-    </g>
-    <text id="MT" transform="translate(4383 3562)" fill="#dbb227" font-size="18" font-family="MalgunGothicBold, Malgun Gothic"><tspan x="0" y="0">MT</tspan></text>
-  </g>
-</svg>

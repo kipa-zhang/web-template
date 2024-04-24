@@ -39,28 +39,20 @@ router.use(async (req, res, next) => {
 
         if (pageWhiteList.length) {
             next()
+        } else if (url == '/' || url.startsWith('/login') || url.startsWith('/logout')) {
+            // Home page
+            next()
+        } else if (checkLink(url, pageList)) {
+            next()
         } else if (method == 'get') {
-            if (url == '/' || url.startsWith('/login') || url.startsWith('/logout')) {
-                // Home page
-                next()
-            } else if (checkLink(url, pageList)) {
-                next()
-            } else {
-                res.render('404');
-            }
+            res.render('404');
         } else if (method == 'post') {
-            if (url.startsWith('/login') || url.startsWith('/logout')) {
-                next()
-            } else if (checkLink(url, pageList)) {
-                next()
-            } else {
-                log.warn('No permission: ', JSON.stringify({
-                    userId,
-                    url,
-                    method,
-                }))
-                res.json(utils.response(0, 'No permission.'));
-            }
+            log.warn('No permission: ', JSON.stringify({
+                userId,
+                url,
+                method,
+            }))
+            res.json(utils.response(0, 'No permission.'));
         }
     }
 })
