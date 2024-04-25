@@ -2459,11 +2459,11 @@ module.exports.getVehicleReportList = async function (req, res) {
                                 screeningCondition.push(false)
                             }
                         }
-                        if(screeningCondition.indexOf(false) == -1 && screeningCondition.indexOf('false') == -1) {
-                            newVehicleList.push(item)
-                        } 
                     }
                     checkScreenCondition()
+                    if(screeningCondition.indexOf(false) == -1 && screeningCondition.indexOf('false') == -1) {
+                        newVehicleList.push(item)
+                    } 
                 }
                 if (MPTCompletionDateRange || PMCompletionDateRange || AVICompletionDateRange) {
                     vehicleData = [...vehicleData, ...newVehicleList]

@@ -911,39 +911,25 @@ module.exports.getVehicleTasks = async function (req, res) {
             currentLoanOutVehicleNos += temp.vehicleNo + ','
         }
 
-        let baseSQL = `
-            select * from (
-                SELECT
-                    veh.vehicleNo, veh.createdAt, veh.onhold,
-                    lo.indentId as loanIndentId, lo.taskId as loanTaskId, lo.startDate as loanStartDate, lo.endDate as loanEndDate,
-                    IF(veh.groupId is not null, veh.groupId, lo.groupId) as groupId,
-                    veh.vehicleType,veh.permitType,veh.totalMileage,
-                    veh.nextAviTime, veh.nextPmTime, veh.nextWpt1Time, veh.nextMptTime, veh.status, veh.overrideStatus,
-                    un.unit, un.subUnit, hh.toHub as hotoUnit,hh.toNode as hotoSubUnit,
-                    IF(hh.toHub is NULL, un.unit, hh.toHub) as currentUnit, IF(hh.toHub is NULL, un.subUnit, hh.toNode) as currentSubUnit,
-                    IF(hh.toHub is NULL, veh.unitId, hh.unitId) as unitId,
-        `;
-        if (customerGroupId) {
-            baseSQL += ` 
-                IF(FIND_IN_SET(veh.vehicleNo, '${currentVehicleNumStr}'), 'Deployed',
-                    IF(ll.reason != '' and ll.reason is not null, ll.reason,
-                        IF(veh.nextAviTime IS NOT NULL && nextAviTime < DATE_FORMAT(NOW(),'%y-%m-%d'), 'Pending AVI',
-                            IF(veh.nextMptTime IS NOT NULL && nextMptTime < DATE_FORMAT(NOW(),'%y-%m-%d'), 'Pending MPT',
-                                IF((
-                                    (veh.nextWpt3Time IS NOT NULL && nextWpt3Time < DATE_FORMAT(NOW(),'%y-%m-%d')) 
-                                    || (veh.nextWpt2Time IS NOT NULL && nextWpt2Time < DATE_FORMAT(NOW(),'%y-%m-%d')) 
-                                    || (veh.nextWpt1Time IS NOT NULL && nextWpt1Time < DATE_FORMAT(NOW(),'%y-%m-%d'))
-                                ), 'Pending WPT', 'Deployable')
-                            )
-                        )
-                    )
-                ) as currentStatus
+        
+        let baseSQL = ''
+        const initBaseSql = function () {
+            baseSQL = `
+                select * from (
+                    SELECT
+                        veh.vehicleNo, veh.createdAt, veh.onhold,
+                        lo.indentId as loanIndentId, lo.taskId as loanTaskId, lo.startDate as loanStartDate, lo.endDate as loanEndDate,
+                        IF(veh.groupId is not null, veh.groupId, lo.groupId) as groupId,
+                        veh.vehicleType,veh.permitType,veh.totalMileage,
+                        veh.nextAviTime, veh.nextPmTime, veh.nextWpt1Time, veh.nextMptTime, veh.status, veh.overrideStatus,
+                        un.unit, un.subUnit, hh.toHub as hotoUnit,hh.toNode as hotoSubUnit,
+                        IF(hh.toHub is NULL, un.unit, hh.toHub) as currentUnit, IF(hh.toHub is NULL, un.subUnit, hh.toNode) as currentSubUnit,
+                        IF(hh.toHub is NULL, veh.unitId, hh.unitId) as unitId,
             `;
-        } else {
-            baseSQL += `
-                IF(FIND_IN_SET(veh.vehicleNo, '${currentVehicleNumStr}'), 'Deployed',
-                    IF(FIND_IN_SET(veh.vehicleNo, '${currentLoanOutVehicleNos}'), 'Loan Out', 
-                        IF(ll.reason != '' and ll.reason is not null, ll.reason, 
+            if (customerGroupId) {
+                baseSQL += ` 
+                    IF(FIND_IN_SET(veh.vehicleNo, '${currentVehicleNumStr}'), 'Deployed',
+                        IF(ll.reason != '' and ll.reason is not null, ll.reason,
                             IF(veh.nextAviTime IS NOT NULL && nextAviTime < DATE_FORMAT(NOW(),'%y-%m-%d'), 'Pending AVI',
                                 IF(veh.nextMptTime IS NOT NULL && nextMptTime < DATE_FORMAT(NOW(),'%y-%m-%d'), 'Pending MPT',
                                     IF((
@@ -954,23 +940,42 @@ module.exports.getVehicleTasks = async function (req, res) {
                                 )
                             )
                         )
-                    )
-                ) as currentStatus
+                    ) as currentStatus
+                `;
+            } else {
+                baseSQL += `
+                    IF(FIND_IN_SET(veh.vehicleNo, '${currentVehicleNumStr}'), 'Deployed',
+                        IF(FIND_IN_SET(veh.vehicleNo, '${currentLoanOutVehicleNos}'), 'Loan Out', 
+                            IF(ll.reason != '' and ll.reason is not null, ll.reason, 
+                                IF(veh.nextAviTime IS NOT NULL && nextAviTime < DATE_FORMAT(NOW(),'%y-%m-%d'), 'Pending AVI',
+                                    IF(veh.nextMptTime IS NOT NULL && nextMptTime < DATE_FORMAT(NOW(),'%y-%m-%d'), 'Pending MPT',
+                                        IF((
+                                            (veh.nextWpt3Time IS NOT NULL && nextWpt3Time < DATE_FORMAT(NOW(),'%y-%m-%d')) 
+                                            || (veh.nextWpt2Time IS NOT NULL && nextWpt2Time < DATE_FORMAT(NOW(),'%y-%m-%d')) 
+                                            || (veh.nextWpt1Time IS NOT NULL && nextWpt1Time < DATE_FORMAT(NOW(),'%y-%m-%d'))
+                                        ), 'Pending WPT', 'Deployable')
+                                    )
+                                )
+                            )
+                        )
+                    ) as currentStatus
+                `;
+            }
+            baseSQL += `
+                    FROM
+                        vehicle veh
+                    left join unit un on un.id = veh.unitId
+                    left join (select ho.vehicleNo, ho.toHub, ho.toNode, ho.unitId from hoto ho where ho.status = 'Approved' and NOW() BETWEEN ho.startDateTime AND ho.endDateTime) hh ON hh.vehicleNo = veh.vehicleNo
+                    left join (select vl.vehicleNo, vl.reason from vehicle_leave_record vl where vl.status=1 and NOW() BETWEEN vl.startTime AND vl.endTime) ll ON ll.vehicleNo = veh.vehicleNo
+                    left join (select l.vehicleNo, l.groupId, l.indentId, l.taskId, l.startDate, l.endDate from loan l where now() BETWEEN l.startDate and l.endDate) lo ON lo.vehicleNo = veh.vehicleNo
+                    GROUP BY veh.vehicleNo
+                ) vv
             `;
+            if (paramList.length) {
+                baseSQL += ' WHERE ' + paramList.join(' AND ')
+            }
         }
-        baseSQL += `
-                FROM
-                    vehicle veh
-                left join unit un on un.id = veh.unitId
-                left join (select ho.vehicleNo, ho.toHub, ho.toNode, ho.unitId from hoto ho where ho.status = 'Approved' and NOW() BETWEEN ho.startDateTime AND ho.endDateTime) hh ON hh.vehicleNo = veh.vehicleNo
-                left join (select vl.vehicleNo, vl.reason from vehicle_leave_record vl where vl.status=1 and NOW() BETWEEN vl.startTime AND vl.endTime) ll ON ll.vehicleNo = veh.vehicleNo
-                left join (select l.vehicleNo, l.groupId, l.indentId, l.taskId, l.startDate, l.endDate from loan l where now() BETWEEN l.startDate and l.endDate) lo ON lo.vehicleNo = veh.vehicleNo
-                GROUP BY veh.vehicleNo
-            ) vv
-        `;
-        if (paramList.length) {
-            baseSQL += ' WHERE ' + paramList.join(' AND ')
-        }
+        initBaseSql()
 
         let countResult = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements })
         let totalRecord = countResult.length
