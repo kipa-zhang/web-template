@@ -721,70 +721,76 @@ module.exports.getVehicleTasks = async function (req, res) {
         //2023-07-05 CUSTOMER UNIT 
         let customerGroupId = '';
         let userType = user.userType.toUpperCase();
-        if(userType == CONTENT.USER_TYPE.CUSTOMER) {
-            customerGroupId = user.unitId;
-            unit = null;
-            subUnit = null;
-            
-            log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
-            let loanOutVehicleNoList = await sequelizeObj.query(`
-                select l.vehicleNo from loan l where l.groupId=${customerGroupId} and l.vehicleNo IS NOT NULL and now() BETWEEN l.startDate and l.endDate
-            `, { type: QueryTypes.SELECT });
-            loanOutVehicleNoList = loanOutVehicleNoList.map(item => item.vehicleNo)
 
-            let groupVehicleNoList = await sequelizeObj.query(`
-                select vv.vehicleNo from vehicle vv where vv.groupId=${customerGroupId}
-            `, { type: QueryTypes.SELECT });
-            groupVehicleNoList = groupVehicleNoList.map(item => item.vehicleNo)
-
-            let customerNoList = loanOutVehicleNoList.concat(groupVehicleNoList);
-            if(customerNoList.length > 0){ 
-                paramList.push(` vv.vehicleNo in ('${ customerNoList.join("','") }')`)
-            } else {
-                return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
-            }
-        } else if (userType == CONTENT.USER_TYPE.HQ) {
-            async function buildHQParams() {
-                if (selectGroup == '1') {
-                    unit = null;
-                    subUnit = null;
-                    if (groupId) {
-                        paramList.push(` vv.groupId = ? `);
-                        replacements.push(groupId)
-                    } else {
-                        let groupList = await unitService.UnitUtils.getGroupListByHQUnit(user.hq);
-                        let hqUserGroupIds = groupList.map(item => item.id);
-                        if (hqUserGroupIds && hqUserGroupIds.length > 0) {
-                            paramList.push(` vv.groupId in(${hqUserGroupIds}) `);
+        const initPermitSql = async function () {
+            if(userType == CONTENT.USER_TYPE.CUSTOMER) {
+                customerGroupId = user.unitId;
+                unit = null;
+                subUnit = null;
+                
+                log.info(`user groupId ${ JSON.stringify(user.unitId) }`)
+                let loanOutVehicleNoList = await sequelizeObj.query(`
+                    select l.vehicleNo from loan l where l.groupId=${customerGroupId} and l.vehicleNo IS NOT NULL and now() BETWEEN l.startDate and l.endDate
+                `, { type: QueryTypes.SELECT });
+                loanOutVehicleNoList = loanOutVehicleNoList.map(item => item.vehicleNo)
+    
+                let groupVehicleNoList = await sequelizeObj.query(`
+                    select vv.vehicleNo from vehicle vv where vv.groupId=${customerGroupId}
+                `, { type: QueryTypes.SELECT });
+                groupVehicleNoList = groupVehicleNoList.map(item => item.vehicleNo)
+    
+                let customerNoList = loanOutVehicleNoList.concat(groupVehicleNoList);
+                if(customerNoList.length > 0){ 
+                    paramList.push(` vv.vehicleNo in ('${ customerNoList.join("','") }')`)
+                    return true
+                } else {
+                    return false
+                }
+            } else if (userType == CONTENT.USER_TYPE.HQ) {
+                async function buildHQParams() {
+                    if (selectGroup == '1') {
+                        unit = null;
+                        subUnit = null;
+                        if (groupId) {
+                            paramList.push(` vv.groupId = ? `);
+                            replacements.push(groupId)
                         } else {
-                            return false;
+                            let groupList = await unitService.UnitUtils.getGroupListByHQUnit(user.hq);
+                            let hqUserGroupIds = groupList.map(item => item.id);
+                            if (hqUserGroupIds && hqUserGroupIds.length > 0) {
+                                paramList.push(` vv.groupId in(${hqUserGroupIds}) `);
+                            } else {
+                                return false;
+                            }
                         }
+                    } else if (selectGroup == '0') {
+                        paramList.push(` vv.groupId is null `);
                     }
-                } else if (selectGroup == '0') {
-                    paramList.push(` vv.groupId is null `);
+                    return true;
                 }
-                return true;
-            }
-            let buildResult = await buildHQParams();
-            if (!buildResult) {
-                return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
-            }
-        } else if (userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
-            function buildAdminParams() {
-                if (selectGroup == '1') {
-                    unit = null;
-                    subUnit = null;
-                    if (groupId) {
-                        paramList.push(` vv.groupId = ? `);
-                        replacements.push(groupId)
-                    } else {
-                        paramList.push(` vv.groupId is not null `);
+                let buildResult = await buildHQParams();
+                return buildResult
+            } else if (userType == CONTENT.USER_TYPE.ADMINISTRATOR) {
+                function buildAdminParams() {
+                    if (selectGroup == '1') {
+                        unit = null;
+                        subUnit = null;
+                        if (groupId) {
+                            paramList.push(` vv.groupId = ? `);
+                            replacements.push(groupId)
+                        } else {
+                            paramList.push(` vv.groupId is not null `);
+                        }
+                    } else if (selectGroup == '0') {
+                        paramList.push(` vv.groupId is null `);
                     }
-                } else if (selectGroup == '0') {
-                    paramList.push(` vv.groupId is null `);
                 }
+                buildAdminParams();
             }
-            buildAdminParams();
+        }
+        let result = await initPermitSql();
+        if (!result) {
+            return res.json({ respMessage: [], recordsFiltered: 0, recordsTotal: 0 });
         }
 
         async function buildUnitParams() {
