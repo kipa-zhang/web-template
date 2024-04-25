@@ -90,33 +90,33 @@ module.exports.returnResources = async function (req, res) {
                 let systemTaskId = loanOut.taskId;
                 if(systemTaskId.includes('AT-')) systemTaskId = loanOut.taskId.slice(3)
                 await sequelizeSystemObj.query(`
-                    update job_task set taskStatus = 'Completed' where id = ${ systemTaskId }
-                `, { type: QueryTypes.UPDATE, replacements: [] })
+                    update job_task set taskStatus = 'Completed' where id = ?
+                `, { type: QueryTypes.UPDATE, replacements: [systemTaskId] })
                 let sysTask = await sequelizeSystemObj.query(`
                     SELECT tripId FROM job_task
-                    WHERE id = ${ systemTaskId } 
-                `, { type: QueryTypes.SELECT })
+                    WHERE id = ?
+                `, { type: QueryTypes.SELECT, replacements: [systemTaskId] })
                 let tripStatus = await sequelizeSystemObj.query(`
                     SELECT jt.taskStatus FROM job_task jt
                     LEFT JOIN job j ON j.id = jt.tripId
-                    WHERE j.id = ${ sysTask[0].tripId } 
+                    WHERE j.id = ?
                     GROUP BY jt.taskStatus
-                `, { type: QueryTypes.SELECT })
+                `, { type: QueryTypes.SELECT, replacements: [sysTask[0].tripId] })
                 let tripStatus2 = await sequelizeSystemObj.query(`
                     SELECT jt.taskStatus FROM job_task jt
                     LEFT JOIN job j ON j.id = jt.tripId
-                    WHERE j.id = ${ sysTask[0].tripId } 
+                    WHERE j.id = ?
                     and jt.taskStatus = 'completed'
                     GROUP BY jt.taskStatus
-                `, { type: QueryTypes.SELECT })
+                `, { type: QueryTypes.SELECT, replacements: [sysTask[0].tripId] })
                 let jobStatus = null;
                 if(tripStatus2.length == tripStatus.length) {
                     jobStatus = 'Completed'
                 }
                 if(jobStatus) {
                     await sequelizeSystemObj.query(`
-                        UPDATE job SET status = '${ jobStatus }' WHERE id = ${ sysTask[0].tripId }
-                    `, { type: QueryTypes.UPDATE })
+                        UPDATE job SET status = ? WHERE id = ?
+                    `, { type: QueryTypes.UPDATE, replacements: [jobStatus, sysTask[0].tripId] })
                 }
             }
         })
@@ -142,16 +142,34 @@ module.exports.returnLoanByLoanId = async function (req, res) {
         if (!loanOut) {
             return res.json(utils.response(0, 'The loan record does not exist, please refresh page!'));
         }
-        let taskByLoan = await sequelizeObj.query(`
+
+        
+        let taskByLoanSql = `
         SELECT t.driverId, t.vehicleNumber FROM task t
         WHERE t.driverStatus not in ('completed', 'cancelled')
-        AND ((('${ moment(loanOut.startDate).format('YYYY-MM-DD HH:mm:ss') }' >= t.indentStartTime AND '${ moment(loanOut.startDate).format('YYYY-MM-DD HH:mm:ss') }' <= t.indentEndTime) 
-        OR ('${ moment(loanOut.endDate).format('YYYY-MM-DD HH:mm:ss') }' >= t.indentStartTime AND '${ moment(loanOut.endDate).format('YYYY-MM-DD HH:mm:ss') }' <= t.indentEndTime) 
-        OR ('${ moment(loanOut.startDate).format('YYYY-MM-DD HH:mm:ss') }' < t.indentStartTime AND '${ moment(loanOut.endDate).format('YYYY-MM-DD HH:mm:ss') }' > t.indentEndTime))
+        AND (((? >= t.indentStartTime AND ? <= t.indentEndTime) 
+        OR (? >= t.indentStartTime AND ? <= t.indentEndTime) 
+        OR (? < t.indentStartTime AND ? > t.indentEndTime))
         OR t.driverStatus = 'started'
-        ) ${ loanOut.driverId ? ` and t.driverId = ${ loanOut.driverId }` : '' }
-        ${ loanOut.vehicleNo ? ` and t.vehicleNumber = '${ loanOut.vehicleNo }'` : '' }
-        `, { type: QueryTypes.SELECT });
+        ) 
+        `
+        let taskByLoanSqlReplacements = [
+            moment(loanOut.startDate).format('YYYY-MM-DD HH:mm:ss'),
+            moment(loanOut.startDate).format('YYYY-MM-DD HH:mm:ss'),
+            moment(loanOut.endDate).format('YYYY-MM-DD HH:mm:ss'),
+            moment(loanOut.endDate).format('YYYY-MM-DD HH:mm:ss'),
+            moment(loanOut.startDate).format('YYYY-MM-DD HH:mm:ss'),
+            moment(loanOut.endDate).format('YYYY-MM-DD HH:mm:ss')
+        ]
+        if(loanOut.driverId){
+            taskByLoanSql += ` and t.driverId = ?`
+            taskByLoanSqlReplacements.push(loanOut.driverId)
+        }   
+        if(loanOut.vehicleNo){
+            taskByLoanSql += ` and t.vehicleNumber = ?`
+            taskByLoanSqlReplacements.push(loanOut.vehicleNo)
+        }
+        let taskByLoan = await sequelizeObj.query(taskByLoanSql, { type: QueryTypes.SELECT, replacements: taskByLoanSqlReplacements});
         let __errorName = loanOut.driverId ? ` driver` : 'vehicle'
         if(taskByLoan.length > 0)  return res.json(utils.response(0, `The operation failed and the ${ __errorName } had unfinished tasks.`));
         
@@ -197,33 +215,33 @@ module.exports.returnLoanByLoanId = async function (req, res) {
                 let systemTaskId = loanOut.taskId;
                 if(systemTaskId.includes('AT-')) systemTaskId = loanOut.taskId.slice(3)
                 await sequelizeSystemObj.query(`
-                    update job_task set taskStatus = 'Completed' where id = ${ systemTaskId }
-                `, { type: QueryTypes.UPDATE, replacements: [] })
+                    update job_task set taskStatus = 'Completed' where id = ?
+                `, { type: QueryTypes.UPDATE, replacements: [systemTaskId] })
                 let sysTask = await sequelizeSystemObj.query(`
                     SELECT tripId FROM job_task
-                    WHERE id = ${ systemTaskId } 
-                `, { type: QueryTypes.SELECT })
+                    WHERE id = ?
+                `, { type: QueryTypes.SELECT, replacements: [systemTaskId] })
                 let tripStatus = await sequelizeSystemObj.query(`
                     SELECT jt.taskStatus FROM job_task jt
                     LEFT JOIN job j ON j.id = jt.tripId
-                    WHERE j.id = ${ sysTask[0].tripId } 
+                    WHERE j.id = ? 
                     GROUP BY jt.taskStatus
-                `, { type: QueryTypes.SELECT })
+                `, { type: QueryTypes.SELECT, replacements: [sysTask[0].tripId] })
                 let tripStatus2 = await sequelizeSystemObj.query(`
                     SELECT jt.taskStatus FROM job_task jt
                     LEFT JOIN job j ON j.id = jt.tripId
-                    WHERE j.id = ${ sysTask[0].tripId } 
+                    WHERE j.id = ?
                     and jt.taskStatus = 'completed'
                     GROUP BY jt.taskStatus
-                `, { type: QueryTypes.SELECT })
+                `, { type: QueryTypes.SELECT, replacements: [sysTask[0].tripId] })
                 let jobStatus = null;
                 if(tripStatus2.length == tripStatus.length) {
                     jobStatus = 'Completed'
                 }
                 if(jobStatus) {
                     await sequelizeSystemObj.query(`
-                        UPDATE job SET status = '${ jobStatus }' WHERE id = ${ sysTask[0].tripId }
-                    `, { type: QueryTypes.UPDATE })
+                        UPDATE job SET status = ? WHERE id = ?
+                    `, { type: QueryTypes.UPDATE, replacements: [jobStatus, sysTask[0].tripId] })
                 }
             }
         })

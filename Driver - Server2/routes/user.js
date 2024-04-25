@@ -4,8 +4,6 @@ require('express-async-errors');
 
 const userService = require('../services/userService');
 
-// router.post('/crossLogin', userService.crossLogin);
-
 router.post('/getHqTypeList', userService.getHqTypeList);
 router.get('/getSystemUrl', userService.getSystemUrl);
 router.get('/getSystemRole', userService.getSystemRole);
@@ -32,7 +30,6 @@ router.post('/getCVMVUserList', userService.getCVMVUserList);
 router.post('/approveUserRegistApply', userService.approveUserRegistApply);
 router.post('/enableUserBase', userService.enableUserBase);
 router.post('/changeSelfPassword', userService.changeSelfPassword);
-//router.post('/changeUserPassword', userService.changeUserPassword);
 router.post('/resetUserPassword', userService.resetUserPassword);
 router.post('/unLockUser', userService.unLockUser);
 router.post('/changeSelfEmail', userService.changeSelfEmail);

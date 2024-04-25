@@ -125,14 +125,17 @@ let TaskUtils = {
         return driverByState
     },
     getDriverDeployable: async function (subUnit, unitId, driverData) {
-        let taskDriver = await sequelizeObj.query(`
+        let taskDriverSql = `
             SELECT tt.driverId FROM task tt
             WHERE tt.driverStatus not in ('Cancelled', 'completed') 
             and ((NOW() BETWEEN tt.indentStartTime and tt.indentEndTime)
             OR tt.driverStatus = 'started')
-            ${ !driverData ? ` AND tt.taskId NOT like 'CU-%'` : ''}
-            group by tt.driverId 
-        `, { type: QueryTypes.SELECT })
+        `
+        if(!driverData) {
+            taskDriverSql += ` AND tt.taskId NOT like 'CU-%'`
+        }
+        taskDriverSql += ` group by tt.driverId `
+        let taskDriver = await sequelizeObj.query(taskDriverSql, { type: QueryTypes.SELECT })
         taskDriver = taskDriver.map(item => item.driverId)
 
         let loanOutDriver = await sequelizeObj.query(` 
@@ -206,14 +209,18 @@ let TaskUtils = {
         return driverDeployable
     },
     getDriverStatusOrDeployed: async function (subUnit, dateData, deployedStatus, unitId, driverData) {
-        let taskDriver = await sequelizeObj.query(`
+        let taskDriverSql = `
             SELECT tt.driverId FROM task tt
             WHERE tt.driverStatus not in ('Cancelled', 'completed') 
             and ((? BETWEEN DATE_FORMAT(tt.indentStartTime, '%Y-%m-%d') and DATE_FORMAT(tt.indentEndTime, '%Y-%m-%d'))
             OR tt.driverStatus = 'started')
-            ${ !driverData ? ` AND tt.taskId NOT like 'CU-%'` : ''}
-            group by tt.driverId
-        `, { type: QueryTypes.SELECT, replacements: [moment(dateData).format('YYYY-MM-DD')] })
+            
+        `
+        if(!driverData){
+            taskDriverSql += ` AND tt.taskId NOT like 'CU-%'`
+        }
+        taskDriverSql += ` group by tt.driverId`
+        let taskDriver = await sequelizeObj.query(taskDriverSql, { type: QueryTypes.SELECT, replacements: [moment(dateData).format('YYYY-MM-DD')] })
         taskDriver = taskDriver.map(item => item.driverId)
 
         let loanOutDriver = await sequelizeObj.query(` 
@@ -307,14 +314,15 @@ let TaskUtils = {
         return driverStatusOrDeployed
     },
     getVehicleDeployable: async function (subUnit, vehicleList, userType) {
-        let taskVehicle = await sequelizeObj.query(`
+        let taskVehicleSql = `
         SELECT tt.vehicleNumber FROM task tt 
         WHERE tt.vehicleStatus not in ('Cancelled', 'completed')  
         and ((NOW() BETWEEN tt.indentStartTime and tt.indentEndTime)
         OR tt.vehicleStatus = 'started')
-        ${ !vehicleList ? ` AND tt.taskId NOT like 'CU-%'` : ''}
-        group by tt.vehicleNumber
-        `, { type: QueryTypes.SELECT })
+        `
+        if(!vehicleList) taskVehicleSql +=  ` AND tt.taskId NOT like 'CU-%'`
+        taskVehicleSql += ` group by tt.vehicleNumber`
+        let taskVehicle = await sequelizeObj.query(taskVehicleSql, { type: QueryTypes.SELECT })
         taskVehicle = taskVehicle.map(item => item.vehicleNumber)
 
         let loanOutVehicle = await sequelizeObj.query(`
@@ -381,14 +389,17 @@ let TaskUtils = {
         return vehicleDeployable
     },
     getVehicleStatusOrDeployed: async function (subUnit, dateData, deployedStatus, userType, vehicleList) {
-        let taskVehicle = await sequelizeObj.query(`
+        let taskVehicleSql = `
         SELECT tt.vehicleNumber FROM task tt 
         WHERE tt.vehicleStatus not in ('Cancelled', 'completed')  
-        ${ !vehicleList ? ` AND taskId NOT like 'CU-%'` : ''}
+        `
+        if(!vehicleList) taskVehicleSql += ` AND taskId NOT like 'CU-%'`
+        taskVehicleSql += `
         and ((? BETWEEN DATE_FORMAT(tt.indentStartTime, '%Y-%m-%d') and DATE_FORMAT(tt.indentEndTime, '%Y-%m-%d'))
         OR tt.vehicleStatus = 'started')
         group by tt.vehicleNumber
-        `, { type: QueryTypes.SELECT, replacements: [moment(dateData).format('YYYY-MM-DD')] })
+        `
+        let taskVehicle = await sequelizeObj.query(taskVehicleSql, { type: QueryTypes.SELECT, replacements: [moment(dateData).format('YYYY-MM-DD')] })
         taskVehicle = taskVehicle.map(item => item.vehicleNumber)
 
         let loanOutVehicle = await sequelizeObj.query(`

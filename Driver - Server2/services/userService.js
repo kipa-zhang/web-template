@@ -1001,7 +1001,8 @@ module.exports.getCurrentUser = async function (req, res) {
             LEFT JOIN unit un ON un.id = us.unitId
         `
         if (userId) {
-            userList = await sequelizeObj.query(baseSQL + ` WHERE us.userId = ? `, { type: QueryTypes.SELECT, replacements: [userId] })
+            baseSQL += ` WHERE us.userId = ? `
+            userList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements: [userId] })
         } else {
             userList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT })
         }
@@ -1022,7 +1023,8 @@ module.exports.getUserList = async function (req, res) {
             LEFT JOIN unit un ON un.id = us.unitId
         `
         if (user) {
-            userList = await sequelizeObj.query(baseSQL + ` WHERE us.userId = ? `, { type: QueryTypes.SELECT, replacements: [user.userId ] })
+            baseSQL += ` WHERE us.userId = ? `
+            userList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT, replacements: [user.userId ] })
         } else {
             userList = await sequelizeObj.query(baseSQL, { type: QueryTypes.SELECT })
         }

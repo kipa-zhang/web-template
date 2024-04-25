@@ -970,7 +970,7 @@ module.exports.getMtAdminList = async function (req, res) {
         m.reportingLocation, m.destination, m.startDate, m.endDate, d.contactNumber, d.driverName as driver_name, t.taskId, m.cancelledCause, m.cancelledDateTime, m.amendedBy, uu.fullName as amendedByUsername ,
         t.driverStatus, t.mobileStartTime, t.hub, t.node, t.groupId 
         from task t
-        LEFT JOIN mt_admin m ON t.indentId = m.id
+        LEFT JOIN mt_admin m  ON t.indentId = m.id
         LEFT JOIN (
             select driverId, nric, driverName, contactNumber from driver 
             union all 
@@ -978,7 +978,7 @@ module.exports.getMtAdminList = async function (req, res) {
         ) d ON d.driverId = t.driverId 
         LEFT JOIN user u on u.userId = m.creator 
         LEFT JOIN user uu on uu.userId = m.amendedBy 
-        where m.dataType != 'mb' `//t.indentId is not null and 
+        where m.dataType = 'mt'` 
         replacements.push(operationList)
         let sql2 = `SELECT COUNT(DISTINCT m.id) total from task t 
         LEFT JOIN mt_admin m ON t.indentId = m.id
@@ -987,9 +987,7 @@ module.exports.getMtAdminList = async function (req, res) {
             union all 
             select driverId, nric, driverName, contactNumber from driver_history
         ) d ON d.driverId = t.driverId 
-        LEFT JOIN user u on u.userId = m.creator 
-        LEFT JOIN user uu on uu.userId = m.amendedBy 
-        where m.dataType != 'mb' `
+        where m.dataType = 'mt' `
 
         const initOptionSqlByMtAdmin = function (){
             if (unitId.length > 0) {
@@ -1079,12 +1077,12 @@ module.exports.getMtAdminList = async function (req, res) {
             orderSql.push(' m.endDate ' + `${ endDateOrder }`)
         } 
         if(taskIdDateOrder) {
-            orderSql.push(' m.id ' + `${ taskIdDateOrder }`)
+            orderSql.push(' t.indentId ' + `${ taskIdDateOrder }`)
         }
         if(orderSql.length > 0) {
-            sql += ` group by m.id ORDER BY ${ orderSql.join(' , ') }`
+            sql += ` ORDER BY ${ orderSql.join(' , ') }`
         } else {
-            sql += ` group by m.id ORDER BY m.id desc`
+            sql += ` ORDER BY t.indentId desc`
         }
         let countResult = await sequelizeObj.query(sql2, { replacements: replacements2, type: QueryTypes.SELECT })
         let totalRecord = countResult[0].total

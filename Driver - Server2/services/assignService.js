@@ -175,34 +175,40 @@ let TaskUtils = {
         return unitList.map(unit => unit.id);
     },
     verifyDriverLeave: async function (driverId, startDate, endDate) {
+        let leaveDriverIdsSql = `
+            SELECT * FROM driver_leave_record WHERE status = 1 and driverId = ?   
+        `
         let params = []; 
+        params.push(driverId)
         if (endDate == null || endDate == '' || endDate == 'null') {
+            leaveDriverIdsSql += ` and (? >= startTime AND ? <= endTime)`
             params = [startDate, startDate];
         } else {
+            leaveDriverIdsSql += ` and ((? >= startTime AND ? <= endTime) 
+            OR (? >= startTime AND ? <= endTime) OR (? < startTime AND ? > endTime))`
             params = [startDate, startDate, endDate, endDate,startDate, endDate];
         }
-        let leaveDriverIds = await sequelizeObj.query(`
-            SELECT * FROM driver_leave_record WHERE status = 1 and driverId = '${ driverId }'   
-            AND ( ${endDate == null || endDate == '' || endDate == 'null' ? '(? >= startTime AND ? <= endTime)' 
-            : '(? >= startTime AND ? <= endTime) OR (? >= startTime AND ? <= endTime) OR (? < startTime AND ? > endTime) '}
-            )
-        `, { type: QueryTypes.SELECT, replacements: params });
+        let leaveDriverIds = await sequelizeObj.query(leaveDriverIdsSql, { type: QueryTypes.SELECT, replacements: params });
         log.info(`leave driver ${ JSON.stringify(leaveDriverIds.length) }`)
         return leaveDriverIds.length == 0;
     },
     verifyVehicleLeave: async function (vehicleNo, startDate, endDate) {
+        let leaveVehicleNosSql = `
+            SELECT * FROM vehicle_leave_record WHERE status = 1 and vehicleNo = ?
+        `
         let params = []; 
+        params.push(vehicleNo)
         if (endDate == null || endDate == '' || endDate == 'null') {
+            leaveVehicleNosSql += ` and (? >= startTime AND ? <= endTime)`
             params = [startDate, startDate];
         } else {
+            leaveVehicleNosSql += `and (
+                (? >= startTime AND ? <= endTime) OR (? >= startTime AND ? <= endTime) OR (? < startTime AND ? > endTime) 
+            )
+            `
             params = [startDate, startDate, endDate, endDate,startDate, endDate];
         }
-        let leaveVehicleNos = await sequelizeObj.query(`
-            SELECT * FROM vehicle_leave_record WHERE status = 1 and vehicleNo = '${ vehicleNo }' 
-            AND ( ${endDate == null || endDate == '' || endDate == 'null' ? '(? >= startTime AND ? <= endTime)' 
-            : '(? >= startTime AND ? <= endTime) OR (? >= startTime AND ? <= endTime) OR (? < startTime AND ? > endTime) '}
-            )
-        `, { type: QueryTypes.SELECT, replacements: params });
+        let leaveVehicleNos = await sequelizeObj.query(leaveVehicleNosSql, { type: QueryTypes.SELECT, replacements: params });
         return leaveVehicleNos.length == 0;
     }, 
     initOperationRecord: async function(operatorId, taskId, beforeDriverId, afterDriverId, beforeVehicleNo, afterVehicleNo, businessType) {

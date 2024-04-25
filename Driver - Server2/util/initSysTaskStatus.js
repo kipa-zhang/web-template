@@ -11,34 +11,41 @@ const initSysTaskStatus = async function(){
         let taskList = await Task.findAll({ where: { creator: 0, driverStatus: { [Op.notIn]: ['Cancelled', 'completed'] } } })
         let loanList = await loan.findAll({ where: { creator: 0 } })
         await sequelizeSystemObj.transaction(async transaction => {
-           for(let item of taskList){
-                if(item.driverId){
-                    let sysDriver = await _SystemDriver.Driver.findOne({ where: { taskId: item.taskId, driverId: item.driverId } })
-                    if(sysDriver) {
-                        await _SystemDriver.Driver.update({ status: 'Assigned (System)' }, { where: { taskId: item.taskId, driverId: item.driverId } })
+            const updateDriverVehicleByTask = async function (taskList){
+                for(let item of taskList){
+                    if(item.driverId){
+                        let sysDriver = await _SystemDriver.Driver.findOne({ where: { taskId: item.taskId, driverId: item.driverId } })
+                        if(sysDriver) {
+                            await _SystemDriver.Driver.update({ status: 'Assigned (System)' }, { where: { taskId: item.taskId, driverId: item.driverId } })
+                        }
+                    }
+                    if(item.vehicleNumber){
+                        let sysVehicle = await _SystemVehicle.Vehicle.findOne({ where: { taskId: item.taskId, vehicleNumber: item.vehicleNumber } })
+                        if(sysVehicle) {
+                            await _SystemVehicle.Vehicle.update({ vehicleStatus: 'Assigned (System)' }, { where: { taskId: item.taskId, vehicleNumber: item.vehicleNumber } })
+                        }
+                    }
+               }
+            }
+            await updateDriverVehicleByTask(taskList)
+
+            const updateDriverVehicleByLoan = async function (loanList){
+                for(let item of loanList){
+                    if(item.driverId){
+                        let sysDriver = await _SystemDriver.Driver.findOne({ where: { taskId: item.taskId, driverId: item.driverId } })
+                        if(sysDriver) {
+                            await _SystemDriver.Driver.update({ status: 'Assigned (System)' }, { where: { taskId: item.taskId, driverId: item.driverId } })
+                        }
+                    }
+                    if(item.vehicleNo){
+                        let sysVehicle = await _SystemVehicle.Vehicle.findOne({ where: { taskId: item.taskId, vehicleNumber: item.vehicleNo } })
+                        if(sysVehicle) {
+                            await _SystemVehicle.Vehicle.update({ vehicleStatus: 'Assigned (System)' }, { where: { taskId: item.taskId, vehicleNumber: item.vehicleNo } })
+                        }
                     }
                 }
-                if(item.vehicleNumber){
-                    let sysVehicle = await _SystemVehicle.Vehicle.findOne({ where: { taskId: item.taskId, vehicleNumber: item.vehicleNumber } })
-                    if(sysVehicle) {
-                        await _SystemVehicle.Vehicle.update({ vehicleStatus: 'Assigned (System)' }, { where: { taskId: item.taskId, vehicleNumber: item.vehicleNumber } })
-                    }
-                }
-           }
-           for(let item of loanList){
-            if(item.driverId){
-                let sysDriver = await _SystemDriver.Driver.findOne({ where: { taskId: item.taskId, driverId: item.driverId } })
-                if(sysDriver) {
-                    await _SystemDriver.Driver.update({ status: 'Assigned (System)' }, { where: { taskId: item.taskId, driverId: item.driverId } })
-                }
             }
-            if(item.vehicleNo){
-                let sysVehicle = await _SystemVehicle.Vehicle.findOne({ where: { taskId: item.taskId, vehicleNumber: item.vehicleNo } })
-                if(sysVehicle) {
-                    await _SystemVehicle.Vehicle.update({ vehicleStatus: 'Assigned (System)' }, { where: { taskId: item.taskId, vehicleNumber: item.vehicleNo } })
-                }
-            }
-       }
+            await updateDriverVehicleByLoan(loanList)
         }).catch(error => {
            throw error
         })

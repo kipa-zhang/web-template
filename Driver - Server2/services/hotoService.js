@@ -673,8 +673,9 @@ module.exports.getVehicleListByReplace = async function (req, res) {
             sql += ` and vv.vehicleType = ?`
             replacements.push(vehicleType)
         }
+        sql += ` GROUP BY vv.vehicleNo order by vv.hotoDateTime desc; `
         let dataList = await sequelizeObj.query(
-            sql + ` GROUP BY vv.vehicleNo order by vv.hotoDateTime desc; `,
+            sql,
             {
                 type: QueryTypes.SELECT
                 , replacements: replacements
@@ -1002,8 +1003,9 @@ module.exports.getDriverListByReplace = async function (req, res) {
             replacements.push(vehicleType)
         }
 
+        sql += ` GROUP BY dd.driverId order by dd.hotoDateTime desc; `
         let pageResult = await sequelizeObj.query(
-            sql + ` GROUP BY dd.driverId order by dd.hotoDateTime desc; `,
+            sql,
             {
                 type: QueryTypes.SELECT
                 , replacements: replacements

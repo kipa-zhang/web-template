@@ -104,8 +104,9 @@ let reportUtils = {
         `, { type: QueryTypes.SELECT });
         return taskList
     },
-    getVehicleList: async function(startDate, endDate, user, newGroup, unitIdList, vehicleCategory, permitType, vehicleStatus, WPT1CompletionDateRange, WPT2CompletionDateRange, WPT3CompletionDateRange, hub, node){
+    getVehicleList: async function(option){
         try {
+            let { startDate, endDate, user, newGroup, unitIdList, vehicleCategory, permitType, vehicleStatus, WPT1CompletionDateRange, WPT2CompletionDateRange, WPT3CompletionDateRange, hub, node } = option
             let taskVehicleSql = `
                 SELECT tt.vehicleNumber FROM task tt
                 WHERE tt.vehicleStatus not in ('Cancelled', 'completed') 
@@ -173,7 +174,7 @@ let reportUtils = {
             `
             let replacements = []
 
-            const checkLimitSql1 = function () {
+            const checkLimitSql0 = function () {
                 if (user.userType.toUpperCase() == 'CUSTOMER' || newGroup) {
                     sql += ` 
                         ${
@@ -230,9 +231,14 @@ let reportUtils = {
                     replacements.push(loanOutVehicle.join(","))
                     replacements.push(taskVehicle)
                 }
-                sql += `
+            }
+            checkLimitSql0()
+
+            sql += `
                     from vehicle v
                 `
+
+            const checkLimitSql1 = function () {
                 if(user.userType.toUpperCase() == 'CUSTOMER' || newGroup){
                     if(startDate){
                         sql += `
@@ -380,8 +386,9 @@ let reportUtils = {
             return []
         }
     },
-    getDriverList: async function(startDate, endDate, user, newGroup, unitIdList, driverStatus, driverCategory, driverClass, driverType, enDateRange,ordRange, role, vocation, ordStart, hub, node){
+    getDriverList: async function(option){
         try {
+            let { startDate, endDate, user, newGroup, unitIdList, driverStatus, driverCategory, driverClass, driverType, enDateRange,ordRange, role, vocation, ordStart, hub, node } = option
             let taskDriversql = `
             SELECT tt.driverId FROM task tt
             WHERE tt.driverStatus not in ('Cancelled', 'completed') 
@@ -569,7 +576,7 @@ let reportUtils = {
 
             const checkSearchSql = function () {
                 if(!newGroup) {
-                    if(unitIdList.length > 0) {
+                    if(unitIdList.length) {
                         sql += ` and dd.unitIds in(?)`
                         replacements.push(unitIdList.join(","))
                     }
@@ -598,21 +605,22 @@ let reportUtils = {
                     sql += ` and FIND_IN_SET(?, dd.vehicleType)`
                     replacements.push(driverType)
                 }
-                if(enDateRange) {
-                    if (enDateRange.indexOf('-') != -1) {
-                        let dates = enDateRange.split(' - ')
-                        sql += ` and (dd.enlistmentDate between ? and ?)`
-                        replacements.push(dates[0])
-                        replacements.push(dates[1])
-                    }
+                
+            }
+            checkSearchSql()
+
+            const checkSearchSq2 = function () {
+                if(enDateRange?.indexOf('-') != -1) {
+                    let dates = enDateRange.split(' - ')
+                    sql += ` and (dd.enlistmentDate between ? and ?)`
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
                 }
-                if(ordRange) {
-                    if (ordRange.indexOf('-') != -1) {
-                        let dates = ordRange.split(' - ')
-                        sql += ` and (dd.operationallyReadyDate between ? and ?)`
-                        replacements.push(dates[0])
-                        replacements.push(dates[1])
-                    }
+                if (ordRange?.indexOf('-') != -1) {
+                    let dates = ordRange.split(' - ')
+                    sql += ` and (dd.operationallyReadyDate between ? and ?)`
+                    replacements.push(dates[0])
+                    replacements.push(dates[1])
                 }
                 
                 if(role){
@@ -623,15 +631,13 @@ let reportUtils = {
                     sql += ` and dd.vocation = ?`
                     replacements.push(vocation)
                 }
-                if (ordStart) {
-                    if (ordStart.toLowerCase() == 'effective') {
-                        sql += ` and (dd.operationallyReadyDate is null OR dd.operationallyReadyDate > DATE_FORMAT(NOW(), '%Y-%m-%d'))`;
-                    } else {
-                        sql += ` and (dd.operationallyReadyDate is not null and dd.operationallyReadyDate <= DATE_FORMAT(NOW(), '%Y-%m-%d'))`;
-                    }
+                if (ordStart?.toLowerCase() == 'effective') {
+                    sql += ` and (dd.operationallyReadyDate is null OR dd.operationallyReadyDate > DATE_FORMAT(NOW(), '%Y-%m-%d'))`;
+                } else if (ordStart) {
+                    sql += ` and (dd.operationallyReadyDate is not null and dd.operationallyReadyDate <= DATE_FORMAT(NOW(), '%Y-%m-%d'))`;
                 }
             }
-            checkSearchSql()
+            checkSearchSq2()
             
             console.log(sql)
             let driverList = await sequelizeObj.query(sql, { type: QueryTypes.SELECT, replacements: replacements });
@@ -928,17 +934,22 @@ module.exports.getKeyPressReportList = async function (req, res) {
             replacements.push('%'+location+'%')
         }
         if (transactionType) {
-            if (transactionType == 'mobileReturn') {
-                baseSQL += ` and ko.dataFrom = 'mobile' and ko.optType = 'returnConfirm' `;
-            } else if (transactionType == 'mobileWithdraw') {
-                baseSQL += ` and ko.dataFrom = 'mobile' and ko.optType = 'withdrawConfirm' `;
-            } else if (transactionType == 'manualReturn') {
-                baseSQL += ` and ko.dataFrom = 'server' and ko.optType = 'returnConfirm' `;
-            } else if (transactionType == 'manualWithdraw') {
-                baseSQL += ` and ko.dataFrom = 'server' and ko.optType = 'withdrawConfirm' `;
-            } else {
-                baseSQL += ` and ko.optType = ? `;
-                replacements.push(transactionType)
+            switch (transactionType) {
+                case 'mobileReturn':
+                    baseSQL += ` and ko.dataFrom = 'mobile' and ko.optType = 'returnConfirm' `;
+                    break;
+                case 'mobileWithdraw':
+                    baseSQL += ` and ko.dataFrom = 'mobile' and ko.optType = 'withdrawConfirm' `;
+                    break;
+                case 'manualReturn':
+                    baseSQL += ` and ko.dataFrom = 'server' and ko.optType = 'returnConfirm' `;
+                    break;
+                case 'manualWithdraw':
+                    baseSQL += ` and ko.dataFrom = 'server' and ko.optType = 'withdrawConfirm' `;
+                    break;
+                default:
+                    baseSQL += ` and ko.optType = ? `;
+                    replacements.push(transactionType)
             }
         } else {
             baseSQL += ` and ko.optType in('withdrawConfirm', 'returnConfirm', 'withdrawConfirmUpload', 'returnConfirmUpload', 'withdrawConfirmQrcode', 'returnConfirmQrcode', 'Mustering') `;
@@ -989,110 +1000,121 @@ const getUrgentIndentList = async function (user, group, filter, hubNodeIdList, 
             left join mileage ml on CONCAT('DUTY-', t.dutyId, '-', t.id) = ml.taskId
         `;
     let limitCondition = [], replacements = []
-    if (user.userType.toLowerCase() == 'customer') {
-        limitCondition.push(` t.groupId = ? `)
-        replacements.push(user.unitId)
-    } else if (user.userType.toLowerCase() != 'administrator') {
-        if(supportedUnit){
+
+    const getPermitSql = function () {
+        if (user.userType.toLowerCase() == 'customer') {
             limitCondition.push(` t.groupId = ? `)
-            replacements.push(supportedUnit)
-        } else if (hubNodeIdList.length) {
-            if(groupIdList){
-                limitCondition.push(` (u.id IN (?) or t.groupId in(?)) `)
-                replacements.push(hubNodeIdList, groupIdList);
-            } else {
-                limitCondition.push(` (u.id IN (?) and t.groupId is null) `)
-                replacements.push(hubNodeIdList);
+            replacements.push(user.unitId)
+        } else if (user.userType.toLowerCase() != 'administrator') {
+            if(supportedUnit){
+                limitCondition.push(` t.groupId = ? `)
+                replacements.push(supportedUnit)
+            } else if (hubNodeIdList.length) {
+                if(groupIdList){
+                    limitCondition.push(` (u.id IN (?) or t.groupId in(?)) `)
+                    replacements.push(hubNodeIdList, groupIdList);
+                } else {
+                    limitCondition.push(` (u.id IN (?) and t.groupId is null) `)
+                    replacements.push(hubNodeIdList);
+                }
             }
         }
     }
-    if (reportDateRange) {
-        let reportDateRangeArr = reportDateRange.split(' ~ ')
-        limitCondition.push(` (DATE(t.startTime) >= ? AND DATE(t.startTime) <= ? ) `)
-        replacements.push(reportDateRangeArr[0])
-        replacements.push(reportDateRangeArr[1])
+    getPermitSql()
+    
+    const getSearchSql1 = function () {
+        if (reportDateRange) {
+            let reportDateRangeArr = reportDateRange.split(' ~ ')
+            limitCondition.push(` (DATE(t.startTime) >= ? AND DATE(t.startTime) <= ? ) `)
+            replacements.push(reportDateRangeArr[0])
+            replacements.push(reportDateRangeArr[1])
+        }
+    
+        if (hub) {
+            limitCondition.push(` t.hub=? `)
+            replacements.push(hub)
+        }
+        if (node) {
+            limitCondition.push(` t.node=? `)
+            replacements.push(node)
+        }
+    
+        if (taskID) {
+            limitCondition.push(` t.indentId LIKE ? `)
+            replacements.push('%'+taskID+'%')
+        }
+        if (taskStatus) {
+            let taskStatusList = taskStatus.split(',').map(val => {
+                if (val.toLowerCase() == 'waitcheck') {
+                    return ` t.status LIKE '%waitcheck%' and now() < t.endTime `
+                } else if (val.toLowerCase() == 'system expired') {
+                    return ` t.status LIKE '%waitcheck%' and now() > t.endTime `
+                } else {
+                    replacements.push('%'+val+'%')
+                    return ` t.status LIKE ? `
+                }
+            }).join('or')
+            limitCondition.push(` (${taskStatusList}) `)
+        }
     }
+    getSearchSql1()
 
-    if (hub) {
-        limitCondition.push(` t.hub=? `)
-        replacements.push(hub)
+    const getSearchSql2 = function () {
+        if (actualTime) {
+            let actualTimeArr = actualTime.split(' ~ ')
+            limitCondition.push(` (DATE(t.mobileStartTime) >= ? AND DATE(t.mobileEndTime) <= ? ) `)
+            replacements.push(actualTimeArr[0])
+            replacements.push(actualTimeArr[1])
+        }
+        if (executionTime) {
+            let executionTimeArr = executionTime.split(' ~ ')
+            limitCondition.push(` (DATE(t.startTime) >= ? AND DATE(t.startTime) <= ? ) `)
+            replacements.push(executionTimeArr[0])
+            replacements.push(executionTimeArr[1])
+        }
+    
+        if (activity) {
+            // no activity here
+            limitCondition.push(` 1 = 2 `)
+        }
+        if (driverName) {
+            limitCondition.push(` d.driverName like ? `)
+            replacements.push('%'+driverName+'%')
+        }
+        if (vehicleNumber) {
+            limitCondition.push(` t.vehicleNo like ? `)
+            replacements.push('%'+vehicleNumber+'%')
+        }
+        if (vehicleType) {
+            limitCondition.push(` t.vehicleType like ? `)
+            replacements.push('%'+vehicleType+'%')
+        }
+        if (mobileNumber) {
+            limitCondition.push(` d.contactNumber like ? `)
+            replacements.push('%'+mobileNumber+'%')
+        }
+        if (remarks) {
+            limitCondition.push(` t.cancelledCause like ? `)
+            replacements.push('%'+remarks+'%')
+        }
+        if (indentID) {
+            limitCondition.push(` t.requestId like ? `)
+            replacements.push('%'+indentID+'%')
+        }
+        if (mileageCaptured) {
+            limitCondition.push(` ml.mileageTraveled >= ? `)
+            replacements.push(mileageCaptured)
+        }
+        if (startOdometer) {
+            limitCondition.push(` ml.startMileage >= ? `)
+            replacements.push(startOdometer)
+        }
+        if (endOdometer) {
+            limitCondition.push(` ml.endOdometer <= ? `)
+            replacements.push(endOdometer)
+        }
     }
-    if (node) {
-        limitCondition.push(` t.node=? `)
-        replacements.push(node)
-    }
-
-    if (taskID) {
-        limitCondition.push(` t.indentId LIKE ? `)
-        replacements.push('%'+taskID+'%')
-    }
-    if (taskStatus) {
-        let taskStatusList = taskStatus.split(',').map(val => {
-            if (val.toLowerCase() == 'waitcheck') {
-                return ` t.status LIKE '%waitcheck%' and now() < t.endTime `
-            } else if (val.toLowerCase() == 'system expired') {
-                return ` t.status LIKE '%waitcheck%' and now() > t.endTime `
-            } else {
-                replacements.push('%'+val+'%')
-                return ` t.status LIKE ? `
-            }
-        }).join('or')
-        limitCondition.push(` (${taskStatusList}) `)
-    }
-
-    if (actualTime) {
-        let actualTimeArr = actualTime.split(' ~ ')
-        limitCondition.push(` (DATE(t.mobileStartTime) >= ? AND DATE(t.mobileEndTime) <= ? ) `)
-        replacements.push(actualTimeArr[0])
-        replacements.push(actualTimeArr[1])
-    }
-    if (executionTime) {
-        let executionTimeArr = executionTime.split(' ~ ')
-        limitCondition.push(` (DATE(t.startTime) >= ? AND DATE(t.startTime) <= ? ) `)
-        replacements.push(executionTimeArr[0])
-        replacements.push(executionTimeArr[1])
-    }
-
-    if (activity) {
-        // no activity here
-        limitCondition.push(` 1 = 2 `)
-    }
-    if (driverName) {
-        limitCondition.push(` d.driverName like ? `)
-        replacements.push('%'+driverName+'%')
-    }
-    if (vehicleNumber) {
-        limitCondition.push(` t.vehicleNo like ? `)
-        replacements.push('%'+vehicleNumber+'%')
-    }
-    if (vehicleType) {
-        limitCondition.push(` t.vehicleType like ? `)
-        replacements.push('%'+vehicleType+'%')
-    }
-    if (mobileNumber) {
-        limitCondition.push(` d.contactNumber like ? `)
-        replacements.push('%'+mobileNumber+'%')
-    }
-    if (remarks) {
-        limitCondition.push(` t.cancelledCause like ? `)
-        replacements.push('%'+remarks+'%')
-    }
-    if (indentID) {
-        limitCondition.push(` t.requestId like ? `)
-        replacements.push('%'+indentID+'%')
-    }
-    if (mileageCaptured) {
-        limitCondition.push(` ml.mileageTraveled >= ? `)
-        replacements.push(mileageCaptured)
-    }
-    if (startOdometer) {
-        limitCondition.push(` ml.startMileage >= ? `)
-        replacements.push(startOdometer)
-    }
-    if (endOdometer) {
-        limitCondition.push(` ml.endOdometer <= ? `)
-        replacements.push(endOdometer)
-    }
+    getSearchSql2()
 
     if (limitCondition.length) {
         taskSql += ' WHERE ' + limitCondition.join(' AND ');
@@ -1297,22 +1319,36 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
         let { taskId, groupId, dataFrom, driverName, driverNric, contactNumber, driverStatus, vehicleNumber, vehicleType, purpose, activity,
             indentStartTime, indentEndTime, mobileStartTime, mobileEndTime, indentId, cancelledCause, hub, node,
             startMileage, endMileage, mileageTraveled } = r
+        
+        if (driverStatus == 'waitcheck') {
+            driverStatus = 'Pending'
+        }
+        driverStatus = driverStatus.slice(0, 1).toUpperCase() + driverStatus.slice(1).toLowerCase()
+
+        let groupName = ''
+        if (groupId) {
+            let item = groupList.find(o => Number(o.id) == Number(groupId))
+            groupName = item ? item.groupName : ""
+        }
+
+        let taskType = ''
+        if (dataFrom == 'MT-ADMIN' && (taskId.indexOf('CU-') || taskId.indexOf('MT-'))) {
+            taskType = 'MT-Admin'
+        } else if (taskId.includes('AT-')) {
+            taskType = 'ATMS'
+        } else if (dataFrom == 'SYSTEM' && !taskId.includes('AT-')) {
+            taskType = 'Sys Task'
+        } else if (dataFrom == 'MOBILE') {
+            taskType = 'Mobile'
+        } else if (dataFrom == 'Urgent Indent') {
+            taskType = 'Urgent Indent'
+        }
+
         titleList.forEach(title => {
             switch (title) {
-                case 'Task Type': {
-                    if (dataFrom == 'MT-ADMIN' && (taskId.indexOf('CU-') || taskId.indexOf('MT-'))) {
-                        row.push('MT-Admin')
-                    } else if (taskId.includes('AT-')) {
-                        row.push('ATMS')
-                    } else if (dataFrom == 'SYSTEM' && !taskId.includes('AT-')) {
-                        row.push('Sys Task')
-                    } else if (dataFrom == 'MOBILE') {
-                        row.push('Mobile')
-                    } else if (dataFrom == 'Urgent Indent') {
-                        row.push('Urgent Indent')
-                    }
+                case 'Task Type': 
+                    row.push(taskType)
                     break;
-                }
                 case 'Hub':
                     row.push(hub)
                     break;
@@ -1322,14 +1358,9 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
                 case 'Task ID':
                     row.push(taskId)
                     break;
-                case 'Task Status': {
-                    if (driverStatus == 'waitcheck') {
-                        driverStatus = 'Pending'
-                    }
-                    driverStatus = driverStatus.slice(0, 1).toUpperCase() + driverStatus.slice(1).toLowerCase()
+                case 'Task Status': 
                     row.push(driverStatus)
                     break;
-                }
                 case 'Driver Name': 
                     row.push(driverName || '-')
                     break;
@@ -1375,15 +1406,9 @@ const generateExcelDatas = async function (reportGroupSelectionTitle, datas) {
                 case "Mileage Captured":
                     row.push(mileageTraveled)
                     break;
-                case "Supported Unit": {
-                    let groupName = ''
-                    if (groupId) {
-                        let item = groupList.find(o => Number(o.id) == Number(groupId))
-                        groupName = item ? item.groupName : ""
-                    }
+                case "Supported Unit": 
                     row.push(groupName)
-                    break
-                }
+                    break;
                 case 'Driver Nric':
                     row.push(driverNric)
                     break;
@@ -1516,6 +1541,16 @@ const ExportTelematicsDataToExcel = async function (reportGroupSelectionTitle, d
     dataList.forEach((r, index) => {
         let row = []
         let { violationType, occurrenceDateTime, dataFrom, groupId, driverName, vehicleNo, vehicleType, hub, node, lat, lng, speed, startTime, endTime, startSpeed, endSpeed, taskId } = r
+
+        if (violationType !== CONTENT.ViolationType.Speeding) {
+            speed = '-'
+        }
+        
+        let diffSpeed = '-'
+        if ([ CONTENT.ViolationType.HardBraking, CONTENT.ViolationType.RapidAcc ].includes(violationType)) {
+            diffSpeed = startSpeed - endSpeed
+        }
+
         titleList.forEach(title => {
             switch (title) {
                 case 'Type of ARB':
@@ -1553,23 +1588,14 @@ const ExportTelematicsDataToExcel = async function (reportGroupSelectionTitle, d
                 case 'Driver Name':
                     row.push(driverName)
                     break;
-                case 'Highest Speed': {
-                    if (violationType == CONTENT.ViolationType.Speeding) {
-                        row.push(speed)
-                    } else {
-                        row.push('-')
-                    }
+                case 'Highest Speed':
+                    row.push(speed)
                     break
-                }
                 case 'Duration':
                     row.push(moment(endTime).diff(moment(startTime), 'second'))
                     break;
                 case 'Diff in speed': {
-                    if ([ CONTENT.ViolationType.HardBraking, CONTENT.ViolationType.RapidAcc ].includes(violationType)) {
-                        row.push(startSpeed - endSpeed)
-                    } else {
-                        row.push('-')
-                    }
+                    row.push(diffSpeed)
                     break;
                 }
                 case 'Task ID':
@@ -1752,61 +1778,60 @@ module.exports.getTelematicReportList = async function (req, res) {
 
         let limitCondition = []
         let replacements = []
-        if (violationType) {
-            limitCondition.push(` AND th.violationType = ? `)
-            replacements.push(violationType)
-        }
-        if (occTimeRange) {
-            let occTimeZone = occTimeRange.split('~').map(item => item.trim())
-            limitCondition.push(` AND (th.occTime BETWEEN ? AND ?) `)
-            replacements.push(occTimeZone[0])
-            replacements.push(occTimeZone[1])
-        }
-        if (vehicleNumber) {
-            limitCondition.push(` AND v.vehicleNo LIKE ? `)
-            replacements.push('%'+vehicleNumber+'%')
-        }
-        if (vehicleType) {
-            limitCondition.push(` AND v.vehicleType = ? `)
-            replacements.push(vehicleType)
-        }
-        if (taskId) {
-            limitCondition.push(` AND (t1.taskId LIKE ? OR t2.dutyId LIKE ?) `)
-            replacements.push('%'+taskId+'%')
-            replacements.push('%'+taskId+'%')
-        }
-        if (hub) {
-            if (node) {
-                limitCondition.push(` AND ((t1.hub = ? AND t1.node = ?) OR (t2.hub = ? AND t2.node = ?)) `)
-                replacements.push(hub)
-                replacements.push(node)
-                replacements.push(hub)
-                replacements.push(node)
-            } else {
-                limitCondition.push(` AND (t1.hub = ? OR t2.hub = ?) `)
-                replacements.push(hub)
-                replacements.push(hub)
+
+        const getSearchSql1 = function () {
+            if (violationType) {
+                limitCondition.push(` AND th.violationType = ? `)
+                replacements.push(violationType)
+            }
+            if (occTimeRange) {
+                let occTimeZone = occTimeRange.split('~').map(item => item.trim())
+                limitCondition.push(` AND (th.occTime BETWEEN ? AND ?) `)
+                replacements.push(occTimeZone[0])
+                replacements.push(occTimeZone[1])
+            }
+            if (vehicleNumber) {
+                limitCondition.push(` AND v.vehicleNo LIKE ? `)
+                replacements.push('%'+vehicleNumber+'%')
+            }
+            if (vehicleType) {
+                limitCondition.push(` AND v.vehicleType = ? `)
+                replacements.push(vehicleType)
+            }
+            if (taskId) {
+                limitCondition.push(` AND (t1.taskId LIKE ? OR t2.dutyId LIKE ?) `)
+                replacements.push('%'+taskId+'%')
+                replacements.push('%'+taskId+'%')
+            }
+            if (hub) {
+                if (node) {
+                    limitCondition.push(` AND ((t1.hub = ? AND t1.node = ?) OR (t2.hub = ? AND t2.node = ?)) `)
+                    replacements.push(hub)
+                    replacements.push(node)
+                    replacements.push(hub)
+                    replacements.push(node)
+                } else {
+                    limitCondition.push(` AND (t1.hub = ? OR t2.hub = ?) `)
+                    replacements.push(hub)
+                    replacements.push(hub)
+                }
+            }
+            
+            if (driverName) {
+                limitCondition.push(` AND d.driverName LIKE ? `)
+                replacements.push('%'+driverName+'%')
             }
         }
-        if (driverName) {
-            limitCondition.push(` AND d.driverName LIKE ? `)
-            replacements.push('%'+driverName+'%')
-        }
+        getSearchSql1()
+        
         if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
             limitCondition.push(` AND (t1.groupId = ? OR t2.groupId = ?) `)
             replacements.push(user.unitId)
             replacements.push(user.unitId)
-        // } else if (user.userType == CONTENT.USER_TYPE.UNIT) {
-        //     if (user.node) {
-        //         limitCondition.push(` AND ((t1.hub = '${ user.hub }' AND t1.node = '${ user.node }') OR (t2.hub = '${ user.hub }' AND t2.node = '${ user.node }')) `)
-        //     } else {
-        //         limitCondition.push(` AND (t1.hub = '${ user.hub }' OR t2.hub = '${ user.hub }') `)
-        //     }
-        // }
         } else if (user.userType != CONTENT.USER_TYPE.ADMINISTRATOR) {
-            if (unitIdList.length > 0) {
+            if (unitIdList.length) {
                 if(groupIdList){
-                    let newGroup = groupIdList.length > 0 ? groupIdList.join(',') : groupIdList
+                    let newGroup = groupIdList.length ? groupIdList.join(',') : groupIdList
                     limitCondition.push(` AND ((un1.id in(?) or t1.groupId in(?))
                     OR (un2.id in(?) or t2.groupId in(?))) `)
                     replacements.push(unitIdList.join(","))
@@ -2127,7 +2152,7 @@ module.exports.getDriverReportList = async function (req, res) {
         let uninGroupList = [newGroup]
         if(unitIdList.length > 0 && newGroup) uninGroupList = [null, newGroup]
         for(let item of uninGroupList){
-            let driverList = await reportUtils.getDriverList(startDate, endDate, user, item, unitIdList, driverStatus, driverCategory, driverClass, driverType, enDateRange,ordRange, role, vocation, ordStart, hub, node);
+            let driverList = await reportUtils.getDriverList({ startDate, endDate, user, item, unitIdList, driverStatus, driverCategory, driverClass, driverType, enDateRange,ordRange, role, vocation, ordStart, hub, node });
             let mileageListData = await reportUtils.getDriverMileageByClass(startDate, endDate)
             let lastDrivenDateList = await reportUtils.getLastDrivenDate()
             let newDriverList = []
@@ -2330,7 +2355,7 @@ module.exports.getVehicleReportList = async function (req, res) {
         if(unitIdList && newGroup) uninGroupList = [null, newGroup]
         for(let item of uninGroupList){
             let newVehicleList = []
-            let vehicleList = await reportUtils.getVehicleList(startDate, endDate, user, item, unitIdList, vehicleCategory, permitType, vehicleStatus, WPT1CompletionDateRange, WPT2CompletionDateRange, WPT3CompletionDateRange, hub, node);
+            let vehicleList = await reportUtils.getVehicleList({ startDate, endDate, user, item, unitIdList, vehicleCategory, permitType, vehicleStatus, WPT1CompletionDateRange, WPT2CompletionDateRange, WPT3CompletionDateRange, hub, node });
             let taskPurposList = await reportUtils.getTaskPurposeByVehicle(startDate, endDate)
             for(let item of vehicleList){
                 let purposList = taskPurposList.filter(taskObj => taskObj.vehicleNumber == item.vehicleNo);

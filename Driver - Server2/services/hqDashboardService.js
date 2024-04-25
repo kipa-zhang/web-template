@@ -117,14 +117,19 @@ const GetMilitaryIndentReadiness = async function (unitIds, userId, userType) {
         vehicleTotal = vehicleTotal[0].total
     }
 
-    let taskVehicle = await sequelizeObj.query(`
+    let taskVehicleSql = `
     SELECT tt.vehicleNumber FROM task tt 
     WHERE tt.vehicleStatus not in ('Cancelled', 'completed')  
     and ((NOW() BETWEEN tt.indentStartTime and tt.indentEndTime)
     OR tt.vehicleStatus = 'started')
-    ${ userType.toUpperCase() == 'CUSTOMER' ? ` and tt.taskId like 'CU-%'` : ` and tt.dataFrom = 'SYSTEM' and tt.driverId is not null` }
-    group by tt.vehicleNumber
-    `, { type: QueryTypes.SELECT })
+    `
+    if(userType.toUpperCase() == 'CUSTOMER') {
+        taskVehicleSql += ` and tt.taskId like 'CU-%'`
+    } else {
+        taskVehicleSql += ` and tt.dataFrom = 'SYSTEM' and tt.driverId is not null`
+    }
+    taskVehicleSql += ` group by tt.vehicleNumber`
+    let taskVehicle = await sequelizeObj.query(taskVehicleSql, { type: QueryTypes.SELECT })
     taskVehicle = taskVehicle.map(item => item.vehicleNumber)
 
     let loanOutVehicle = await sequelizeObj.query(` 

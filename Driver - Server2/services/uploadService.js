@@ -29,6 +29,10 @@ const { OperationRecord } = require('../model/operationRecord.js');
  * https://github.com/mgcrea/node-xlsx#readme
  */
 
+const trimString = function(str, defaultValue) {
+	return str ? str.trim() : defaultValue;
+}
+
 module.exports.uploadVehicle = async function (req, res) {
 	let dirPath = conf.uploadFilePath + "\\vehicle"
 	if (!fs.existsSync(dirPath)) {
@@ -57,96 +61,111 @@ module.exports.uploadVehicle = async function (req, res) {
 		try {
 			let warnMsgHtml = ``;
 			for (let file of files.file) {
-				if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-					let list = xlsx.parse(file.path, { cellDates: true });
-					// First sheet's data
-					log.info(JSON.stringify(list));
-					list = list[0].data; 
-					let rowIndex = -1;
-					for (let data of list) {
-						rowIndex++;
+				let list = xlsx.parse(file.path, { cellDates: true });
+				// First sheet's data
+				log.info(JSON.stringify(list));
+				list = list[0].data; 
+				let rowIndex = -1;
+				for (let data of list) {
+					rowIndex++;
 
-						// First row is title!
+					let vehicleNo = trimString(data[indexOfVehicleNo], '');
+					let unit = trimString(data[indexOfUnit], null);
+					let subUnit = trimString(data[indexOfSubUnit], null);
+
+					// First row is title!
+					function checkData() {
+						let hasError = false;
 						if (rowIndex === 0) {
 							if (!checkVehicleFile(data, { indexOfVehicleNo, indexOfHardWareID, indexOfUnit, indexOfSubUnit, indexOfLimitSpeed, indexOfVehicleType, indexOfPermitType, indexOfTotalMileage, indexOfDimensions, indesOfAvidate})) {
 								log.warn('Please Select Vehicle Excel file!')
-								return res.json(utils.response(0, 'Please Select Vehicle Excel file!'));
+								throw new Error('Please Select Vehicle Excel file!');
 							}
-							continue;
+							hasError = true;
+							return hasError;
 						}
-						let vehicleNo = data[indexOfVehicleNo] ? data[indexOfVehicleNo].trim() : '';
-						let unit = data[indexOfUnit] ? data[indexOfUnit].trim() : null;
-						let subUnit = data[indexOfSubUnit] ? data[indexOfSubUnit].trim() : null;
-
+	
 						if (!vehicleNo) {
 							log.info('Vehicle No is empty, jump this row!')
 							warnMsgHtml += `Row ${rowIndex + 1}: Vehicle No is empty, jump this row!<br/>`
+							hasError = true;
+							return hasError;
 						} else if (!unit) {
 							warnMsgHtml += `Row ${rowIndex + 1}: Vehicle unit is empty, jump this row!<br/>`
-							continue;
+							hasError = true;
+							return hasError;
+						}
+						return hasError;
+					}
+					if (checkData()) {
+						continue;
+					}
+					let hardWareID = trimString(data[indexOfHardWareID], null);
+					let totalMileage = data[indexOfTotalMileage];
+					let limitSpeed = data[indexOfLimitSpeed];
+					function initData1() {
+						if (totalMileage) {
+							totalMileage += '';
 						} else {
-							let hardWareID = data[indexOfHardWareID] ? data[indexOfHardWareID].trim() : null;
-							let totalMileage = data[indexOfTotalMileage];
-							if (totalMileage) {
-								totalMileage += '';
-							} else {
-								totalMileage = '0';
-							}
+							totalMileage = '0';
+						}
+						if (limitSpeed) {
+							limitSpeed += '';
+						} else {
+							limitSpeed = '60';
+						}
+					}
+					initData1();
 
-							let limitSpeed = data[indexOfLimitSpeed];
-							if (limitSpeed) {
-								limitSpeed += '';
-							} else {
-								limitSpeed = '60';
-							}
+					function initData2() {
+						let existVehicle = uploadVehicleList.find(item => item.vehicleNo == vehicleNo);
+						if (!existVehicle) {
+							uploadVehicleList.push({ 
+								vehicleNo: vehicleNo, 
+								unit: unit, 
+								subUnit: subUnit, 
+								deviceId: hardWareID || null, 
+								vehicleType: data[indexOfVehicleType].trim(), 
+								limitSpeed: limitSpeed.trim(), // While xlsx is null here
+								permitType: data[indexOfPermitType].trim(), 
+								totalMileage: totalMileage.trim(), 
+								dimensions: data[indexOfDimensions].trim(), 
+								nextAviTime: data[indesOfAvidate] ? data[indesOfAvidate].trim() : null, 
+								creator: req.cookies.userId 
+							})
+							uploadVehicleRelationList.push({ 
+								vehicleNo: vehicleNo, 
+								deviceId: hardWareID || null, 
+								limitSpeed: limitSpeed.trim(),  // While xlsx is null here
+								unit: unit, 
+								subUnit: subUnit
+							})
+							permitTypeList.push({
+								vehicleType: data[indexOfVehicleType].trim(), 
+								permitType: data[indexOfPermitType].trim()
+							});
+						}
 
-							let existVehicle = uploadVehicleList.find(item => item.vehicleNo == vehicleNo);
-							if (!existVehicle) {
-								uploadVehicleList.push({ 
-									vehicleNo: vehicleNo, 
-									unit: unit, 
-									subUnit: subUnit, 
-									deviceId: hardWareID || null, 
-									vehicleType: data[indexOfVehicleType].trim(), 
-									limitSpeed: limitSpeed.trim(), // While xlsx is null here
-									permitType: data[indexOfPermitType].trim(), 
-									totalMileage: totalMileage.trim(), 
-									dimensions: data[indexOfDimensions].trim(), 
-									nextAviTime: data[indesOfAvidate] ? data[indesOfAvidate].trim() : null, 
-									creator: req.cookies.userId 
+					}
+					initData2();
+					function initData3(params) {
+						if (data[indexOfUnit]) {
+							let existUnit = uploadUnitList.find(item => (item.unit == unit && item.subUnit == subUnit));
+							if (!existUnit) {
+								uploadUnitList.push(data[indexOfUnit].trim() + ',' + (data[indexOfSubUnit] ? data[indexOfSubUnit].trim() : ''))
+							}
+						}
+						if (hardWareID) {
+							let existDevice = uploadDeviceList.find(item => (item.deviceId == hardWareID));
+							if (!existDevice) {
+								uploadDeviceList.push({  
+									deviceId: hardWareID,
+									creator: req.cookies.userId
 								})
-								uploadVehicleRelationList.push({ 
-									vehicleNo: vehicleNo, 
-									deviceId: hardWareID || null, 
-									limitSpeed: limitSpeed.trim(),  // While xlsx is null here
-									unit: unit, 
-									subUnit: subUnit
-								})
-								permitTypeList.push({
-									vehicleType: data[indexOfVehicleType].trim(), 
-									permitType: data[indexOfPermitType].trim()
-								});
-							}
-
-							if (data[indexOfUnit]) {
-								let existUnit = uploadUnitList.find(item => (item.unit == unit && item.subUnit == subUnit));
-								if (!existUnit) {
-									uploadUnitList.push(data[indexOfUnit].trim() + ',' + (data[indexOfSubUnit] ? data[indexOfSubUnit].trim() : ''))
-								}
-							}
-							if (hardWareID) {
-								let existDevice = uploadDeviceList.find(item => (item.deviceId == hardWareID));
-								if (!existDevice) {
-									uploadDeviceList.push({  
-										deviceId: hardWareID,
-										creator: req.cookies.userId
-									})
-								}
 							}
 						}
 					}
-				} else {
-					return res.json(utils.response(0, 'Please Use Excel file!'));
+					initData3();
 				}
 			}
 			await sequelizeObj.transaction(async transaction => {
@@ -317,24 +336,32 @@ module.exports.uploadWaypoint = async function (req, res) {
 					for (let data of list) {
 						rowIndex++;
 						// First row is title!
-						if (rowIndex === 0) {
-							if (!checkWaypointFile(data, { indexOfWaypointName, indexOfLat, indexOfLng })) {
-								log.warn('Please Select Waypoint Excel file!')
-								return res.json(utils.response(0, 'Please Select Waypoint Excel file!'));
+						function checkHead() {
+							if (rowIndex === 0) {
+								if (!checkWaypointFile(data, { indexOfWaypointName, indexOfLat, indexOfLng })) {
+									log.warn('Please Select Waypoint Excel file!')
+									throw new Error('Please Select Waypoint Excel file!');
+								}
+								return true;
 							}
+						}
+						if (checkHead()) {
 							continue;
 						}
 
-						if (!data[indexOfWaypointName]) {
-							log.info('Waypoint is empty, jump this row!')
-						} else {
-							uploadWaypointList.push({ 
-								waypointName: data[indexOfWaypointName].trim(),
-								lat: data[indexOfLat],
-								lng: data[indexOfLng],
-								creator: req.cookies.userId,
-							});
+						function buildData() {
+							if (!data[indexOfWaypointName]) {
+								log.info('Waypoint is empty, jump this row!')
+							} else {
+								uploadWaypointList.push({ 
+									waypointName: data[indexOfWaypointName].trim(),
+									lat: data[indexOfLat],
+									lng: data[indexOfLng],
+									creator: req.cookies.userId,
+								});
+							}
 						}
+						buildData();
 					}
 				} else {
 					return res.json(utils.response(0, 'Please Use Excel file!'));

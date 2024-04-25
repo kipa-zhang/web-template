@@ -62,8 +62,8 @@ router.get('/', async (req, res) => {
                 res.cookie('lastLoginTime', moment().format('YYYY-MM-DD HH:mm:ss'), { expires: utils.expiresCookieDate() });
                 res.cookie('needChangePassword', 0, { expires: utils.expiresCookieDate() });
                 res.cookie('role', user.role, { expires: utils.expiresCookieDate() });
-                res.cookie('hub', unit ? unit.unit : '', { expires: utils.expiresCookieDate() });
-                res.cookie('node', (unit && unit.subUnit) ? unit.subUnit: '', { expires: utils.expiresCookieDate() });
+                res.cookie('hub', unit?.unit ? unit.unit : '', { expires: utils.expiresCookieDate() });
+                res.cookie('node', unit?.subUnit ? unit.subUnit: '', { expires: utils.expiresCookieDate() });
                 res.cookie('VehicleMissingFrequency', conf.VehicleMissingFrequency, { expires: utils.expiresCookieDate() });
                 // Store System Conf into cookie
                 res.cookie('sysConf', {

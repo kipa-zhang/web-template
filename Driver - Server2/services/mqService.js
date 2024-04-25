@@ -59,7 +59,7 @@ module.exports.updateTaskRoute = async function (message) {
  */
 module.exports.affectedRouteHandler = async function (activeMQMsg) {
     try {
-        // incidentID;CA_USER_ID;routeNo1;routeNo2;
+        // "incidentID;CA_USER_ID;routeNo1;routeNo2;"
         let msgList = activeMQMsg.split(';');
         let incidentNo = msgList[0];
         let caUserID = msgList[1];
