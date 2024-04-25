@@ -693,10 +693,8 @@ const getTaskReportList = async function (req, res) {
             result = taskList.concat(loanList)
         }
         for(let item of result){
-            if (item.driverStatus.toLowerCase() == 'waitcheck') {
-                if (moment().isAfter(item.indentEndTime)) {
-                    item.driverStatus = 'System Expired'
-                }
+            if (item.driverStatus.toLowerCase() == 'waitcheck' && moment().isAfter(item.indentEndTime)) {
+                item.driverStatus = 'System Expired'
             }
             if(item?.length > 9) {
                 item.driverNric = utils.decodeAESCode(item.driverNric);
@@ -1824,28 +1822,31 @@ module.exports.getTelematicReportList = async function (req, res) {
         }
         getSearchSql1()
         
-        if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-            limitCondition.push(` AND (t1.groupId = ? OR t2.groupId = ?) `)
-            replacements.push(user.unitId)
-            replacements.push(user.unitId)
-        } else if (user.userType != CONTENT.USER_TYPE.ADMINISTRATOR) {
-            if (unitIdList.length) {
-                if(groupIdList){
-                    let newGroup = groupIdList.length ? groupIdList.join(',') : groupIdList
-                    limitCondition.push(` AND ((un1.id in(?) or t1.groupId in(?))
-                    OR (un2.id in(?) or t2.groupId in(?))) `)
-                    replacements.push(unitIdList.join(","))
-                    replacements.push(newGroup)
-                    replacements.push(unitIdList.join(","))
-                    replacements.push(newGroup)
-                } else {
-                    limitCondition.push(` AND ((un1.id in(?) and t1.groupId is null) 
-                    OR (un2.id in(?) and t2.groupId is null)) `)
-                    replacements.push(unitIdList.join(","))
-                    replacements.push(unitIdList.join(","))
+        const getPermitSql = function () {
+            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
+                limitCondition.push(` AND (t1.groupId = ? OR t2.groupId = ?) `)
+                replacements.push(user.unitId)
+                replacements.push(user.unitId)
+            } else if (user.userType != CONTENT.USER_TYPE.ADMINISTRATOR) {
+                if (unitIdList.length) {
+                    if(groupIdList){
+                        let newGroup = groupIdList.length ? groupIdList.join(',') : groupIdList
+                        limitCondition.push(` AND ((un1.id in(?) or t1.groupId in(?))
+                        OR (un2.id in(?) or t2.groupId in(?))) `)
+                        replacements.push(unitIdList.join(","))
+                        replacements.push(newGroup)
+                        replacements.push(unitIdList.join(","))
+                        replacements.push(newGroup)
+                    } else {
+                        limitCondition.push(` AND ((un1.id in(?) and t1.groupId is null) 
+                        OR (un2.id in(?) and t2.groupId is null)) `)
+                        replacements.push(unitIdList.join(","))
+                        replacements.push(unitIdList.join(","))
+                    }
                 }
             }
         }
+        getPermitSql()
         
         let baseSQL;
         if (dataFrom.toLowerCase() == 'mobile') {
@@ -1917,58 +1918,57 @@ module.exports.getOBDReportList = async function (req, res) {
 
         let limitCondition = []
         let replacements = []
-        if (deviceId) {
-            limitCondition.push(` AND d.deviceId LIKE ? `)
-            replacements.push('%'+deviceId+'%')
-        }
-        if (vehicleNumber) {
-            limitCondition.push(` AND vv.vehicleNo LIKE ? `)
-            replacements.push('%'+vehicleNumber+'%')
-        }
-        if (vehicleType) {
-            limitCondition.push(` AND vv.vehicleType = ? `)
-            replacements.push(vehicleType)
-        }
-        if (transmittedDate) {
-            limitCondition.push(` AND (DATE(d.latestDeviceTime) BETWEEN ? AND ?) `)
-            replacements.push(moment().format('YYYY-MM-DD'))
-            replacements.push(moment().add(transmittedDate, 'days').format('YYYY-MM-DD'))
-        }
-        if (hub) {
-            if (node) {
-                limitCondition.push(` AND (vv.hub = ? AND vv.node = ?) `)
-                replacements.push(hub)
-                replacements.push(node)
-            } else {
-                limitCondition.push(` AND ( vv.hub = ?) `)
-                replacements.push(hub)
+
+        const getSearchSql = function () {
+            if (deviceId) {
+                limitCondition.push(` AND d.deviceId LIKE ? `)
+                replacements.push('%'+deviceId+'%')
             }
-        }
-
-        if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
-            limitCondition.push(` AND vv.groupId = ? `)
-            replacements.push(user.unitId)
-        // } else if (user.userType == CONTENT.USER_TYPE.UNIT) {
-        //     if (user.node) {
-        //         limitCondition.push(` AND ((vv.hub = '${ user.hub }' AND vv.node = '${ user.node }') `)
-        //     } else {
-        //         limitCondition.push(` AND (vv.hub = '${ user.hub }') `)
-        //     }
-        // }
-
-        } else if (user.userType != CONTENT.USER_TYPE.ADMINISTRATOR) {
-            if (unitIdList.length > 0) {
-                if(groupIdList){
-                    let newGroup = groupIdList.length > 0 ? groupIdList.join(',') : groupIdList
-                    limitCondition.push(` AND (vv.unitId in(?) or vv.groupId in (?) ) `)
-                    replacements.push(unitIdList.join(','))
-                    replacements.push(newGroup)
+            if (vehicleNumber) {
+                limitCondition.push(` AND vv.vehicleNo LIKE ? `)
+                replacements.push('%'+vehicleNumber+'%')
+            }
+            if (vehicleType) {
+                limitCondition.push(` AND vv.vehicleType = ? `)
+                replacements.push(vehicleType)
+            }
+            if (transmittedDate) {
+                limitCondition.push(` AND (DATE(d.latestDeviceTime) BETWEEN ? AND ?) `)
+                replacements.push(moment().format('YYYY-MM-DD'))
+                replacements.push(moment().add(transmittedDate, 'days').format('YYYY-MM-DD'))
+            }
+            if (hub) {
+                if (node) {
+                    limitCondition.push(` AND (vv.hub = ? AND vv.node = ?) `)
+                    replacements.push(hub)
+                    replacements.push(node)
                 } else {
-                    limitCondition.push(` AND vv.unitId in(?) `)
-                    replacements.push(unitIdList.join(','))
+                    limitCondition.push(` AND ( vv.hub = ?) `)
+                    replacements.push(hub)
                 }
             }
         }
+        getSearchSql()
+
+        const initPermitSql = function () {
+            if (user.userType == CONTENT.USER_TYPE.CUSTOMER) {
+                limitCondition.push(` AND vv.groupId = ? `)
+                replacements.push(user.unitId)
+            } else if (user.userType != CONTENT.USER_TYPE.ADMINISTRATOR) {
+                if (unitIdList.length > 0) {
+                    if(groupIdList){
+                        let newGroup = groupIdList.length > 0 ? groupIdList.join(',') : groupIdList
+                        limitCondition.push(` AND (vv.unitId in(?) or vv.groupId in (?) ) `)
+                        replacements.push(unitIdList.join(','))
+                        replacements.push(newGroup)
+                    } else {
+                        limitCondition.push(` AND vv.unitId in(?) `)
+                        replacements.push(unitIdList.join(','))
+                    }
+                }
+            }
+        }
+        initPermitSql()
 
         if (limitCondition.length) {
             baseSQL += limitCondition.join(' ')
@@ -1991,31 +1991,34 @@ const driverReportExcel = async function (reportGroupSelectionTitle, datas, repo
     let classStatus = false
     let newTitleList = []
     let classList = null
-    for(let item of titleList){
-        if(item == 'Accumulated Mileage') {
-            classList = await sequelizeObj.query(`
-                select * from (
-                    SELECT if(p.parent is null or p.parent = '', dm.permitType, p.parent) parent
-                    FROM permittype p 
-                    left join driver_permittype_detail dm on dm.permitType = p.permitType
-               ) dp group by dp.parent 
-            `, { type: QueryTypes.SELECT });
-            classList = classList.map(itemObj => itemObj.parent)
-            classList = Array.from(new Set(classList))
-          
-            if(classList.length > 0) {
+
+    const initNewTitleList = async function () {
+        for(let item of titleList){
+            if(item == 'Accumulated Mileage') {
+                classList = await sequelizeObj.query(`
+                    select * from (
+                        SELECT if(p.parent is null or p.parent = '', dm.permitType, p.parent) parent
+                        FROM permittype p 
+                        left join driver_permittype_detail dm on dm.permitType = p.permitType
+                   ) dp group by dp.parent 
+                `, { type: QueryTypes.SELECT });
+                classList = classList.map(itemObj => itemObj.parent)
+                classList = Array.from(new Set(classList))
+              
                 classStatus = true
                 for(let item2 of classList){
                     if(item2 && item2 != '') newTitleList.push(item2)
                 }
+            } else if (item == 'Hub/Node') {
+                newTitleList.push('Hub')
+                newTitleList.push('Node')
+            } else {
+                newTitleList.push(item)
             }
-        } else if (item == 'Hub/Node') {
-            newTitleList.push('Hub')
-            newTitleList.push('Node')
-        } else {
-            newTitleList.push(item)
         }
     }
+    await initNewTitleList()
+    
     excelList.push(newTitleList)
     datas.forEach((r, index) => {
         let row = []
@@ -2041,54 +2044,77 @@ const driverReportExcel = async function (reportGroupSelectionTitle, datas, repo
             }
         }
         newTitleList.forEach(title => {
-            if (title == 'Driver Name') {
-                row.push(driverName);
-            } else if (title == 'Driver Role') {
-                row.push(role)
-            } else if (title == 'Vocation') {
-                row.push(vocation)
-            } else if (title == 'Hub') {
-                row.push(unit)
-            } else if (title == 'Node') {
-                row.push(subUnit)
-            } else if (title == 'Unit'){
-                row.push(groupName)
-            } else if (title == 'Enlistment Date') {
-                row.push(enlistmentDate)
-            } else if (title == 'ORD') {
-                row.push(operationallyReadyDate)
-            } else if (title == 'Driver NRIC') {
-                row.push(nric)
-            } else if (title == 'DOB') {
-                row.push(birthday)
-            } else if (title == 'Contact No') {
-                row.push(contactNumber)
-            } else if (title == 'Permit No') {
-                row.push(permitNo)
-            } else if (title == 'Date of Issue') {
-                row.push(permitIssueDate)
-            } else if (title == 'Status') {
-                row.push(status)
-            } else if (title == 'Category') {
-                row.push(assessmentType)
-            } else if (title == 'Vehicle Class') {
-                row.push(permitType)
-            } else if (title == 'Platforms') {
-                row.push(vehicleType)
-            } else if (title == 'Demerit Points') {
-                row.push(driverDemeritPoints)
-            } else if(title == 'Last Driven Date'){
-                row.push(lastDrivenDate)
-            } else if(classStatus) {
-                if(newMileageList.length > 0){
-                    for(let item of newMileageList){
-                        if(title == item.permitType){
-                            row.push(item.totalMileage ?? 0)
-                        } 
+            switch (title) {
+                case 'Driver Name':
+                    row.push(driverName);
+                    break;
+                case 'Driver Role':
+                    row.push(role)
+                    break;
+                case 'Vocation':
+                    row.push(vocation)
+                    break;
+                case 'Hub':
+                    row.push(unit)
+                    break;
+                case 'Node':
+                    row.push(subUnit)
+                    break;
+                case 'Unit':
+                    row.push(groupName)
+                    break;
+                case 'Enlistment Date':
+                    row.push(enlistmentDate)
+                    break;
+                case 'ORD':
+                    row.push(operationallyReadyDate)
+                    break;
+                case 'Driver NRIC':
+                    row.push(nric)
+                    break;
+                case 'DOB':
+                    row.push(birthday)
+                    break;
+                case 'Contact No':
+                    row.push(contactNumber)
+                    break;
+                case 'Permit No':
+                    row.push(permitNo)
+                    break;
+                case 'Date of Issue':
+                    row.push(permitIssueDate)
+                    break;
+                case 'Status':
+                    row.push(status)
+                    break;
+                case 'Category':
+                    row.push(assessmentType)
+                    break;
+                case 'Vehicle Class':
+                    row.push(permitType)
+                    break;
+                case 'Platforms':
+                    row.push(vehicleType)
+                    break;
+                case 'Demerit Points':
+                    row.push(driverDemeritPoints)
+                    break;
+                case 'Last Driven Date':
+                    row.push(lastDrivenDate)
+                    break;
+                case classStatus:{
+                    if(newMileageList.length){
+                        for(let item of newMileageList){
+                            if(title == item.permitType){
+                                row.push(item.totalMileage ?? 0)
+                            } 
+                        }
+                    } else {
+                        row.push(0)
                     }
-                } else {
-                    row.push(0)
+                    break
                 }
+
             }
         })
         excelList.push(row)
@@ -2151,28 +2177,30 @@ module.exports.getDriverReportList = async function (req, res) {
         let result = []
         let uninGroupList = [newGroup]
         if(unitIdList.length > 0 && newGroup) uninGroupList = [null, newGroup]
-        for(let item of uninGroupList){
-            let driverList = await reportUtils.getDriverList({ startDate, endDate, user, item, unitIdList, driverStatus, driverCategory, driverClass, driverType, enDateRange,ordRange, role, vocation, ordStart, hub, node });
-            let mileageListData = await reportUtils.getDriverMileageByClass(startDate, endDate)
-            let lastDrivenDateList = await reportUtils.getLastDrivenDate()
-            let newDriverList = []
-            for(let item of driverList){
-                let groupObj = groupList.filter(groupItem => groupItem.id == item.groupId)
-                item.groupName = groupObj[0] ? groupObj[0].groupName : null
-                if(item.nric){
-                    if(item.nric.length > 9) {
+
+        const initResult = async function () {
+            for(let item of uninGroupList){
+                let driverList = await reportUtils.getDriverList({ startDate, endDate, user, item, unitIdList, driverStatus, driverCategory, driverClass, driverType, enDateRange,ordRange, role, vocation, ordStart, hub, node });
+                let mileageListData = await reportUtils.getDriverMileageByClass(startDate, endDate)
+                let lastDrivenDateList = await reportUtils.getLastDrivenDate()
+                let newDriverList = []
+                for(let item of driverList){
+                    let groupObj = groupList.filter(groupItem => groupItem.id == item.groupId)
+                    item.groupName = groupObj[0] ? groupObj[0].groupName : null
+                    if(item.nric.length > 9){
                         item.nric = utils.decodeAESCode(item.nric);
                         item.nric = ((item.nric).toString()).substr(0, 1) + '****' + ((item.nric).toString()).substr(((item.nric).toString()).length-4, 4)
-                    } 
+                    }
+                    let mileageList = mileageListData.filter(mi => mi.driverId == item.driverId)
+                    item.mileageList = mileageList
+                    let lastList = lastDrivenDateList.filter(ld => ld.driverId == item.driverId)
+                    item.lastDrivenDate = lastList.length > 0 ? moment(lastList[0].mobileEndTime).format('YYYY-MM-DD HH:mm:ss') : ''
+                    newDriverList.push(item)
                 }
-                let mileageList = mileageListData.filter(mi => mi.driverId == item.driverId)
-                item.mileageList = mileageList
-                let lastList = lastDrivenDateList.filter(ld => ld.driverId == item.driverId)
-                item.lastDrivenDate = lastList.length > 0 ? moment(lastList[0].mobileEndTime).format('YYYY-MM-DD HH:mm:ss') : ''
-                newDriverList.push(item)
+                result = [...result, ...newDriverList]
             }
-            result = [...result, ...newDriverList]
         }
+        await initResult()
         
         let filename = await driverReportExcel(reportGroupSelectionTitle, result, reportDateRange)
         return res.json(utils.response(1, filename));
@@ -2234,69 +2262,97 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
           } = r
 
         newTitleList.forEach(title => {
-            if (title == 'Vehicle Category') {
-                row.push(vehicleCategory);
-            } else if (title == 'Vehicle Number') {
-                row.push(vehicleNo)
-            } else if (title == 'Vehicle Type') {
-                row.push(vehicleType)
-            }  else if (title == 'Odometer') {
-                row.push(`${ odometer ?? 0 }km`)
-            } else if (title == 'Hub') {
-                row.push(unit)
-            } else if (title == 'Node') {
-                row.push(subUnit)
-            } else if (title == 'Description') {
-                row.push(description)
-            } else if (title == 'Speed Limit') {
-                row.push(`${ limitSpeed ?? 0 }KM/hr`)
-            } else if (title == 'Permit Type') {
-                row.push(permitType)
-            } else if (title == 'Status') {
-                row.push(status)
-            } else if (title == 'WPT1 completion date') {
-                row.push(wpt1CompleteTime ? moment(wpt1CompleteTime).format('YYYY-MM-DD HH:mm') : null)
-            } else if (title == 'WPT1 due date') {
-                row.push(nextWpt1Time)
-            } else if (title == 'WPT1 lapsed days') {
-                let days = apartDays(nextWpt1Time)
-                row.push(days > 0 ? days : '')
-            } else if (title == 'WPT2 completion date') {
-                row.push(wpt2CompleteTime ? moment(wpt2CompleteTime).format('YYYY-MM-DD HH:mm') : null)
-            } else if (title == 'WPT2 due date') {
-                row.push(nextWpt2Time)
-            } else if (title == 'WPT2 lapsed days') {
-                let days = apartDays(nextWpt2Time)
-                row.push(days > 0 ? days : '')
-            } else if (title == 'WPT3 completion date') {
-                row.push(wpt3CompleteTime ? moment(wpt3CompleteTime).format('YYYY-MM-DD HH:mm') : null)
-            } else if (title == 'WPT3 due date') {
-                row.push(nextWpt3Time)
-            } else if (title == 'WPT3 lapsed days') {
-                let days = apartDays(nextWpt3Time)
-                row.push(days > 0 ? days : '')
-            } else if (title == 'MPT completion date') {
-                row.push(mptCompleteTime ? moment(mptCompleteTime).format('YYYY-MM-DD HH:mm') : null)
-            } else if (title == 'MPT due date') {
-                row.push(nextMptTime)
-            } else if (title == 'MPT lapsed days') {
-                let days = apartDays(nextMptTime)
-                row.push(days > 0 ? days : '')
-            } else if (title == 'PM completion date') {
-                row.push(pmCompleteTime ? moment(pmCompleteTime).format('YYYY-MM-DD HH:mm') : null)
-            } else if (title == 'PM due date') {
-                row.push(nextPmTime)
-            } else if (title == 'PM lapsed days') {
-                let days = apartDays(nextPmTime)
-                row.push(days > 0 ? days : '')
-            } else if (title == 'AVI completion date') {
-                row.push(aviCompleteTime ? moment(aviCompleteTime).format('YYYY-MM-DD HH:mm') : null)
-            } else if (title == 'AVI due date') {
-                row.push(nextAviTime)
-            } else if (title == 'AVI lapsed days') {
-                let days = apartDays(nextAviTime)
-                row.push(days > 0 ? days : '')
-            } 
+            switch (title) {
+                case 'Vehicle Category':
+                    row.push(vehicleCategory);
+                    break;
+                case 'Vehicle Number':
+                    row.push(vehicleNo)
+                    break;
+                case 'Vehicle Type':
+                    row.push(vehicleType)
+                    break;
+                case 'Odometer':
+                    row.push(`${ odometer ?? 0 }km`)
+                    break;
+                case 'Hub':
+                    row.push(unit)
+                    break;
+                case 'Node':
+                    row.push(subUnit)
+                    break;
+                case 'Description':
+                    row.push(description)
+                    break;
+                case 'Speed Limit':
+                    row.push(`${ limitSpeed ?? 0 }KM/hr`)
+                    break;
+                case 'Permit Type':
+                    row.push(permitType)
+                    break;
+                case 'Status':
+                    row.push(status)
+                    break;
+                case 'WPT1 completion date':
+                    row.push(wpt1CompleteTime ? moment(wpt1CompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    break;
+                case 'WPT1 due date':
+                    row.push(nextWpt1Time)
+                    break;
+                case 'WPT1 lapsed days':
+                    let days = apartDays(nextWpt1Time)
+                    row.push(days > 0 ? days : '')
+                    break;
+                case 'WPT2 completion date':
+                    row.push(wpt2CompleteTime ? moment(wpt2CompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    break;
+                case 'WPT2 due date':
+                    row.push(nextWpt2Time)
+                    break;
+                case 'WPT2 lapsed days':
+                    let days2 = apartDays(nextWpt2Time)
+                    row.push(days2 > 0 ? days2 : '')
+                    break;
+                case 'WPT3 completion date':
+                    row.push(wpt3CompleteTime ? moment(wpt3CompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    break;
+                case 'WPT3 due date':
+                    row.push(nextWpt3Time)
+                    break;
+                case 'WPT3 lapsed days':
+                    let days3 = apartDays(nextWpt3Time)
+                    row.push(days3 > 0 ? days3 : '')
+                    break;
+                case 'MPT completion date':
+                    row.push(mptCompleteTime ? moment(mptCompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    break;
+                case 'MPT due date':
+                    row.push(nextMptTime)
+                    break;
+                case 'MPT lapsed days':
+                    let days4 = apartDays(nextMptTime)
+                    row.push(days4 > 0 ? days4 : '')
+                    break;
+                case 'PM completion date':
+                    row.push(pmCompleteTime ? moment(pmCompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    break;
+                case 'PM due date':
+                    row.push(nextPmTime)
+                    break;
+                case 'PM lapsed days':
+                    let days5 = apartDays(nextPmTime)
+                    row.push(days5 > 0 ? days5 : '')
+                    break;
+                case 'AVI completion date':
+                    row.push(aviCompleteTime ? moment(aviCompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    break;
+                case 'AVI due date':
+                    row.push(nextAviTime)
+                    break;
+                case 'AVI lapsed days':
+                    let days6 = apartDays(nextAviTime)
+                    row.push(days6 > 0 ? days6 : '')
+            }
         })
         excelList.push(row)
     })
@@ -2353,68 +2409,71 @@ module.exports.getVehicleReportList = async function (req, res) {
         let vehicleData = []
         let uninGroupList = [newGroup]
         if(unitIdList && newGroup) uninGroupList = [null, newGroup]
-        for(let item of uninGroupList){
-            let newVehicleList = []
-            let vehicleList = await reportUtils.getVehicleList({ startDate, endDate, user, item, unitIdList, vehicleCategory, permitType, vehicleStatus, WPT1CompletionDateRange, WPT2CompletionDateRange, WPT3CompletionDateRange, hub, node });
-            let taskPurposList = await reportUtils.getTaskPurposeByVehicle(startDate, endDate)
-            for(let item of vehicleList){
-                let purposList = taskPurposList.filter(taskObj => taskObj.vehicleNumber == item.vehicleNo);
-                for(let itemTask of purposList){
-                    if (!itemTask.purpose) continue
 
-                    switch (itemTask.purpose.toLowerCase()) {
-                        case 'avi':
-                            item.aviCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
-                            break;
-                        case 'pm':
-                            item.pmCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
-                            break;
-                        case 'mpt':
-                            item.mptCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
-                            break;
+        const initVehicleData = async function () {
+            for(let item of uninGroupList){
+                let newVehicleList = []
+                let vehicleList = await reportUtils.getVehicleList({ startDate, endDate, user, item, unitIdList, vehicleCategory, permitType, vehicleStatus, WPT1CompletionDateRange, WPT2CompletionDateRange, WPT3CompletionDateRange, hub, node });
+                let taskPurposList = await reportUtils.getTaskPurposeByVehicle(startDate, endDate)
+                for(let item of vehicleList){
+                    let purposList = taskPurposList.filter(taskObj => taskObj.vehicleNumber == item.vehicleNo && taskObj.purpose);
+                    for(let itemTask of purposList){
+                        switch (itemTask.purpose.toLowerCase()) {
+                            case 'avi':
+                                item.aviCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
+                                break;
+                            case 'pm':
+                                item.pmCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
+                                break;
+                            case 'mpt':
+                                item.mptCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
+                                break;
+                        }
                     }
+                    const checkScreenCondition = function () {
+                        let screeningCondition = [];
+                        if (MPTCompletionDateRange?.indexOf(' - ') != -1) {
+                            let dates = MPTCompletionDateRange.split(' - ')
+                            if(item.mptCompleteTime){
+                                let state = dates[1] >= moment(item.mptCompleteTime).format('YYYY-MM-DD') && dates[0] <= moment(item.mptCompleteTime).format('YYYY-MM-DD')
+                                screeningCondition.push(state) 
+                            } else {
+                                screeningCondition.push(false)
+                            }
+                        }
+                        if (PMCompletionDateRange?.indexOf(' - ') != -1) {
+                            let dates = PMCompletionDateRange.split(' - ')
+                            if(item.pmCompleteTime){
+                                let state = dates[1] >= moment(item.pmCompleteTime).format('YYYY-MM-DD') && dates[0] <= moment(item.pmCompleteTime).format('YYYY-MM-DD')
+                                screeningCondition.push(state)
+                            } else {
+                                screeningCondition.push(false)
+                            }
+                        }
+                        if (AVICompletionDateRange?.indexOf(' - ') != -1) {
+                            let dates = AVICompletionDateRange.split(' - ')
+                            if(item.aviCompleteTime){
+                                let state = dates[1] >= moment(item.aviCompleteTime).format('YYYY-MM-DD') && dates[0] <= moment(item.aviCompleteTime).format('YYYY-MM-DD')
+                                screeningCondition.push(state)
+                            } else {
+                                screeningCondition.push(false)
+                            }
+                        }
+                        if(screeningCondition.indexOf(false) == -1 && screeningCondition.indexOf('false') == -1) {
+                            newVehicleList.push(item)
+                        } 
+                    }
+                    checkScreenCondition()
                 }
-                let screeningCondition = [];
-                const checkScreenCondition = function () {
-                    if (MPTCompletionDateRange?.indexOf(' - ') != -1) {
-                        let dates = MPTCompletionDateRange.split(' - ')
-                        if(item.mptCompleteTime){
-                            let state = dates[1] >= moment(item.mptCompleteTime).format('YYYY-MM-DD') && dates[0] <= moment(item.mptCompleteTime).format('YYYY-MM-DD')
-                            screeningCondition.push(state) 
-                        } else {
-                            screeningCondition.push(false)
-                        }
-                    }
-                    if (PMCompletionDateRange?.indexOf(' - ') != -1) {
-                        let dates = PMCompletionDateRange.split(' - ')
-                        if(item.pmCompleteTime){
-                            let state = dates[1] >= moment(item.pmCompleteTime).format('YYYY-MM-DD') && dates[0] <= moment(item.pmCompleteTime).format('YYYY-MM-DD')
-                            screeningCondition.push(state)
-                        } else {
-                            screeningCondition.push(false)
-                        }
-                    }
-                    if (AVICompletionDateRange?.indexOf(' - ') != -1) {
-                        let dates = AVICompletionDateRange.split(' - ')
-                        if(item.aviCompleteTime){
-                            let state = dates[1] >= moment(item.aviCompleteTime).format('YYYY-MM-DD') && dates[0] <= moment(item.aviCompleteTime).format('YYYY-MM-DD')
-                            screeningCondition.push(state)
-                        } else {
-                            screeningCondition.push(false)
-                        }
-                    }
+                if (MPTCompletionDateRange || PMCompletionDateRange || AVICompletionDateRange) {
+                    vehicleData = [...vehicleData, ...newVehicleList]
+                } else {
+                    vehicleData = [...vehicleData, ...vehicleList]
                 }
-                checkScreenCondition()
-                if(screeningCondition.indexOf(false) == -1 && screeningCondition.indexOf('false') == -1) {
-                    newVehicleList.push(item)
-                } 
-            }
-            if (MPTCompletionDateRange || PMCompletionDateRange || AVICompletionDateRange) {
-                vehicleData = [...vehicleData, ...newVehicleList]
-            } else {
-                vehicleData = [...vehicleData, ...vehicleList]
             }
         }
+        await initVehicleData()        
+
         let filename = await vehicleReportExcel(reportGroupSelectionTitle, vehicleData, reportDateRange)
         return res.json(utils.response(1, filename));
     } catch (error) {
