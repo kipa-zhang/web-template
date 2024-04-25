@@ -2261,6 +2261,28 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
             nextWpt3Time,wpt3CompleteTime, unit, subUnit, status, mptCompleteTime, aviCompleteTime, pmCompleteTime
           } = r
 
+        wpt1CompleteTime = wpt1CompleteTime ? moment(wpt1CompleteTime).format('YYYY-MM-DD HH:mm') : null
+        wpt2CompleteTime = wpt2CompleteTime ? moment(wpt2CompleteTime).format('YYYY-MM-DD HH:mm') : null
+        wpt3CompleteTime = wpt3CompleteTime ? moment(wpt3CompleteTime).format('YYYY-MM-DD HH:mm') : null
+        mptCompleteTime = mptCompleteTime ? moment(mptCompleteTime).format('YYYY-MM-DD HH:mm') : null
+        pmCompleteTime = pmCompleteTime ? moment(pmCompleteTime).format('YYYY-MM-DD HH:mm') : null
+        aviCompleteTime = aviCompleteTime ? moment(aviCompleteTime).format('YYYY-MM-DD HH:mm') : null
+
+        odometer = odometer ? odometer : 0
+        limitSpeed = limitSpeed ? limitSpeed : 0
+        let days = apartDays(nextWpt1Time)
+        days = days > 0 ? days : ''
+        let days2 = apartDays(nextWpt2Time)
+        days2 = days2 > 0 ? days2 : ''
+        let days3 = apartDays(nextWpt3Time)
+        days3 = days3 > 0 ? days3 : ''
+        let days4 = apartDays(nextMptTime)
+        days4 = days4 > 0 ? days4 : ''
+        let days5 = apartDays(nextPmTime)
+        days5 = days5 > 0 ? days5 : ''
+        let days6 = apartDays(nextAviTime)
+        days6 = days6 > 0 ? days6 : ''
+
         newTitleList.forEach(title => {
             switch (title) {
                 case 'Vehicle Category':
@@ -2273,7 +2295,7 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
                     row.push(vehicleType)
                     break;
                 case 'Odometer':
-                    row.push(`${ odometer ?? 0 }km`)
+                    row.push(`${ odometer }km`)
                     break;
                 case 'Hub':
                     row.push(unit)
@@ -2285,7 +2307,7 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
                     row.push(description)
                     break;
                 case 'Speed Limit':
-                    row.push(`${ limitSpeed ?? 0 }KM/hr`)
+                    row.push(`${ limitSpeed }KM/hr`)
                     break;
                 case 'Permit Type':
                     row.push(permitType)
@@ -2294,64 +2316,59 @@ const vehicleReportExcel = async function (reportGroupSelectionTitle, datas, rep
                     row.push(status)
                     break;
                 case 'WPT1 completion date':
-                    row.push(wpt1CompleteTime ? moment(wpt1CompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    row.push(wpt1CompleteTime)
                     break;
                 case 'WPT1 due date':
                     row.push(nextWpt1Time)
                     break;
                 case 'WPT1 lapsed days':
-                    let days = apartDays(nextWpt1Time)
-                    row.push(days > 0 ? days : '')
+                    row.push(days)
                     break;
                 case 'WPT2 completion date':
-                    row.push(wpt2CompleteTime ? moment(wpt2CompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    row.push(wpt2CompleteTime)
                     break;
                 case 'WPT2 due date':
                     row.push(nextWpt2Time)
                     break;
                 case 'WPT2 lapsed days':
-                    let days2 = apartDays(nextWpt2Time)
-                    row.push(days2 > 0 ? days2 : '')
+                    row.push(days2)
                     break;
                 case 'WPT3 completion date':
-                    row.push(wpt3CompleteTime ? moment(wpt3CompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    row.push(wpt3CompleteTime)
                     break;
                 case 'WPT3 due date':
                     row.push(nextWpt3Time)
                     break;
                 case 'WPT3 lapsed days':
-                    let days3 = apartDays(nextWpt3Time)
-                    row.push(days3 > 0 ? days3 : '')
+                    row.push(days3)
                     break;
                 case 'MPT completion date':
-                    row.push(mptCompleteTime ? moment(mptCompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    row.push(mptCompleteTime)
                     break;
                 case 'MPT due date':
                     row.push(nextMptTime)
                     break;
                 case 'MPT lapsed days':
-                    let days4 = apartDays(nextMptTime)
-                    row.push(days4 > 0 ? days4 : '')
+                    row.push(days4)
                     break;
                 case 'PM completion date':
-                    row.push(pmCompleteTime ? moment(pmCompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    row.push(pmCompleteTime)
                     break;
                 case 'PM due date':
                     row.push(nextPmTime)
                     break;
                 case 'PM lapsed days':
-                    let days5 = apartDays(nextPmTime)
-                    row.push(days5 > 0 ? days5 : '')
+                    row.push(days5)
                     break;
                 case 'AVI completion date':
-                    row.push(aviCompleteTime ? moment(aviCompleteTime).format('YYYY-MM-DD HH:mm') : null)
+                    row.push(aviCompleteTime)
                     break;
                 case 'AVI due date':
                     row.push(nextAviTime)
                     break;
                 case 'AVI lapsed days':
-                    let days6 = apartDays(nextAviTime)
-                    row.push(days6 > 0 ? days6 : '')
+                    row.push(days6)
+                    break;
             }
         })
         excelList.push(row)
@@ -2417,7 +2434,7 @@ module.exports.getVehicleReportList = async function (req, res) {
                 let taskPurposList = await reportUtils.getTaskPurposeByVehicle(startDate, endDate)
                 for(let item of vehicleList){
                     let purposList = taskPurposList.filter(taskObj => taskObj.vehicleNumber == item.vehicleNo && taskObj.purpose);
-                    for(let itemTask of purposList){
+                    purposList.forEach(itemTask => {
                         switch (itemTask.purpose.toLowerCase()) {
                             case 'avi':
                                 item.aviCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
@@ -2429,7 +2446,7 @@ module.exports.getVehicleReportList = async function (req, res) {
                                 item.mptCompleteTime = moment(itemTask.mobileEndTime).format('YYYY-MM-DD HH:mm')
                                 break;
                         }
-                    }
+                    })
                     const checkScreenCondition = function () {
                         let screeningCondition = [];
                         if (MPTCompletionDateRange?.indexOf(' - ') != -1) {
