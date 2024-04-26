@@ -1,1 +1,0 @@
-{"vehicleNo":"VK100-160","distance":"0","operationType":"end","serviceModeValue":"delivery","endMileageTime":"2024-03-29 09:17:42","userId":"201189","taskId":"MT-154","mileage":"3.0","operationTime":"2024-03-29 09:17:42","startMileage":0,"startTime":"2024-03-28T10:46:31.000Z"}
