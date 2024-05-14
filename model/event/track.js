@@ -12,6 +12,11 @@ module.exports.Track = dbConf.sequelizeObj.define('track', {
         allowNull: false,
         primaryKey: true,
     },
+    occTime: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        primaryKey: true,
+    },
     vehicleNo: {
         type: DataTypes.STRING,
         defaultValue: null,
@@ -66,9 +71,7 @@ module.exports.Track = dbConf.sequelizeObj.define('track', {
         type: DataTypes.INTEGER(5),
         defaultValue: 0
     },
-    occTime: {
-        type: DataTypes.DATE,
-    },
+    
 	lastOccTime: {
         type: DataTypes.DATE,
     }

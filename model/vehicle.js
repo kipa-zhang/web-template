@@ -10,6 +10,12 @@ module.exports.Vehicle = dbConf.sequelizeObj.define('vehicle', {
         type: DataTypes.INTEGER(11),
         defaultValue: null,
     },
+    deviceId: {
+        type: DataTypes.STRING(55),
+    },
+    vehicleCategory: {
+        type: DataTypes.STRING(55),
+    },
     vehicleType: {
         type: DataTypes.STRING(55),
     },
@@ -26,26 +32,7 @@ module.exports.Vehicle = dbConf.sequelizeObj.define('vehicle', {
         type: DataTypes.INTEGER(12),
         defaultValue: 0,
     },
-    keyTagId: {
-        type: DataTypes.STRING(64),
-        defaultValue: null,
-    },
     nextWpt1Time: {
-		type: DataTypes.DATE,
-	},
-    wpt1CompleteTime: {
-		type: DataTypes.DATE,
-	},
-    nextWpt2Time: {
-		type: DataTypes.DATE,
-	},
-    wpt2CompleteTime: {
-		type: DataTypes.DATE,
-	},
-    nextWpt3Time: {
-		type: DataTypes.DATE,
-	},
-    wpt3CompleteTime: {
 		type: DataTypes.DATE,
 	},
     nextMptTime: {
@@ -64,9 +51,19 @@ module.exports.Vehicle = dbConf.sequelizeObj.define('vehicle', {
     status: {
         type: DataTypes.STRING(20),
     },
+    overrideStatus: {
+        type: DataTypes.STRING(20),
+    },
+    overrideStatusTime: {
+        type: DataTypes.DATE,
+    },
     limitSpeed: {
         type: DataTypes.INTEGER,
         defaultValue: 60,
+    },
+    onhold: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
     },
 }, {
     // other options

@@ -17,37 +17,27 @@ module.exports.Driver = dbConf.sequelizeObj.define('driver', {
         allowNull: false,
     },
     nric: {
-        type: DataTypes.STRING(55),
+        type: DataTypes.STRING(8),
     },
     contactNumber: {
         type: DataTypes.STRING(55),
     },
-    email: {
-        type: DataTypes.STRING(64),
-    },
     permitType: {
         type: DataTypes.STRING(255),
     },
-    vehicleType: {
-        type: DataTypes.STRING(3000),
+    unitId: {
+        type: DataTypes.INTEGER(12),
+        defaultValue: null,
+    },
+    totalMileage: {
+        type: DataTypes.INTEGER(12),
+        defaultValue: 0,
     },
     vocation: {
         type: DataTypes.STRING(55),
     },
     rank: {
         type: DataTypes.STRING(55),
-    },
-    unit: {
-        type: DataTypes.STRING(255),
-        defaultValue: null,
-    },
-    unitId: {
-        type: DataTypes.INTEGER(12),
-        defaultValue: null,
-    },
-    groupId: {
-        type: DataTypes.INTEGER(12),
-        defaultValue: null,
     },
     enlistmentDate: {
         type: DataTypes.DATE,
@@ -82,26 +72,17 @@ module.exports.Driver = dbConf.sequelizeObj.define('driver', {
     lng: {
         type: DataTypes.VIRTUAL,
     },
+    state: {
+        type: DataTypes.STRING(55)
+    }, 
     status: {
         type: DataTypes.STRING(20),
     },
-    licensingStatus: {
+    overrideStatus: {
         type: DataTypes.STRING(20),
-        defaultValue: 'Not Ready'
     },
-    lastSOSDateTime: {
-        type: DataTypes.DATE
-    },
-    state: {
-        type: DataTypes.STRING(55)
-    },
-    permitStatus: {
-        type: DataTypes.STRING(10),
-        defaultValue: "valid"
-    }, 
-    permitInvalidReason: {
-        type: DataTypes.STRING(64),
-        defaultValue: null
+    overrideStatusTime: {
+        type: DataTypes.DATE,
     },
 }, {
     // other options

@@ -23,6 +23,9 @@ module.exports.NogoZone = dbConf.sequelizeObj.define('nogoZone', {
         type: DataTypes.INTEGER(11),
         allowNull: false,
     },
+    operation: {
+        type: DataTypes.VIRTUAL
+    },
     deleted: {
         type: DataTypes.TINYINT(1),
         defaultValue: 0
@@ -35,14 +38,18 @@ module.exports.NogoZone = dbConf.sequelizeObj.define('nogoZone', {
         type: DataTypes.TINYINT(1),
         defaultValue: 1
     },
-    enableVoice: {
-        type: DataTypes.TINYINT(1),
-        defaultValue: 0
-    },
     selectedWeeks: {
         type: DataTypes.STRING(255),
         allowNull: true,
     },
+    startDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+    },
+    endDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: false
+    }
 }, {
     // other options
     tableName: 'nogo_zone',

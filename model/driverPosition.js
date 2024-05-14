@@ -71,14 +71,6 @@ module.exports.DriverPosition = dbConf.sequelizeObj.define('driverPosition', {
         type: DataTypes.INTEGER(12),
         allowNull: false,
     },
-    realtimeSpeeding: {
-        type: DataTypes.TINYINT,
-        defaultValue: 0,
-    },
-    realtimeAlert: {
-        type: DataTypes.TINYINT,
-        defaultValue: 0,
-    },
 }, {
     // other options
     tableName: 'driver_position',
