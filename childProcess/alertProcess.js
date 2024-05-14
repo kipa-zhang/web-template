@@ -40,98 +40,94 @@ process.on('message', async deviceProcess => {
 
 
 const updateOBDAlert = async function (targetList) {
-    try {
-        if (!targetList.length) {
-            log.info(`updateOBDAlertByChildProcess => no data.`)
-            return
+    if (!targetList.length) {
+        log.info(`updateOBDAlertByChildProcess => no data.`)
+        return
+    } else {
+        log.info(`updateOBDAlertByChildProcess`, JSON.stringify(targetList, null, 4))
+    }
+
+    // Find out vehicleList be related 
+    let deviceIdList = targetList.map(item => item.deviceId)
+    let vehicleList = await Vehicle.findAll({ where: { deviceId: deviceIdList }, raw: true })
+
+    for (let target of targetList) {
+        // Find out vehicle
+        let vehicle = vehicleList.find(item => item.deviceId == target.deviceId)
+        if (!vehicle) {
+            log.warn(`DeviceID ${ target.deviceId } has no record in Table(Vehicle)`)
+            continue
         } else {
-            log.info(`updateOBDAlertByChildProcess`, JSON.stringify(targetList, null, 4))
+            log.warn(`DeviceID ${ target.deviceId } => VehicleNo ${ vehicle.vehicleNo }`)
         }
 
-        // Find out vehicleList be related 
-        let deviceIdList = targetList.map(item => item.deviceId)
-        let vehicleList = await Vehicle.findAll({ where: { deviceId: deviceIdList }, raw: true })
+        // Find out task by date (not loan task, so need vehicleNumber & driverId while search task)
+        let taskList = await sequelizeObj.query(`
+            SELECT taskId, dataFrom, driverId, vehicleNumber, vehicleNumber AS vehicleNo,
+            DATE_FORMAT(mobileStartTime, '%Y-%m-%d %H:%i:%s') AS mobileStartTime, 
+            DATE_FORMAT(mobileEndTime, '%Y-%m-%d %H:%i:%s') AS mobileEndTime,
+            hub, node, groupId
+            FROM task
+            WHERE vehicleNumber = '${ vehicle.vehicleNo }'
+            AND '${ target.createdAt }' >= mobileStartTime
+            AND (mobileEndTime IS NULL OR '${ target.createdAt }' <= mobileEndTime )
+            AND driverId IS NOT NULL
 
-        for (let target of targetList) {
-            // Find out vehicle
-            let vehicle = vehicleList.find(item => item.deviceId == target.deviceId)
-            if (!vehicle) {
-                log.warn(`DeviceID ${ target.deviceId } has no record in Table(Vehicle)`)
-                continue
+            UNION
+
+            SELECT CONCAT('DUTY-', dutyId) AS taskId, 'SYSTEM' AS dataFrom, driverId, vehicleNo, vehicleNo AS vehicleNumber,
+            DATE_FORMAT(mobileStartTime, '%Y-%m-%d %H:%i:%s') AS mobileStartTime, 
+            DATE_FORMAT(mobileEndTime, '%Y-%m-%d %H:%i:%s') AS mobileEndTime,
+            hub, node, groupId
+            FROM urgent_indent
+            WHERE vehicleNo = '${ vehicle.vehicleNo }'
+            AND '${ target.createdAt }' >= mobileStartTime
+            AND (mobileEndTime IS NULL OR '${ target.createdAt }' <= mobileEndTime )
+            AND driverId IS NOT NULL
+        `, { type: QueryTypes.SELECT })
+        // Calculate every task's alert record
+
+        if (!taskList.length) {
+            log.info(`DeviceID ${ target.deviceId } do not has task at ${ target.createdAt } `)
+            continue
+        }
+
+        for (let task of taskList) {
+            // generate timezone
+            let timezone = [ task.mobileStartTime ]
+            if (task.mobileEndTime) {
+                // If through two or more days, will ignore at commonStoreEventHistoryForIdle
+                timezone.push(task.mobileEndTime)
             } else {
-                log.warn(`DeviceID ${ target.deviceId } => VehicleNo ${ vehicle.vehicleNo }`)
+                timezone.push(moment().format('YYYY-MM-DD 23:59:59'))
             }
+            log.warn(`TaskID: ${ task.taskId } => TimeZone ${ timezone }`)
 
-            // Find out task by date (not loan task, so need vehicleNumber & driverId while search task)
-            let taskList = await sequelizeObj.query(`
-                SELECT taskId, dataFrom, driverId, vehicleNumber, vehicleNumber AS vehicleNo,
-                DATE_FORMAT(mobileStartTime, '%Y-%m-%d %H:%i:%s') AS mobileStartTime, 
-                DATE_FORMAT(mobileEndTime, '%Y-%m-%d %H:%i:%s') AS mobileEndTime,
-                hub, node, groupId
-                FROM task
-                WHERE vehicleNumber = '${ vehicle.vehicleNo }'
-                AND '${ target.createdAt }' >= mobileStartTime
-                AND (mobileEndTime IS NULL OR '${ target.createdAt }' <= mobileEndTime )
-                AND driverId IS NOT NULL
+            let deviceGPSList = await outputService.readFromFile(target.deviceId, null, timezone)
+            let alertList = await commonGenerateNoGoZoneAlert(deviceGPSList, target.deviceId, vehicle.vehicleNo, task.hub, task.node, task.groupId)
 
-                UNION
+            if (alertList.length) {
+                alertList = alertList.map(item => {
+                    item.taskId = task.taskId
+                    item.vehicleNo = task.vehicleNo
+                    return item
+                })
+                log.warn(`Alert List => `, JSON.stringify(alertList, null, 4))
+                await sequelizeObj.transaction(async transaction => {
+                    await TrackHistory.destroy({ where: { 
+                        deviceId: target.deviceId, 
+                        violationType: CONTENT.ViolationType.NoGoZoneAlert, 
+                        occTime: { [Op.between]: timezone } 
+                    } })
 
-                SELECT CONCAT('DUTY-', dutyId) AS taskId, 'SYSTEM' AS dataFrom, driverId, vehicleNo, vehicleNo AS vehicleNumber,
-                DATE_FORMAT(mobileStartTime, '%Y-%m-%d %H:%i:%s') AS mobileStartTime, 
-                DATE_FORMAT(mobileEndTime, '%Y-%m-%d %H:%i:%s') AS mobileEndTime,
-                hub, node, groupId
-                FROM urgent_indent
-                WHERE vehicleNo = '${ vehicle.vehicleNo }'
-                AND '${ target.createdAt }' >= mobileStartTime
-                AND (mobileEndTime IS NULL OR '${ target.createdAt }' <= mobileEndTime )
-                AND driverId IS NOT NULL
-            `, { type: QueryTypes.SELECT })
-            // Calculate every task's alert record
-
-            if (!taskList.length) {
-                log.info(`DeviceID ${ target.deviceId } do not has task at ${ target.createdAt } `)
-                continue
-            }
-
-            for (let task of taskList) {
-                // generate timezone
-                let timezone = [ task.mobileStartTime ]
-                if (task.mobileEndTime) {
-                    // If through two or more days, will ignore at commonStoreEventHistoryForIdle
-                    timezone.push(task.mobileEndTime)
-                } else {
-                    timezone.push(moment().format('YYYY-MM-DD 23:59:59'))
-                }
-                log.warn(`TaskID: ${ task.taskId } => TimeZone ${ timezone }`)
-
-                let deviceGPSList = await outputService.readFromFile(target.deviceId, null, timezone)
-                let alertList = await commonGenerateNoGoZoneAlert(deviceGPSList, target.deviceId, vehicle.vehicleNo, task.hub, task.node, task.groupId)
-
-                if (alertList.length) {
-                    alertList = alertList.map(item => {
-                        item.taskId = task.taskId
-                        item.vehicleNo = task.vehicleNo
-                        return item
-                    })
-                    log.warn(`Alert List => `, JSON.stringify(alertList, null, 4))
-                    await sequelizeObj.transaction(async transaction => {
-                        await TrackHistory.destroy({ where: { 
-                            deviceId: target.deviceId, 
-                            violationType: CONTENT.ViolationType.NoGoZoneAlert, 
-                            occTime: { [Op.between]: timezone } 
-                        } })
-    
-                        await commonStoreEventHistoryForAlert(alertList, 'obd');
-                        await commonStoreEventForAlert(alertList, { dataFrom: 'obd' });
-                        await commonStoreEventPositionHistoryForOBD(alertList, deviceGPSList)
-                    })
-                } else {
-                    log.info(`updateOBDAlertByChildProcess => DeviceId: ${ target.deviceId }(VehicleNo: ${ vehicle.vehicleNo }) has no alert record on taskId: ${ task.taskId }.(mobileStartTime: ${ task.mobileStartTime }, mobileEndTime: ${ task.mobileEndTime })`)
-                }
+                    await commonStoreEventHistoryForAlert(alertList, 'obd');
+                    await commonStoreEventForAlert(alertList, { dataFrom: 'obd' });
+                    await commonStoreEventPositionHistoryForOBD(alertList, deviceGPSList)
+                })
+            } else {
+                log.info(`updateOBDAlertByChildProcess => DeviceId: ${ target.deviceId }(VehicleNo: ${ vehicle.vehicleNo }) has no alert record on taskId: ${ task.taskId }.(mobileStartTime: ${ task.mobileStartTime }, mobileEndTime: ${ task.mobileEndTime })`)
             }
         }
-    } catch (error) {
-        log.error(`updateOBDAlertByChildProcess => `, error)
     }
 }
 
@@ -396,43 +392,34 @@ const commonGenerateNoGoZoneAlert = async function (list, id, vehicleNo, hub, no
 
                 let result = util.isPointInPolygon([position.lat, position.lng], JSON.parse(noGoZone.polygon))
                 
-                if (result) {
-                    if (preStatus == 0) {
-                        // first time in zone
-                        alertRecord.occTime = position.createdAt
-                        alertRecord.startTime = position.createdAt
-                        alertRecord.vin = position.vin
-                        alertRecord.startSpeed = position.speed
-                        alertRecord.speed = position.speed
-                        alertRecord.lat = position.lat
-                        alertRecord.lng = position.lng
+                if (result && preStatus == 0) {
+                    // first time in zone
+                    alertRecord.occTime = position.createdAt
+                    alertRecord.startTime = position.createdAt
+                    alertRecord.vin = position.vin
+                    alertRecord.startSpeed = position.speed
+                    alertRecord.speed = position.speed
+                    alertRecord.lat = position.lat
+                    alertRecord.lng = position.lng
 
-                        preStatus = 1
-                    } else {
-                        // still in
-                    }
-                } else {
-                    if (preStatus == 1) {
-                        // out
-                        alertRecord.endTime = position.createdAt
+                    preStatus = 1
+                } else if (!result && preStatus == 1) {
+                    // out
+                    alertRecord.endTime = position.createdAt
 
-                        let timezone = moment(alertRecord.endTime).diff(moment(alertRecord.startTime));
-                        alertRecord.stayTime = Math.floor(timezone / 1000)
+                    let timezone = moment(alertRecord.endTime).diff(moment(alertRecord.startTime));
+                    alertRecord.stayTime = Math.floor(timezone / 1000)
 
-                        // store this record and start new one
-                        alertList.push(alertRecord)
+                    // store this record and start new one
+                    alertList.push(alertRecord)
 
-                        // re-init
-                        preStatus = 0; 
-                        alertRecord = {
-                            deviceId: id, 
-                            vehicleNo,
-                            violationType: CONTENT.ViolationType.NoGoZoneAlert, 
-                            zoneId: noGoZone.id
-                        }
-                    } else {
-
-                        // still out
+                    // re-init
+                    preStatus = 0; 
+                    alertRecord = {
+                        deviceId: id, 
+                        vehicleNo,
+                        violationType: CONTENT.ViolationType.NoGoZoneAlert, 
+                        zoneId: noGoZone.id
                     }
                 }
             }

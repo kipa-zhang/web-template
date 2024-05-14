@@ -6,7 +6,6 @@ const conf = require('../conf/conf');
 
 const transferService = require('../services/transferService');
 const offenceService = require('../services/offenceService');
-// const compareService = require('../services/compareService');
 
 module.exports.initTrackDashboardInfo = function () {
 
@@ -36,9 +35,5 @@ module.exports.initTrackDashboardInfo = function () {
         )
         scheduler.addSimpleIntervalJob(offenceJob)
     }
-    
-    // schedule.scheduleJob('*/10 * * * * *', () => {
-    //     log.info(`(initTrackDashboardInfo ${moment().format('YYYY-MM-DD HH:mm:ss')} ): updateCompareResult!`);
-    //     compareService.updateCompareResult()
-    // })
+
 }

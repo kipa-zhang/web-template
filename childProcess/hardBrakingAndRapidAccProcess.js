@@ -22,6 +22,19 @@ process.on('message', async deviceProcess => {
     try {
         const deviceList = deviceProcess.deviceList
         const driverList = deviceProcess.driverList
+
+        const initData = function (record) {
+            let result = {
+                flagOccTime,
+                flagCount
+            }
+
+            result.flagOccTime = record ? record.lastOccTime : null
+            result.flagCount = record ? record.count : 0
+
+            return result
+        }
+
         for (let device of deviceList) {
             let hardBrakingRecord = await Track.findOne({
                 where: {
@@ -30,12 +43,13 @@ process.on('message', async deviceProcess => {
                 }
             })
             // This is the flag use to different current data from old data
-            let flagOccTime = hardBrakingRecord ? hardBrakingRecord.lastOccTime : null;
-            let flagCount = hardBrakingRecord ? hardBrakingRecord.count : 0;
+            // let flagOccTime = hardBrakingRecord ? hardBrakingRecord.lastOccTime : null;
+            // let flagCount = hardBrakingRecord ? hardBrakingRecord.count : 0;
+            let result = initData(hardBrakingRecord)
             let timezone = [ device.startRecordTime, device.endRecordTime ]
-            let list = await getDataFormDB({ deviceId: device.deviceId, flagOccTime, timezone });
+            let list = await getDataFormDB({ deviceId: device.deviceId, flagOccTime: result.flagOccTime, timezone });
 
-            await generateHardBraking({ deviceId: device.deviceId, list, flagCount, dbRecord: hardBrakingRecord })
+            await generateHardBraking({ deviceId: device.deviceId, list, flagCount: result.flagCount, dbRecord: hardBrakingRecord })
             let rapidAccRecord = await Track.findOne({
                 where: {
                     deviceId: device.deviceId,
@@ -43,10 +57,11 @@ process.on('message', async deviceProcess => {
                 }
             })
             // This is the flag use to different current data from old data
-            let flagOccTime2 = rapidAccRecord ? rapidAccRecord.lastOccTime : null;
-            let flagCount2 = rapidAccRecord ? rapidAccRecord.count : 0;
-            let list2 = await getDataFormDB({ deviceId: device.deviceId, flagOccTime: flagOccTime2, timezone });
-            await generateRapidAcc({ deviceId: device.deviceId, list: list2, flagCount: flagCount2, dbRecord: rapidAccRecord });
+            // let flagOccTime2 = rapidAccRecord ? rapidAccRecord.lastOccTime : null;
+            // let flagCount2 = rapidAccRecord ? rapidAccRecord.count : 0;
+            let result2 = initData(rapidAccRecord)
+            let list2 = await getDataFormDB({ deviceId: device.deviceId, flagOccTime: result2.flagOccTime, timezone });
+            await generateRapidAcc({ deviceId: device.deviceId, list: list2, flagCount: result2.flagCount, dbRecord: rapidAccRecord });
             await util.wait(10)
         }
         for (let driver of driverList) {
@@ -58,13 +73,14 @@ process.on('message', async deviceProcess => {
                 }
             })
             // This is the flag use to different current data from old data
-            let flagOccTime = hardBrakingRecord ? hardBrakingRecord.lastOccTime : null;
-            let flagCount = hardBrakingRecord ? hardBrakingRecord.count : 0;
+            // let flagOccTime = hardBrakingRecord ? hardBrakingRecord.lastOccTime : null;
+            // let flagCount = hardBrakingRecord ? hardBrakingRecord.count : 0;
+            let result = initData(hardBrakingRecord)
             let timezone = [ driver.startRecordTime, driver.endRecordTime ]
 
-            let list = await getDataFormDBByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, flagOccTime, timezone });
+            let list = await getDataFormDBByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, flagOccTime: result.flagOccTime, timezone });
             
-            await generateHardBrakingByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, list, flagCount, dbRecord: hardBrakingRecord })
+            await generateHardBrakingByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, list, flagCount: result.flagCount, dbRecord: hardBrakingRecord })
             let rapidAccRecord = await Track.findOne({
                 where: {
                     deviceId: driver.driverId,
@@ -73,10 +89,11 @@ process.on('message', async deviceProcess => {
                 }
             })
             // This is the flag use to different current data from old data
-            let flagOccTime2 = rapidAccRecord ? rapidAccRecord.lastOccTime : null;
-            let flagCount2 = rapidAccRecord ? rapidAccRecord.count : 0;
-            let list2 = await getDataFormDBByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, flagOccTime: flagOccTime2, timezone })
-            await generateRapidAccByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, list: list2, flagCount: flagCount2, dbRecord: rapidAccRecord });
+            // let flagOccTime2 = rapidAccRecord ? rapidAccRecord.lastOccTime : null;
+            // let flagCount2 = rapidAccRecord ? rapidAccRecord.count : 0;
+            let result2 = initData(rapidAccRecord)
+            let list2 = await getDataFormDBByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, flagOccTime: result2.flagOccTime, timezone })
+            await generateRapidAccByMobile({ driverId: driver.driverId, vehicleNo: driver.vehicleNo, list: list2, flagCount: result2.flagCount, dbRecord: rapidAccRecord });
             await util.wait(10)
         }
         process.send({ success: true })
@@ -320,150 +337,123 @@ const generateRapidAccByMobile = async function (option) {
 // ************************************************************
 // Common
 const commonGenerateHardBraking = function (list, id, violationType) {
-    try {
-        // TODO: At least two record can cal descSpeed
-        if (!list.length || list.length === 1) return [];
+    // TODO: At least two record can cal descSpeed
+    if (!list.length || list.length === 1) return [];
 
-        let index = -1, preNode = null;
-        let hardBrakingList = [];
-        for (let data of list) {
-            index++;
-            if (index === 0) {
-                continue;
-            } else {
-                preNode = list[index - 1]
-            }
-
-            if (preNode.speed > data.speed) {
-                // In hardBraking
-                // Check descSpeed
-                let diffSpeed = preNode.speed - data.speed ;
-                let diffSecond = Math.floor(moment(data.createdAt).diff(moment(preNode.createdAt)) / 1000);
-                let decSpeed = diffSecond ? (diffSpeed / diffSecond) : 0
-                if (decSpeed >= conf.HardBraking) {
-                    hardBrakingList.push({
-                        rowNo: preNode.rowNo,
-                        deviceId: id,
-                        violationType,
-                        speed: preNode.speed,
-                        lat: preNode.lat,
-                        lng: preNode.lng,
-                        occTime: preNode.createdAt,
-                        startSpeed: preNode.speed,
-                        endSpeed: data.speed,
-                        startTime: preNode.createdAt,
-                        endTime: data.createdAt,
-                    })
-                }
-            } else {
-                // Not in hardBraking
-                continue;
-            }
+    let index = -1, preNode = null;
+    let hardBrakingList = [];
+    for (let data of list) {
+        index++;
+        if (index === 0) {
+            continue;
+        } else {
+            preNode = list[index - 1]
         }
-        return hardBrakingList;
-    } catch (error) {
-        log.error('(commonGenerateHardBraking): ', error)
+
+        if (preNode.speed > data.speed) {
+            // In hardBraking
+            // Check descSpeed
+            let diffSpeed = preNode.speed - data.speed ;
+            let diffSecond = Math.floor(moment(data.createdAt).diff(moment(preNode.createdAt)) / 1000);
+            let decSpeed = diffSecond ? (diffSpeed / diffSecond) : 0
+            if (decSpeed >= conf.HardBraking) {
+                hardBrakingList.push({
+                    rowNo: preNode.rowNo,
+                    deviceId: id,
+                    violationType,
+                    speed: preNode.speed,
+                    lat: preNode.lat,
+                    lng: preNode.lng,
+                    occTime: preNode.createdAt,
+                    startSpeed: preNode.speed,
+                    endSpeed: data.speed,
+                    startTime: preNode.createdAt,
+                    endTime: data.createdAt,
+                })
+            }
+        } else {
+            // Not in hardBraking
+            continue;
+        }
     }
+    return hardBrakingList;
 }
 const commonGenerateRapidAcc = function (list, id, violationType) {
-    try {
-        // TODO: At least two record can cal descSpeed
-        if (!list.length || list.length === 1) return [];
+    // TODO: At least two record can cal descSpeed
+    if (!list.length || list.length === 1) return [];
 
-        let index = -1, preNode = null;
-        let rapidAccList = [];
+    let index = -1, preNode = null;
+    let rapidAccList = [];
+    for (let data of list) {
+        index++;
+        if (index === 0) {
+            continue;
+        } else {
+            preNode = list[index - 1]
+        }
+
+        if (data.speed > preNode.speed) {
+            // In hardBraking
+            // Check descSpeed
+            let diffSpeed = data.speed - preNode.speed;
+            let diffSecond = Math.floor(moment(data.createdAt).diff(moment(preNode.createdAt)) / 1000);
+            let ascSpeed = diffSecond ? (diffSpeed / diffSecond) : 0
+            if (ascSpeed >= conf.RapicAcc) {
+                rapidAccList.push({
+                    rowNo: preNode.rowNo,
+                    deviceId: id,
+                    violationType,
+                    speed: preNode.speed,
+                    lat: preNode.lat,
+                    lng: preNode.lng,
+                    occTime: preNode.createdAt,
+                    startSpeed: preNode.speed,
+                    endSpeed: data.speed,
+                    startTime: preNode.createdAt,
+                    endTime: data.createdAt,
+                })
+            }
+        } else {
+            // Not in hardBraking
+            continue;
+        }
+    }
+    return rapidAccList;
+}
+const commonGenerateContinuousList = function (list) {
+    // TODO: find continuous decSpeed and calculate as single one
+    let result = [];
+    if (list.length === 1) {
+        // Only one record
+        let currentNode = list[0]
+        result.push({
+            deviceId: currentNode.deviceId,
+            violationType: currentNode.violationType,
+            speed: currentNode.speed,
+            lat: currentNode.lat,
+            lng: currentNode.lng,
+            occTime: currentNode.occTime,
+            startSpeed: currentNode.startSpeed, 
+            endSpeed: currentNode.endSpeed, 
+            startTime: currentNode.startTime, 
+            endTime: currentNode.endTime,
+        })
+    } else {
+        // More than one record
+        let index = -1, startNode = null;
         for (let data of list) {
             index++;
             if (index === 0) {
+                // First record, just store in startNode
+                startNode = data;
                 continue;
             } else {
-                preNode = list[index - 1]
-            }
-
-            if (data.speed > preNode.speed) {
-                // In hardBraking
-                // Check descSpeed
-                let diffSpeed = data.speed - preNode.speed;
-                let diffSecond = Math.floor(moment(data.createdAt).diff(moment(preNode.createdAt)) / 1000);
-                let ascSpeed = diffSecond ? (diffSpeed / diffSecond) : 0
-                if (ascSpeed >= conf.RapicAcc) {
-                    rapidAccList.push({
-                        rowNo: preNode.rowNo,
-                        deviceId: id,
-                        violationType,
-                        speed: preNode.speed,
-                        lat: preNode.lat,
-                        lng: preNode.lng,
-                        occTime: preNode.createdAt,
-                        startSpeed: preNode.speed,
-                        endSpeed: data.speed,
-                        startTime: preNode.createdAt,
-                        endTime: data.createdAt,
-                    })
-                }
-            } else {
-                // Not in hardBraking
-                continue;
-            }
-        }
-        return rapidAccList;
-    } catch (error) {
-        log.error('(commonGenerateRapidAcc): ', error)
-    }
-}
-const commonGenerateContinuousList = function (list) {
-    try {
-        // TODO: find continuous decSpeed and calculate as single one
-        let result = [];
-        if (list.length === 1) {
-            // Only one record
-            let currentNode = list[0]
-            result.push({
-                deviceId: currentNode.deviceId,
-                violationType: currentNode.violationType,
-                speed: currentNode.speed,
-                lat: currentNode.lat,
-                lng: currentNode.lng,
-                occTime: currentNode.occTime,
-                startSpeed: currentNode.startSpeed, 
-                endSpeed: currentNode.endSpeed, 
-                startTime: currentNode.startTime, 
-                endTime: currentNode.endTime,
-            })
-        } else {
-            // More than one record
-            let index = -1, startNode = null;
-            for (let data of list) {
-                index++;
-                if (index === 0) {
-                    // First record, just store in startNode
-                    startNode = data;
-                    continue;
-                } else {
-                    // Check if continuous rowNo record
-                    if (data.rowNo - 1 === list[index - 1].rowNo) {
-                        // This is continuous node
-                        // Check if last record
-                        if (index === list.length - 1) {
-                            // Last one record
-                            result.push({
-                                deviceId: data.deviceId,
-                                violationType: data.violationType,
-                                speed: data.speed,
-                                lat: data.lat,
-                                lng: data.lng,
-                                occTime: startNode.occTime,
-                                startSpeed: startNode.startSpeed, 
-                                startTime: startNode.startTime, 
-                                endSpeed: data.endSpeed, 
-                                endTime: data.endTime,
-                            })
-                        } else {
-                            // Not last one record
-                            continue;
-                        }
-                    } else {
-                        // This is not continuous node
+                // Check if continuous rowNo record
+                if (data.rowNo - 1 === list[index - 1].rowNo) {
+                    // This is continuous node
+                    // Check if last record
+                    if (index === list.length - 1) {
+                        // Last one record
                         result.push({
                             deviceId: data.deviceId,
                             violationType: data.violationType,
@@ -472,39 +462,54 @@ const commonGenerateContinuousList = function (list) {
                             lng: data.lng,
                             occTime: startNode.occTime,
                             startSpeed: startNode.startSpeed, 
-                            endSpeed: list[index - 1].endSpeed, 
                             startTime: startNode.startTime, 
-                            endTime: list[index - 1].endTime,
+                            endSpeed: data.endSpeed, 
+                            endTime: data.endTime,
                         })
-                        // Check if last record
-                        if (index === list.length - 1) {
-                            // Last one record
-                            result.push({
-                                deviceId: data.deviceId,
-                                violationType: data.violationType,
-                                speed: data.speed,
-                                lat: data.lat,
-                                lng: data.lng,
-                                occTime: data.occTime,
-                                startSpeed: data.startSpeed, 
-                                endSpeed: data.endSpeed, 
-                                startTime: data.startTime, 
-                                endTime: data.endTime,
-                            })
-                        } else {
-                            // Not last one record
-                            startNode = data;
-                            continue;
-                        }
+                    } else {
+                        // Not last one record
+                        continue;
+                    }
+                } else {
+                    // This is not continuous node
+                    result.push({
+                        deviceId: data.deviceId,
+                        violationType: data.violationType,
+                        speed: data.speed,
+                        lat: data.lat,
+                        lng: data.lng,
+                        occTime: startNode.occTime,
+                        startSpeed: startNode.startSpeed, 
+                        endSpeed: list[index - 1].endSpeed, 
+                        startTime: startNode.startTime, 
+                        endTime: list[index - 1].endTime,
+                    })
+                    // Check if last record
+                    if (index === list.length - 1) {
+                        // Last one record
+                        result.push({
+                            deviceId: data.deviceId,
+                            violationType: data.violationType,
+                            speed: data.speed,
+                            lat: data.lat,
+                            lng: data.lng,
+                            occTime: data.occTime,
+                            startSpeed: data.startSpeed, 
+                            endSpeed: data.endSpeed, 
+                            startTime: data.startTime, 
+                            endTime: data.endTime,
+                        })
+                    } else {
+                        // Not last one record
+                        startNode = data;
+                        continue;
                     }
                 }
             }
-
         }
-        return result;
-    } catch (error) {
-        log.error('(commonGenerateContinuousList): ', error)
+
     }
+    return result;
 }
 const commonStoreEventForHardBraking = async function (list, option) {
     let latestRecord = list[list.length - 1]

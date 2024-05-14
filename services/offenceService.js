@@ -118,96 +118,91 @@ const prepareBaseData = async function () {
         }
     }
     const CheckRecordWithSameGPS = async function (deviceList, driverList) {
-        try {
-            // deviceList
-            log.warn(`(CheckRecordWithSameGPS) Device => start time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
-            for (let device of deviceList) {
-                // Check width same gps data
-                const recordList = await sequelizeObj.query(`
-                    SELECT * FROM (
-                        SELECT COUNT(*) AS positionCount, GROUP_CONCAT(id) AS idList, lat, lng, deviceId, createdAt 
-                        FROM device_position_history_backup 
-                        WHERE deviceId = '${ device.deviceId }' 
-                        AND createdAt BETWEEN '${ moment(device.startRecordTime).format('YYYY-MM-DD HH:mm:ss') }' AND '${ moment(device.endRecordTime).format('YYYY-MM-DD HH:mm:ss') }'
-                        GROUP BY lat, lng
-                    ) AS t 
-                    WHERE t.positionCount > 1
+        // deviceList
+        log.warn(`(CheckRecordWithSameGPS) Device => start time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
+        for (let device of deviceList) {
+            // Check width same gps data
+            const recordList = await sequelizeObj.query(`
+                SELECT * FROM (
+                    SELECT COUNT(*) AS positionCount, GROUP_CONCAT(id) AS idList, lat, lng, deviceId, createdAt 
+                    FROM device_position_history_backup 
+                    WHERE deviceId = '${ device.deviceId }' 
+                    AND createdAt BETWEEN '${ moment(device.startRecordTime).format('YYYY-MM-DD HH:mm:ss') }' AND '${ moment(device.endRecordTime).format('YYYY-MM-DD HH:mm:ss') }'
+                    GROUP BY lat, lng
+                ) AS t 
+                WHERE t.positionCount > 1
+            `, { type: QueryTypes.SELECT })
+            log.warn(`(CheckRecordWithSameGPS) Device => deviceId (${ device.deviceId })=> same time count (${ recordList.length }) `)
+
+            // While no record, continue
+            if (!recordList.length) continue
+
+            for (let record of recordList) {
+                let firstRecord = await sequelizeObj.query(`
+                    SELECT id AS id FROM device_position_history_backup 
+                    WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND deviceId = '${ device.deviceId }' 
+                    ORDER BY id ASC LIMIT 1
                 `, { type: QueryTypes.SELECT })
-                log.warn(`(CheckRecordWithSameGPS) Device => deviceId (${ device.deviceId })=> same time count (${ recordList.length }) `)
-    
-                // While no record, continue
-                if (!recordList.length) continue
-    
-                for (let record of recordList) {
-                    let firstRecord = await sequelizeObj.query(`
-                        SELECT id AS id FROM device_position_history_backup 
-                        WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND deviceId = '${ device.deviceId }' 
-                        ORDER BY id ASC LIMIT 1
-                    `, { type: QueryTypes.SELECT })
-                    let lastRecord = await sequelizeObj.query(`
-                        SELECT id AS id FROM device_position_history_backup 
-                        WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND deviceId = '${ device.deviceId }' 
-                        ORDER BY id DESC LIMIT 1
-                    `, { type: QueryTypes.SELECT })
-                    // Delete data with same gps, but speed is not 0
-                    if (firstRecord.length && lastRecord.length) {
-                        await sequelizeObj.query(`
-                            DELETE FROM device_position_history_backup 
-                            WHERE speed != 0 
-                            AND id between ${ firstRecord[0].id } AND ${ lastRecord[0].id }
-                        `, { type: QueryTypes.DELETE })
-                    }
+                let lastRecord = await sequelizeObj.query(`
+                    SELECT id AS id FROM device_position_history_backup 
+                    WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND deviceId = '${ device.deviceId }' 
+                    ORDER BY id DESC LIMIT 1
+                `, { type: QueryTypes.SELECT })
+                // Delete data with same gps, but speed is not 0
+                if (firstRecord.length && lastRecord.length) {
+                    await sequelizeObj.query(`
+                        DELETE FROM device_position_history_backup 
+                        WHERE speed != 0 
+                        AND id between ${ firstRecord[0].id } AND ${ lastRecord[0].id }
+                    `, { type: QueryTypes.DELETE })
                 }
             }
-            log.warn(`(CheckRecordWithSameGPS) Device => end time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
-    
-            // driverList
-            log.warn(`(CheckRecordWithSameGPS) Mobile => start time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
-            for (let driver of driverList) {
-                // Check width same gps data
-                const recordList = await sequelizeObj.query(`
-                    SELECT * FROM (
-                        SELECT COUNT(*) AS positionCount, GROUP_CONCAT(id) AS idList, lat, lng, driverId, vehicleNo, createdAt 
-                        FROM driver_position_history_backup 
-                        WHERE driverId = '${ driver.driverId }' AND vehicleNo = '${ driver.vehicleNo }'
-                        AND createdAt BETWEEN '${ moment(driver.startRecordTime).format('YYYY-MM-DD HH:mm:ss') }' AND '${ moment(driver.endRecordTime).format('YYYY-MM-DD HH:mm:ss') }'
-                        GROUP BY lat, lng
-                    ) AS t 
-                    WHERE t.positionCount > 1
-                `, { type: QueryTypes.SELECT })
-                log.warn(`(CheckRecordWithSameGPS) Mobile => deviceId (${ driver.driverId })=> same time count (${ recordList.length }) `)
-    
-                // While no record, continue
-                if (!recordList.length) continue
-    
-                for (let record of recordList) {
-                    let firstRecord = await sequelizeObj.query(`
-                        SELECT id AS id FROM driver_position_history_backup 
-                        WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND driverId = '${ driver.driverId }' AND vehicleNo = '${ driver.vehicleNo }'
-                        ORDER BY id ASC LIMIT 1
-                    `, { type: QueryTypes.SELECT })
-                    let lastRecord = await sequelizeObj.query(`
-                        SELECT id AS id FROM driver_position_history_backup 
-                        WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND driverId = '${ driver.driverId }'  AND vehicleNo = '${ driver.vehicleNo }'
-                        ORDER BY id DESC LIMIT 1
-                    `, { type: QueryTypes.SELECT })
-                    // Delete data with same gps, but speed is not 0
-                    if (firstRecord[0].id && lastRecord[0].id) {
-                        await sequelizeObj.query(`
-                            DELETE FROM driver_position_history_backup 
-                            WHERE speed != 0 
-                            AND id between ${ firstRecord[0].id } AND ${ lastRecord[0].id }
-                        `, { type: QueryTypes.DELETE })
-                    }
-                }
-                
-            }
-            log.warn(`(CheckRecordWithSameGPS) Mobile => end time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
-            
-        } catch (error) {
-            log.error(`CheckRecordWithSameGPS: `, error);
-            throw error;
         }
+        log.warn(`(CheckRecordWithSameGPS) Device => end time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
+
+        // driverList
+        log.warn(`(CheckRecordWithSameGPS) Mobile => start time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
+        for (let driver of driverList) {
+            // Check width same gps data
+            const recordList = await sequelizeObj.query(`
+                SELECT * FROM (
+                    SELECT COUNT(*) AS positionCount, GROUP_CONCAT(id) AS idList, lat, lng, driverId, vehicleNo, createdAt 
+                    FROM driver_position_history_backup 
+                    WHERE driverId = '${ driver.driverId }' AND vehicleNo = '${ driver.vehicleNo }'
+                    AND createdAt BETWEEN '${ moment(driver.startRecordTime).format('YYYY-MM-DD HH:mm:ss') }' AND '${ moment(driver.endRecordTime).format('YYYY-MM-DD HH:mm:ss') }'
+                    GROUP BY lat, lng
+                ) AS t 
+                WHERE t.positionCount > 1
+            `, { type: QueryTypes.SELECT })
+            log.warn(`(CheckRecordWithSameGPS) Mobile => deviceId (${ driver.driverId })=> same time count (${ recordList.length }) `)
+
+            // While no record, continue
+            if (!recordList.length) continue
+
+            for (let record of recordList) {
+                let firstRecord = await sequelizeObj.query(`
+                    SELECT id AS id FROM driver_position_history_backup 
+                    WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND driverId = '${ driver.driverId }' AND vehicleNo = '${ driver.vehicleNo }'
+                    ORDER BY id ASC LIMIT 1
+                `, { type: QueryTypes.SELECT })
+                let lastRecord = await sequelizeObj.query(`
+                    SELECT id AS id FROM driver_position_history_backup 
+                    WHERE lat = '${ record.lat }' AND lng = '${ record.lng }' AND driverId = '${ driver.driverId }'  AND vehicleNo = '${ driver.vehicleNo }'
+                    ORDER BY id DESC LIMIT 1
+                `, { type: QueryTypes.SELECT })
+                // Delete data with same gps, but speed is not 0
+                if (firstRecord[0].id && lastRecord[0].id) {
+                    await sequelizeObj.query(`
+                        DELETE FROM driver_position_history_backup 
+                        WHERE speed != 0 
+                        AND id between ${ firstRecord[0].id } AND ${ lastRecord[0].id }
+                    `, { type: QueryTypes.DELETE })
+                }
+            }
+            
+        }
+        log.warn(`(CheckRecordWithSameGPS) Mobile => end time (${ moment().format('YYYY-MM-DD HH:mm:ss') }) `)
+        
     }
 
     try {
@@ -225,79 +220,75 @@ const prepareBaseData = async function () {
 }
 
 const prepareData = async function () {
-    try {
-        // deviceList 
-        const deviceList = await sequelizeObj.query(`
-            SELECT d.deviceId, v.vehicleNo, dp.createdAt, dp.createdAt AS startRecordTime, 
-            IFNULL(v.limitSpeed, 60) AS limitSpeed, 
-            IF(DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE) < d.updatedAt, 
-                DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE), 
-                    d.updatedAt) AS endRecordTime
-            FROM device d
-            LEFT JOIN (
-                SELECT vehicleNo, deviceId, limitSpeed
-                FROM vehicle
+    // deviceList 
+    const deviceList = await sequelizeObj.query(`
+    SELECT d.deviceId, v.vehicleNo, dp.createdAt, dp.createdAt AS startRecordTime, 
+    IFNULL(v.limitSpeed, 60) AS limitSpeed, 
+    IF(DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE) < d.updatedAt, 
+        DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE), 
+            d.updatedAt) AS endRecordTime
+    FROM device d
+    LEFT JOIN (
+        SELECT vehicleNo, deviceId, limitSpeed
+        FROM vehicle
 
-                UNION 
+        UNION 
 
-                SELECT vehicleNo, deviceId, limitSpeed
-                FROM vehicle_history
-            ) v ON v.deviceId = d.deviceId
-            LEFT JOIN (
-                SELECT deviceId, createdAt, id 
-                FROM device_position_history_backup
-                GROUP BY deviceId
-            ) dp ON dp.deviceId = d.deviceId 
-            WHERE dp.id IS NOT NULL 
-        `, { type: QueryTypes.SELECT })
-        log.info(`updateTrackDashboardInfoByChildProcess deviceList => find out ${ deviceList.length } `)
-        log.info(`updateTrackDashboardInfoByChildProcess deviceList => detail ${ JSON.stringify(deviceList, null, 4) } `)
-
-
-        // driverList
-        const driverList = await sequelizeObj.query(`
-            SELECT d.driverId, v.vehicleNo, dp.createdAt, d.vehicleNo, dp.createdAt AS startRecordTime, 
-            IFNULL(v.limitSpeed, 60) AS limitSpeed, 
-            IF(DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE) < d.updatedAt, 
-                DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE), 
-                    d.updatedAt) AS endRecordTime
-            FROM driver_position d
-            LEFT JOIN (
-                SELECT vehicleNo, deviceId, limitSpeed
-                FROM vehicle
-
-                UNION 
-
-                SELECT vehicleNo, deviceId, limitSpeed
-                FROM vehicle_history
-            ) v ON v.vehicleNo = d.vehicleNo
-            LEFT JOIN (
-                SELECT driverId, vehicleNo, createdAt, id 
-                FROM driver_position_history_backup
-                GROUP BY driverId, vehicleNo
-            ) dp ON dp.driverId = d.driverId AND dp.vehicleNo = d.vehicleNo
-            WHERE dp.id IS NOT NULL 
-        `, { type: QueryTypes.SELECT })
-
-        log.info(`updateTrackDashboardInfoByChildProcess driverList => find out ${ driverList.length } `)
-        log.info(`updateTrackDashboardInfoByChildProcess driverList => detail ${ JSON.stringify(driverList, null, 4) } `)
+        SELECT vehicleNo, deviceId, limitSpeed
+        FROM vehicle_history
+    ) v ON v.deviceId = d.deviceId
+    LEFT JOIN (
+        SELECT deviceId, createdAt, id 
+        FROM device_position_history_backup
+        GROUP BY deviceId
+    ) dp ON dp.deviceId = d.deviceId 
+    WHERE dp.id IS NOT NULL 
+    `, { type: QueryTypes.SELECT })
+    log.info(`updateTrackDashboardInfoByChildProcess deviceList => find out ${ deviceList.length } `)
+    log.info(`updateTrackDashboardInfoByChildProcess deviceList => detail ${ JSON.stringify(deviceList, null, 4) } `)
 
 
-        for (let device of deviceList) {
-            device.createdAt = moment(device.createdAt).format('YYYY-MM-DD HH:mm:ss')
-            device.startRecordTime = moment(device.startRecordTime).format('YYYY-MM-DD HH:mm:ss')
-            device.endRecordTime = moment(device.endRecordTime).format('YYYY-MM-DD HH:mm:ss')
-        }
-        for (let driver of driverList) {
-            driver.createdAt = moment(driver.createdAt).format('YYYY-MM-DD HH:mm:ss')
-            driver.startRecordTime = moment(driver.startRecordTime).format('YYYY-MM-DD HH:mm:ss')
-            driver.endRecordTime = moment(driver.endRecordTime).format('YYYY-MM-DD HH:mm:ss')
-        }
+    // driverList
+    const driverList = await sequelizeObj.query(`
+        SELECT d.driverId, v.vehicleNo, dp.createdAt, d.vehicleNo, dp.createdAt AS startRecordTime, 
+        IFNULL(v.limitSpeed, 60) AS limitSpeed, 
+        IF(DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE) < d.updatedAt, 
+            DATE_ADD(dp.createdAt, INTERVAL ${ conf.Calculate_TimeZone } MINUTE), 
+                d.updatedAt) AS endRecordTime
+        FROM driver_position d
+        LEFT JOIN (
+            SELECT vehicleNo, deviceId, limitSpeed
+            FROM vehicle
 
-        return { deviceList, driverList }
-    } catch (error) {
-        throw error
+            UNION 
+
+            SELECT vehicleNo, deviceId, limitSpeed
+            FROM vehicle_history
+        ) v ON v.vehicleNo = d.vehicleNo
+        LEFT JOIN (
+            SELECT driverId, vehicleNo, createdAt, id 
+            FROM driver_position_history_backup
+            GROUP BY driverId, vehicleNo
+        ) dp ON dp.driverId = d.driverId AND dp.vehicleNo = d.vehicleNo
+        WHERE dp.id IS NOT NULL 
+    `, { type: QueryTypes.SELECT })
+
+    log.info(`updateTrackDashboardInfoByChildProcess driverList => find out ${ driverList.length } `)
+    log.info(`updateTrackDashboardInfoByChildProcess driverList => detail ${ JSON.stringify(driverList, null, 4) } `)
+
+
+    for (let device of deviceList) {
+        device.createdAt = moment(device.createdAt).format('YYYY-MM-DD HH:mm:ss')
+        device.startRecordTime = moment(device.startRecordTime).format('YYYY-MM-DD HH:mm:ss')
+        device.endRecordTime = moment(device.endRecordTime).format('YYYY-MM-DD HH:mm:ss')
     }
+    for (let driver of driverList) {
+        driver.createdAt = moment(driver.createdAt).format('YYYY-MM-DD HH:mm:ss')
+        driver.startRecordTime = moment(driver.startRecordTime).format('YYYY-MM-DD HH:mm:ss')
+        driver.endRecordTime = moment(driver.endRecordTime).format('YYYY-MM-DD HH:mm:ss')
+    }
+
+    return { deviceList, driverList }   
 }
 
 const OutputDataList = async function (deviceList, driverList) {
