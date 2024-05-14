@@ -1,0 +1,2 @@
+{"vehicleNo":"pK100-10","distance":"6966","operationType":"end","serviceModeValue":"delivery","endMileageTime":"2024-03-20 14:14:39","userId":"201075","taskId":"MT-142","mileage":"0.0","operationTime":"2024-03-20 14:14:39","startMileage":0,"startTime":"2024-03-20T06:14:39.000Z"}
+{"vehicleNo":"iK100-0","distance":"0","operationType":"end","serviceModeValue":"delivery","endMileageTime":"2024-03-20 14:14:54","userId":"201075","taskId":"MT-138","mileage":"117280.0","operationTime":"2024-03-20 14:14:54","startMileage":117280,"startTime":"2024-03-12T04:11:10.000Z"}
