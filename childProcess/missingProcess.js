@@ -224,6 +224,8 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
         // not last one record
         let timezone = moment(list[index + 1].createdAt).diff(moment(data.createdAt));
         if (timezone <= conf.judgeMissingTime) continue
+        
+        // timezone > conf.judgeMissingTime
         if (vehicleNo) {
             // Mobile
             let checkResult = await checkMissingByTimeZone([data.createdAt, list[index + 1].createdAt], id, vehicleNo)
@@ -258,38 +260,33 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
             })
         } 
 
+        let missingType = list[noSignalStartIndex + 1].gpsService == 1 ? 'No GPS Signal' : 'No GPS Service'
         // Checkout Missing Type => No Signal(GPS Time is same)
-        if (list[index + 1].gpsTime == data.gpsTime) {
-            if (noSignalStartIndex == -1) {
-                // TODO: find out start record
-                noSignalStartIndex = index
-            }
-        } else {
-            if (noSignalStartIndex !== -1) {
-                // TODO: find out end record
-                // Check time
-                let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));
-                if (timezone > conf.judgeMissingTime) {
-                    idleList.push({ 
-                        deviceId: id, 
-                        violationType: CONTENT.ViolationType.Missing, 
-                        startTime: list[noSignalStartIndex].createdAt, 
-                        missingType: list[noSignalStartIndex + 1].gpsService == 1 ? 'No GPS Signal' : 'No GPS Service',
-                        endTime: data.createdAt, 
-                        speed: list[noSignalStartIndex].speed, 
-                        vin: list[noSignalStartIndex].vin, 
-                        lat: list[noSignalStartIndex].lat, 
-                        lng: list[noSignalStartIndex].lng, 
-                        occTime: list[noSignalStartIndex].createdAt, 
-                        stayTime: Math.floor((moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt))) / 1000) 
-                    })
-                } else {
-                    // TODO: leave this record, find next start node
-                }
+        if (list[index + 1].gpsTime == data.gpsTime && noSignalStartIndex == -1) {
+            // TODO: find out start record
+            noSignalStartIndex = index
+        } else if (list[index + 1].gpsTime !== data.gpsTime && noSignalStartIndex !== -1) {
+            // TODO: find out end record
+            // Check time
+            let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));
+            if (timezone > conf.judgeMissingTime) {
+                idleList.push({ 
+                    deviceId: id, 
+                    violationType: CONTENT.ViolationType.Missing, 
+                    startTime: list[noSignalStartIndex].createdAt, 
+                    missingType: missingType,
+                    endTime: data.createdAt, 
+                    speed: list[noSignalStartIndex].speed, 
+                    vin: list[noSignalStartIndex].vin, 
+                    lat: list[noSignalStartIndex].lat, 
+                    lng: list[noSignalStartIndex].lng, 
+                    occTime: list[noSignalStartIndex].createdAt, 
+                    stayTime: Math.floor((moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt))) / 1000) 
+                })
+            } 
 
-                // TODO: reload flag
-                noSignalStartIndex = -1;
-            }
+            // TODO: reload flag
+            noSignalStartIndex = -1;
         }    
     }
     return idleList;
