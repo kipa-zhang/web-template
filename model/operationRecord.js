@@ -22,10 +22,10 @@ module.exports.OperationRecord = dbConf.sequelizeObj.define('operationRecord', {
         defaultValue: 'common'
     },
     beforeData: {
-        type: DataTypes.STRING(128),
+        type: DataTypes.TEXT,
     },
     afterData: {
-        type: DataTypes.STRING(128),
+        type: DataTypes.TEXT,
     },
 	optTime: {
         type: DataTypes.DATE,

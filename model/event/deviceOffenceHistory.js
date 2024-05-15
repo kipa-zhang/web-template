@@ -3,7 +3,7 @@ const dbConf = require('../../db/dbConf');
 
 module.exports.DeviceOffenceHistory = dbConf.sequelizeObj.define('deviceOffenceHistory', {
     id: {
-        type: DataTypes.INTEGER, 
+        type: DataTypes.BIGINT(20), 
         primaryKey: true,
     },
     deviceId: {

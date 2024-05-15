@@ -3,16 +3,12 @@ const dbConf = require('../../db/dbConf');
 
 module.exports.DriverOffenceHistory = dbConf.sequelizeObj.define('driverOffenceHistory', {
     id: {
-        type: DataTypes.INTEGER(11), 
+        type: DataTypes.BIGINT(20), 
         primaryKey: true,
     },
     driverId: {
         type: DataTypes.INTEGER(11),
         allowNull: false,
-    },
-    vehicleNo: {
-        type: DataTypes.STRING,
-        defaultValue: null,
     },
     lat: {
         type: DataTypes.FLOAT(13, 10),

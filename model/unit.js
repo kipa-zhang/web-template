@@ -1,4 +1,4 @@
-const { DataTypes, QueryTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
 const dbConf = require('../db/dbConf');
 
 module.exports.Unit = dbConf.sequelizeObj.define('unit', {
@@ -13,7 +13,7 @@ module.exports.Unit = dbConf.sequelizeObj.define('unit', {
     },
     subUnit: {
         type: DataTypes.STRING(55),
-        default: null,
+        allowNull: false,
     },
     group: {
         type: DataTypes.STRING(255),
@@ -26,7 +26,7 @@ module.exports.Unit = dbConf.sequelizeObj.define('unit', {
     lng: {
         type: DataTypes.STRING(55),
         default: null,
-    }
+    },
 }, {
     tableName: 'unit',
     timestamps: false,

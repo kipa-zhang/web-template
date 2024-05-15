@@ -1,21 +1,6 @@
 module.exports = {
-    USER_TYPE: {
-        ADMINISTRATOR: 'ADMINISTRATOR',
-        HQ: 'HQ',
-        UNIT: 'UNIT',
-        LICENSING_OFFICER: 'LICENSING OFFICER',
-        MOBILE: 'MOBILE',
-        CUSTOMER: 'CUSTOMER'
-    },
-    ViolationType: {
-		HardBraking: 'Hard Braking',
-		RapidAcc: 'Rapid Acc',
-		Speeding: 'Speeding',
-		IDLETime: 'IDLE Time',
-		Missing: 'Missing',
-        NoGoZoneAlert: 'No Go Zone Alert'
-	},
     INCIDENT_STATUS: {
+        NEW: 'NEW',
         OPEN: 'OPEN',
         RE_ROUTED: 'RE-ROUTED',
         DISMISSED: 'DISMISSED'
@@ -29,6 +14,10 @@ module.exports = {
         NEW: 'NEW',
         ASSIGNING: 'ASSIGNING',
         ASSIGNED: 'ASSIGNED',
+    },
+    DEVICE_STATE: {
+        PARKED: 'Parked',
+        ON_ROAD: 'On Road',
     },
     CONVOY_STATE: {
         YET_TO_START: 'YET TO START',
@@ -49,5 +38,29 @@ module.exports = {
         INCIDENT_ROUTE: 'incident_route',
         INCIDENT_NEW: 'incident_new',
         INCIDENT_DELETE: 'incident_delete',
-    }
+        SYS_CONF_UPDATE: 'sys_conf_update'
+    },
+    USER_TYPE: {
+        ADMINISTRATOR: 'ADMINISTRATOR',
+        HQ: 'HQ',
+        UNIT: 'UNIT',
+        LICENSING_OFFICER: 'LICENSING OFFICER',
+        MOBILE: 'MOBILE',
+        CUSTOMER: 'CUSTOMER'
+    },
+    USER_APPOINT: {
+        OIC: 'OIC',
+        DY: 'DY',
+    },
+    DRIVER_STATUS: {
+        EMPTY: "",
+        UNASSIGNED: "Unassigned",
+        ASSIGNED: "Assigned",
+        COMPLETED: "Completed",
+        NOSHOW: "No Show",
+        NOSHOWSYSTEM: "No Show (System)",
+        ARRIVED: "Arrived",
+        DEPARTED: "Started",
+        LATE: "Late Trip",
+    },
 };

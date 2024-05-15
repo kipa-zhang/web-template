@@ -27,7 +27,13 @@ module.exports.Notification = dbConf.sequelizeObj.define('notification', {
         type: DataTypes.DATE,
         allowNull: false,
     },
+    scheduledTime: {
+        type: DataTypes.TIME,
+    },
     description: {
+        type: DataTypes.TEXT, 
+    },
+    link: {
         type: DataTypes.TEXT, 
     },
     coverImage: {
@@ -55,6 +61,18 @@ module.exports.Notification = dbConf.sequelizeObj.define('notification', {
     sended: {
         type: DataTypes.TINYINT,
         defaultValue: 0 
+    },
+    toCategory: {
+        type: DataTypes.STRING(55), 
+    }, 
+    toType: {
+        type: DataTypes.STRING(55), 
+    },
+    platform: {
+        type: DataTypes.STRING(255), 
+    },
+    groupId: {
+        type: DataTypes.STRING(255), 
     },
   }, {
     // other options

@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, NOW } = require('sequelize');
 const dbConf = require('../db/dbConf');
 
 module.exports.Device = dbConf.sequelizeObj.define('device', {

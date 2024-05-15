@@ -12,6 +12,9 @@ module.exports.Task = dbConf.sequelizeObj.define('task', {
     vehicleNumber: {
         type: DataTypes.STRING(15),
     },
+    routeNo: {
+        type: DataTypes.STRING(45),
+    },
 	driverStatus: {
         type: DataTypes.STRING(55),
     },
@@ -27,32 +30,29 @@ module.exports.Task = dbConf.sequelizeObj.define('task', {
     indentEndTime: {
 		type: DataTypes.DATE,
 	},
+    purpose: {
+        type: DataTypes.STRING(200),
+    },
+    pickupDestination: {
+        type: DataTypes.STRING(200),
+    },
+    dropoffDestination: {
+        type: DataTypes.STRING(200),
+    },
     mobileStartTime: {
 		type: DataTypes.DATE,
 	},
     mobileEndTime: {
 		type: DataTypes.DATE,
 	},
-    purpose: {
-        type: DataTypes.STRING(200),
-    },
-    activity: {
-        type: DataTypes.STRING(200),
-    },
-    pickupDestination: {
-        type: DataTypes.STRING(200),
-    },
     pickupGPS: {
-        type: DataTypes.STRING(200),
-    },
-    dropoffDestination: {
         type: DataTypes.STRING(200),
     },
     dropoffGPS: {
         type: DataTypes.STRING(200),
     },
     routePoints: {
-        type: DataTypes.BLOB
+        type: DataTypes.TEXT
     },
     routeDistance: {
         type: DataTypes.FLOAT
@@ -61,15 +61,18 @@ module.exports.Task = dbConf.sequelizeObj.define('task', {
         type: DataTypes.FLOAT
     },
     routeNavigation: {
-        type: DataTypes.BLOB
+        type: DataTypes.TEXT
+    },
+    groupId: {
+        type: DataTypes.INTEGER(12),
+        defaultValue: null,
     },
     creator: {
         type: DataTypes.INTEGER(11),
         defaultValue: null,
     },
-    createdAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW(),
+    taskReady: {
+        type: DataTypes.VIRTUAL
     },
     hub: {
         type: DataTypes.STRING(50),
@@ -80,15 +83,9 @@ module.exports.Task = dbConf.sequelizeObj.define('task', {
     dataFrom: {
         type: DataTypes.STRING(20),
     },
-    reassignReasons: {
-        type: DataTypes.STRING(50),
-    },
-    reassignRemarks : {
-        type: DataTypes.STRING(200),
-    },
-    reassignAt: {
-        type: DataTypes.DATE,
-    },
+    startLateReason: {
+        type: DataTypes.TEXT,
+    }
 }, {
     tableName: 'task',
     timestamps: false,
