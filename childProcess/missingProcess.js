@@ -88,25 +88,28 @@ const updateOBDMissing = async function (targetList) {
             continue
         }
 
-        for (let task of taskList) {
-            // generate timezone
-            let timezone = [ task.mobileStartTime ]            
-            if (task.mobileEndTime) {
-                // If through two or more days, will ignore at commonStoreEventHistoryForIdle
-                timezone.push(task.mobileEndTime)
-            } else {
-                timezone.push(moment().format('YYYY-MM-DD 23:59:59'))
-            }
-            log.warn(`TaskID: ${ task.taskId } => TimeZone ${ timezone }`)
-
-            let deviceGPSList = await outputService.readFromFile(target.deviceId, null, timezone)
-            let missingList = await commonGenerateMissing(deviceGPSList, target.deviceId, null)
-            
-            await analysisMissing(missingList)
-        }
+        await analysisTaskList(targetList)
     }
 }
-const analysisMissing = async function () {
+const analysisTaskList = async function () {
+    for (let task of taskList) {
+        // generate timezone
+        let timezone = [ task.mobileStartTime ]            
+        if (task.mobileEndTime) {
+            // If through two or more days, will ignore at commonStoreEventHistoryForIdle
+            timezone.push(task.mobileEndTime)
+        } else {
+            timezone.push(moment().format('YYYY-MM-DD 23:59:59'))
+        }
+        log.warn(`TaskID: ${ task.taskId } => TimeZone ${ timezone }`)
+
+        let deviceGPSList = await outputService.readFromFile(target.deviceId, null, timezone)
+        let missingList = await commonGenerateMissing(deviceGPSList, target.deviceId, null)
+        
+        await analysisMissing(missingList)
+    }
+}
+const analysisMissing = async function (missingList) {
     if (missingList.length) {
         missingList = missingList.map(item => {
             item.taskId = task.taskId
@@ -216,33 +219,19 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
     for (let data of list) {
         index++;
 
+        if (index == list.length - 1) continue
         if (index !== list.length - 1) {
             let timezone = moment(list[index + 1].createdAt).diff(moment(data.createdAt));
 
-            if (timezone > conf.judgeMissingTime) {
-                if (vehicleNo) {
-                    // Mobile
-                    let checkResult = await checkMissingByTimeZone([data.createdAt, list[index + 1].createdAt], id, vehicleNo)
-                    if (checkResult.result) {
-                        idleList.push({ 
-                            deviceId: id, 
-                            violationType: CONTENT.ViolationType.Missing, 
-                            missingType: checkResult.reason,
-                            startTime: data.createdAt, 
-                            endTime: list[index + 1].createdAt, 
-                            speed: data.speed, 
-                            vin: data.vin, 
-                            lat: data.lat, 
-                            lng: data.lng, 
-                            occTime: data.createdAt, 
-                            stayTime: Math.floor(timezone / 1000) 
-                        })
-                    }
-                } else {
-                    // OBD
+            if (timezone <= conf.judgeMissingTime) continue
+            if (vehicleNo) {
+                // Mobile
+                let checkResult = await checkMissingByTimeZone([data.createdAt, list[index + 1].createdAt], id, vehicleNo)
+                if (checkResult.result) {
                     idleList.push({ 
                         deviceId: id, 
                         violationType: CONTENT.ViolationType.Missing, 
+                        missingType: checkResult.reason,
                         startTime: data.createdAt, 
                         endTime: list[index + 1].createdAt, 
                         speed: data.speed, 
@@ -252,8 +241,22 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
                         occTime: data.createdAt, 
                         stayTime: Math.floor(timezone / 1000) 
                     })
-                } 
-            }
+                }
+            } else {
+                // OBD
+                idleList.push({ 
+                    deviceId: id, 
+                    violationType: CONTENT.ViolationType.Missing, 
+                    startTime: data.createdAt, 
+                    endTime: list[index + 1].createdAt, 
+                    speed: data.speed, 
+                    vin: data.vin, 
+                    lat: data.lat, 
+                    lng: data.lng, 
+                    occTime: data.createdAt, 
+                    stayTime: Math.floor(timezone / 1000) 
+                })
+            } 
 
             const generateData = function () {
                 // Checkout Missing Type => No Signal(GPS Time is same)
@@ -261,13 +264,9 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
                     if (noSignalStartIndex == -1) {
                         // TODO: find out start record
                         noSignalStartIndex = index
-                    } else {
-                        // TODO: go on find out end record
                     }
                 } else {
-                    if (noSignalStartIndex == -1) {
-                        // TODO: find out start record
-                    } else {
+                    if (noSignalStartIndex !== -1) {
                         // TODO: find out end record
                         // Check time
                         let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));

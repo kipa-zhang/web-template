@@ -208,105 +208,104 @@ const commonGenerateContinuousSpeeding = function (list, id) {
             startSpeed: list[0].speed,
             endSpeed: list[0].speed,
         })
-    } else {
-        // More than one record
-        let index = -1;
-        let startNode = null;
-        let tempSpeed = 0
-        for (let data of list) {
+        return speedingList;
+    } 
+    // More than one record
+    let index = -1;
+    let startNode = null;
+    let tempSpeed = 0
+    for (let data of list) {
 
-            if (data.speed > tempSpeed) tempSpeed = data.speed
+        if (data.speed > tempSpeed) tempSpeed = data.speed
 
-            index++;
-            if (index === 0) {
-                // First record, store as startNode
-                data.occTime = data.createdAt;
-                data.startTime = data.createdAt;
-                data.endTime = data.createdAt;
-                data.startSpeed= data.speed;
-                data.endSpeed= data.speed;
-                startNode = data;
-                continue;
+        index++;
+        if (index === 0) {
+            // First record, store as startNode
+            data.occTime = data.createdAt;
+            data.startTime = data.createdAt;
+            data.endTime = data.createdAt;
+            data.startSpeed= data.speed;
+            data.endSpeed= data.speed;
+            startNode = data;
+            continue;
+        } 
+        // Next record
+        // Check if continuous rowNo record
+        if (data.rowNo - 1 === list[index - 1].rowNo) {
+            // Continuous
+            // Check if last record
+            if (index === list.length - 1) {
+                // Last record
+                speedingList.push({
+                    deviceId: id,
+                    violationType: CONTENT.ViolationType.Speeding,
+                    // speed: data.speed,
+                    speed: tempSpeed,
+                    lat: data.lat,
+                    lng: data.lng,
+                    occTime: startNode.occTime,
+                    startTime: startNode.startTime,
+                    startSpeed: startNode.startSpeed,
+                    endTime: data.createdAt, // Last record, no 'endTime', 'endSpeed' Filed yet
+                    endSpeed: data.speed, // Last record, no 'endTime', 'endSpeed' Filed yet
+                })
+                
+                tempSpeed = 0
+
             } else {
-                // Next record
-                // Check if continuous rowNo record
-                if (data.rowNo - 1 === list[index - 1].rowNo) {
-                    // Continuous
-                    // Check if last record
-                    if (index === list.length - 1) {
-                        // Last record
-                        speedingList.push({
-                            deviceId: id,
-                            violationType: CONTENT.ViolationType.Speeding,
-                            // speed: data.speed,
-                            speed: tempSpeed,
-                            lat: data.lat,
-                            lng: data.lng,
-                            occTime: startNode.occTime,
-                            startTime: startNode.startTime,
-                            startSpeed: startNode.startSpeed,
-                            endTime: data.createdAt, // Last record, no 'endTime', 'endSpeed' Filed yet
-                            endSpeed: data.speed, // Last record, no 'endTime', 'endSpeed' Filed yet
-                        })
-                        
-                        tempSpeed = 0
-
-                    } else {
-                        // Not last record
-                        data.endTime = data.createdAt // Last record, no 'endTime', 'endSpeed' Filed yet
-                        data.endSpeed = data.speed // Last record, no 'endTime', 'endSpeed' Filed yet
-                        continue;
-                    }
-                } else {
-                    // Not Continuous
-                    // Add pre zone Speeding
-                    speedingList.push({
-                        deviceId: id,
-                        violationType: CONTENT.ViolationType.Speeding,
-                        // speed: list[index - 1].speed,
-                        speed: tempSpeed,
-                        lat: list[index - 1].lat,
-                        lng: list[index - 1].lng,
-                        occTime: startNode.occTime,
-                        startTime: startNode.startTime,
-                        startSpeed: startNode.startSpeed,
-                        endTime: list[index - 1].endTime,
-                        endSpeed: list[index - 1].endSpeed,
-                    })
-
-                    tempSpeed = 0
-                    
-                    // Check if last record
-                    if (index === list.length - 1) {
-                        // Last record
-                        speedingList.push({
-                            deviceId: id,
-                            violationType: CONTENT.ViolationType.Speeding,
-                            // speed: data.speed,
-                            speed: tempSpeed,
-                            lat: data.lat,
-                            lng: data.lng,
-                            occTime: data.createdAt,
-                            startTime: data.createdAt,
-                            endTime: data.createdAt, // Last record, no 'endTime', 'endSpeed' Filed yet
-                            startSpeed: data.speed, 
-                            endSpeed: data.speed, // Last record, no 'endTime', 'endSpeed' Filed yet
-                        })
-
-                        tempSpeed = 0
-                        
-                    } else {
-                        // Not last record
-                        data.occTime = data.createdAt;
-                        data.startTime = data.createdAt;
-                        data.endTime = data.createdAt;
-                        data.startSpeed= data.speed;
-                        data.endSpeed= data.speed;
-                        startNode = data;
-                        continue;
-                    }
-                }
+                // Not last record
+                data.endTime = data.createdAt // Last record, no 'endTime', 'endSpeed' Filed yet
+                data.endSpeed = data.speed // Last record, no 'endTime', 'endSpeed' Filed yet
             }
+            
+            continue;
+        } 
+        
+        // Not Continuous
+        // Add pre zone Speeding
+        speedingList.push({
+            deviceId: id,
+            violationType: CONTENT.ViolationType.Speeding,
+            // speed: list[index - 1].speed,
+            speed: tempSpeed,
+            lat: list[index - 1].lat,
+            lng: list[index - 1].lng,
+            occTime: startNode.occTime,
+            startTime: startNode.startTime,
+            startSpeed: startNode.startSpeed,
+            endTime: list[index - 1].endTime,
+            endSpeed: list[index - 1].endSpeed,
+        })
+
+        tempSpeed = 0
+        
+        // Check if last record
+        if (index === list.length - 1) {
+            // Last record
+            speedingList.push({
+                deviceId: id,
+                violationType: CONTENT.ViolationType.Speeding,
+                // speed: data.speed,
+                speed: tempSpeed,
+                lat: data.lat,
+                lng: data.lng,
+                occTime: data.createdAt,
+                startTime: data.createdAt,
+                endTime: data.createdAt, // Last record, no 'endTime', 'endSpeed' Filed yet
+                startSpeed: data.speed, 
+                endSpeed: data.speed, // Last record, no 'endTime', 'endSpeed' Filed yet
+            })
+
+            tempSpeed = 0
+            
+        } else {
+            // Not last record
+            data.occTime = data.createdAt;
+            data.startTime = data.createdAt;
+            data.endTime = data.createdAt;
+            data.startSpeed= data.speed;
+            data.endSpeed= data.speed;
+            startNode = data;
         }
     }
     return speedingList;
