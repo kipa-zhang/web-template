@@ -229,7 +229,7 @@ const commonGenerateContinuousSpeeding = function (list, id) {
             startNode = data;
             continue;
         } 
-        
+
         // Next record
         // Check if continuous rowNo record
         if (data.rowNo - 1 === list[index - 1].rowNo) {
@@ -253,11 +253,12 @@ const commonGenerateContinuousSpeeding = function (list, id) {
                 
                 tempSpeed = 0
 
-            } else {
-                // Not last record
-                data.endTime = data.createdAt // Last record, no 'endTime', 'endSpeed' Filed yet
-                data.endSpeed = data.speed // Last record, no 'endTime', 'endSpeed' Filed yet
-            }
+                continue;
+            } 
+            
+            // Not last record
+            data.endTime = data.createdAt // Last record, no 'endTime', 'endSpeed' Filed yet
+            data.endSpeed = data.speed // Last record, no 'endTime', 'endSpeed' Filed yet
             
             continue;
         } 
@@ -280,34 +281,37 @@ const commonGenerateContinuousSpeeding = function (list, id) {
 
         tempSpeed = 0
         
-        // Check if last record
-        if (index === list.length - 1) {
-            // Last record
-            speedingList.push({
-                deviceId: id,
-                violationType: CONTENT.ViolationType.Speeding,
-                // speed: data.speed,
-                speed: tempSpeed,
-                lat: data.lat,
-                lng: data.lng,
-                occTime: data.createdAt,
-                startTime: data.createdAt,
-                endTime: data.createdAt, // Last record, no 'endTime', 'endSpeed' Filed yet
-                startSpeed: data.speed, 
-                endSpeed: data.speed, // Last record, no 'endTime', 'endSpeed' Filed yet
-            })
+        const generateData = function () {
+            // Check if last record
+            if (index === list.length - 1) {
+                // Last record
+                speedingList.push({
+                    deviceId: id,
+                    violationType: CONTENT.ViolationType.Speeding,
+                    // speed: data.speed,
+                    speed: tempSpeed,
+                    lat: data.lat,
+                    lng: data.lng,
+                    occTime: data.createdAt,
+                    startTime: data.createdAt,
+                    endTime: data.createdAt, // Last record, no 'endTime', 'endSpeed' Filed yet
+                    startSpeed: data.speed, 
+                    endSpeed: data.speed, // Last record, no 'endTime', 'endSpeed' Filed yet
+                })
 
-            tempSpeed = 0
-            
-        } else {
-            // Not last record
-            data.occTime = data.createdAt;
-            data.startTime = data.createdAt;
-            data.endTime = data.createdAt;
-            data.startSpeed= data.speed;
-            data.endSpeed= data.speed;
-            startNode = data;
+                tempSpeed = 0
+                
+            } else {
+                // Not last record
+                data.occTime = data.createdAt;
+                data.startTime = data.createdAt;
+                data.endTime = data.createdAt;
+                data.startSpeed= data.speed;
+                data.endSpeed= data.speed;
+                startNode = data;
+            }
         }
+        generateData()
     }
     return speedingList;
 }
