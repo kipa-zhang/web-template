@@ -438,76 +438,73 @@ const commonGenerateContinuousList = function (list) {
             startTime: currentNode.startTime, 
             endTime: currentNode.endTime,
         })
-    } else {
-        // More than one record
-        let index = -1, startNode = null;
-        for (let data of list) {
-            index++;
-            if (index === 0) {
-                // First record, just store in startNode
+        return result
+    } 
+    // More than one record
+    let index = -1, startNode = null;
+    for (let data of list) {
+        index++;
+        if (index === 0) {
+            // First record, just store in startNode
+            startNode = data;
+            continue;
+        } else if (data.rowNo - 1 === list[index - 1].rowNo) {
+            // Check if continuous rowNo record
+            // This is continuous node
+            // Check if last record
+            if (index === list.length - 1) {
+                // Last one record
+                result.push({
+                    deviceId: data.deviceId,
+                    violationType: data.violationType,
+                    speed: data.speed,
+                    lat: data.lat,
+                    lng: data.lng,
+                    occTime: startNode.occTime,
+                    startSpeed: startNode.startSpeed, 
+                    startTime: startNode.startTime, 
+                    endSpeed: data.endSpeed, 
+                    endTime: data.endTime,
+                })
+            } else {
+                // Not last one record
+                continue;
+            }
+        } else {
+            // This is not continuous node
+            result.push({
+                deviceId: data.deviceId,
+                violationType: data.violationType,
+                speed: data.speed,
+                lat: data.lat,
+                lng: data.lng,
+                occTime: startNode.occTime,
+                startSpeed: startNode.startSpeed, 
+                endSpeed: list[index - 1].endSpeed, 
+                startTime: startNode.startTime, 
+                endTime: list[index - 1].endTime,
+            })
+            // Check if last record
+            if (index === list.length - 1) {
+                // Last one record
+                result.push({
+                    deviceId: data.deviceId,
+                    violationType: data.violationType,
+                    speed: data.speed,
+                    lat: data.lat,
+                    lng: data.lng,
+                    occTime: data.occTime,
+                    startSpeed: data.startSpeed, 
+                    endSpeed: data.endSpeed, 
+                    startTime: data.startTime, 
+                    endTime: data.endTime,
+                })
+            } else {
+                // Not last one record
                 startNode = data;
                 continue;
-            } else {
-                // Check if continuous rowNo record
-                if (data.rowNo - 1 === list[index - 1].rowNo) {
-                    // This is continuous node
-                    // Check if last record
-                    if (index === list.length - 1) {
-                        // Last one record
-                        result.push({
-                            deviceId: data.deviceId,
-                            violationType: data.violationType,
-                            speed: data.speed,
-                            lat: data.lat,
-                            lng: data.lng,
-                            occTime: startNode.occTime,
-                            startSpeed: startNode.startSpeed, 
-                            startTime: startNode.startTime, 
-                            endSpeed: data.endSpeed, 
-                            endTime: data.endTime,
-                        })
-                    } else {
-                        // Not last one record
-                        continue;
-                    }
-                } else {
-                    // This is not continuous node
-                    result.push({
-                        deviceId: data.deviceId,
-                        violationType: data.violationType,
-                        speed: data.speed,
-                        lat: data.lat,
-                        lng: data.lng,
-                        occTime: startNode.occTime,
-                        startSpeed: startNode.startSpeed, 
-                        endSpeed: list[index - 1].endSpeed, 
-                        startTime: startNode.startTime, 
-                        endTime: list[index - 1].endTime,
-                    })
-                    // Check if last record
-                    if (index === list.length - 1) {
-                        // Last one record
-                        result.push({
-                            deviceId: data.deviceId,
-                            violationType: data.violationType,
-                            speed: data.speed,
-                            lat: data.lat,
-                            lng: data.lng,
-                            occTime: data.occTime,
-                            startSpeed: data.startSpeed, 
-                            endSpeed: data.endSpeed, 
-                            startTime: data.startTime, 
-                            endTime: data.endTime,
-                        })
-                    } else {
-                        // Not last one record
-                        startNode = data;
-                        continue;
-                    }
-                }
             }
         }
-
     }
     return result;
 }

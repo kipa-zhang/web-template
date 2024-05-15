@@ -106,28 +106,31 @@ const updateOBDAlert = async function (targetList) {
             let deviceGPSList = await outputService.readFromFile(target.deviceId, null, timezone)
             let alertList = await commonGenerateNoGoZoneAlert(deviceGPSList, target.deviceId, vehicle.vehicleNo, task.hub, task.node, task.groupId)
 
-            if (alertList.length) {
-                alertList = alertList.map(item => {
-                    item.taskId = task.taskId
-                    item.vehicleNo = task.vehicleNo
-                    return item
-                })
-                log.warn(`Alert List => `, JSON.stringify(alertList, null, 4))
-                await sequelizeObj.transaction(async transaction => {
-                    await TrackHistory.destroy({ where: { 
-                        deviceId: target.deviceId, 
-                        violationType: CONTENT.ViolationType.NoGoZoneAlert, 
-                        occTime: { [Op.between]: timezone } 
-                    } })
-
-                    await commonStoreEventHistoryForAlert(alertList, 'obd');
-                    await commonStoreEventForAlert(alertList, { dataFrom: 'obd' });
-                    await commonStoreEventPositionHistoryForOBD(alertList, deviceGPSList)
-                })
-            } else {
-                log.info(`updateOBDAlertByChildProcess => DeviceId: ${ target.deviceId }(VehicleNo: ${ vehicle.vehicleNo }) has no alert record on taskId: ${ task.taskId }.(mobileStartTime: ${ task.mobileStartTime }, mobileEndTime: ${ task.mobileEndTime })`)
-            }
+            await analysisAlertData(alertList)
         }
+    }
+}
+const analysisAlertData = async function (alertList) {
+    if (alertList.length) {
+        alertList = alertList.map(item => {
+            item.taskId = task.taskId
+            item.vehicleNo = task.vehicleNo
+            return item
+        })
+        log.warn(`Alert List => `, JSON.stringify(alertList, null, 4))
+        await sequelizeObj.transaction(async transaction => {
+            await TrackHistory.destroy({ where: { 
+                deviceId: target.deviceId, 
+                violationType: CONTENT.ViolationType.NoGoZoneAlert, 
+                occTime: { [Op.between]: timezone } 
+            } })
+
+            await commonStoreEventHistoryForAlert(alertList, 'obd');
+            await commonStoreEventForAlert(alertList, { dataFrom: 'obd' });
+            await commonStoreEventPositionHistoryForOBD(alertList, deviceGPSList)
+        })
+    } else {
+        log.info(`updateOBDAlertByChildProcess => DeviceId: ${ target.deviceId }(VehicleNo: ${ vehicle.vehicleNo }) has no alert record on taskId: ${ task.taskId }.(mobileStartTime: ${ task.mobileStartTime }, mobileEndTime: ${ task.mobileEndTime })`)
     }
 }
 
@@ -364,75 +367,71 @@ const checkAlertTime = function (noGoZone, dateTime) {
 }
 
 const commonGenerateNoGoZoneAlert = async function (list, id, vehicleNo, hub, node, groupId) {
-    try {
-        // TODO: At least two record can cal descSpeed
-        if (!list.length || list.length === 1) return [];
-        let alertList = [];
+    // TODO: At least two record can cal descSpeed
+    if (!list.length || list.length === 1) return [];
+    let alertList = [];
 
-        let noGoZoneList = []
-        if (groupId) {
-            noGoZoneList = await getNoGoZoneListByGroup(groupId)
-        } else {
-            noGoZoneList = await getNoGoZoneListByHubNode(hub, node);
-        }
-        for (let noGoZone of noGoZoneList) {
-            log.info(noGoZone.zoneName)
-            let alertRecord = {
-                deviceId: id, 
-                vehicleNo,
-                violationType: CONTENT.ViolationType.NoGoZoneAlert, 
-                zoneId: noGoZone.id
-            }
-            let preStatus = 0;
-            for (let position of list) {
-                if (!checkAlertTime(noGoZone, position.createdAt)) {
-                    // current time is not in alert timezone
-                    continue;
-                }
-
-                let result = util.isPointInPolygon([position.lat, position.lng], JSON.parse(noGoZone.polygon))
-                
-                if (result && preStatus == 0) {
-                    // first time in zone
-                    alertRecord.occTime = position.createdAt
-                    alertRecord.startTime = position.createdAt
-                    alertRecord.vin = position.vin
-                    alertRecord.startSpeed = position.speed
-                    alertRecord.speed = position.speed
-                    alertRecord.lat = position.lat
-                    alertRecord.lng = position.lng
-
-                    preStatus = 1
-                } else if (!result && preStatus == 1) {
-                    // out
-                    alertRecord.endTime = position.createdAt
-
-                    let timezone = moment(alertRecord.endTime).diff(moment(alertRecord.startTime));
-                    alertRecord.stayTime = Math.floor(timezone / 1000)
-
-                    // store this record and start new one
-                    alertList.push(alertRecord)
-
-                    // re-init
-                    preStatus = 0; 
-                    alertRecord = {
-                        deviceId: id, 
-                        vehicleNo,
-                        violationType: CONTENT.ViolationType.NoGoZoneAlert, 
-                        zoneId: noGoZone.id
-                    }
-                }
-            }
-            if (alertRecord.startTime && !alertRecord.endTime) {
-                // in no go zone, not out yet
-                alertList.push(alertRecord)
-            }
-        }
-
-        return alertList
-    } catch (error) {
-        log.error('(commonGenerateAlert): ', error)
+    let noGoZoneList = []
+    if (groupId) {
+        noGoZoneList = await getNoGoZoneListByGroup(groupId)
+    } else {
+        noGoZoneList = await getNoGoZoneListByHubNode(hub, node);
     }
+    for (let noGoZone of noGoZoneList) {
+        log.info(noGoZone.zoneName)
+        let alertRecord = {
+            deviceId: id, 
+            vehicleNo,
+            violationType: CONTENT.ViolationType.NoGoZoneAlert, 
+            zoneId: noGoZone.id
+        }
+        let preStatus = 0;
+        for (let position of list) {
+            if (!checkAlertTime(noGoZone, position.createdAt)) {
+                // current time is not in alert timezone
+                continue;
+            }
+
+            let result = util.isPointInPolygon([position.lat, position.lng], JSON.parse(noGoZone.polygon))
+            
+            if (result && preStatus == 0) {
+                // first time in zone
+                alertRecord.occTime = position.createdAt
+                alertRecord.startTime = position.createdAt
+                alertRecord.vin = position.vin
+                alertRecord.startSpeed = position.speed
+                alertRecord.speed = position.speed
+                alertRecord.lat = position.lat
+                alertRecord.lng = position.lng
+
+                preStatus = 1
+            } else if (!result && preStatus == 1) {
+                // out
+                alertRecord.endTime = position.createdAt
+
+                let timezone = moment(alertRecord.endTime).diff(moment(alertRecord.startTime));
+                alertRecord.stayTime = Math.floor(timezone / 1000)
+
+                // store this record and start new one
+                alertList.push(alertRecord)
+
+                // re-init
+                preStatus = 0; 
+                alertRecord = {
+                    deviceId: id, 
+                    vehicleNo,
+                    violationType: CONTENT.ViolationType.NoGoZoneAlert, 
+                    zoneId: noGoZone.id
+                }
+            }
+        }
+        if (alertRecord.startTime && !alertRecord.endTime) {
+            // in no go zone, not out yet
+            alertList.push(alertRecord)
+        }
+    }
+
+    return alertList
 }
 
 const commonStoreEventForAlert = async function (list, option) {

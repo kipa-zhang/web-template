@@ -102,26 +102,29 @@ const updateOBDMissing = async function (targetList) {
             let deviceGPSList = await outputService.readFromFile(target.deviceId, null, timezone)
             let missingList = await commonGenerateMissing(deviceGPSList, target.deviceId, null)
             
-            if (missingList.length) {
-                missingList = missingList.map(item => {
-                    item.taskId = task.taskId
-                    item.vehicleNo = task.vehicleNo
-                    return item
-                })
-                log.warn(`Missing List => `, JSON.stringify(missingList, null, 4))   
-                await sequelizeObj.transaction(async transaction => {
-                    let track = await Track.findOne({ where: { deviceId: target.deviceId, violationType: CONTENT.ViolationType.Missing } })
-                    let result = await commonStoreEventHistoryForMissing(missingList, 'obd');
-                    log.info(JSON.stringify(result, null, 4))
-
-                    // flagCount is not correct here, need think about if exist same data(from result above)
-                    let flagCount = track ? track.count : 0
-                    await commonStoreEventForMissing(missingList, { flagCount, dataFrom: 'obd' });
-                })
-            } else {
-                log.info(`updateOBDMissing => DeviceId: ${ target.deviceId }(VehicleNo: ${ vehicle.vehicleNo }) has no missing record on taskId: ${ task.taskId }.(mobileStartTime: ${ task.mobileStartTime }, mobileEndTime: ${ task.mobileEndTime })`)
-            }
+            await analysisMissing(missingList)
         }
+    }
+}
+const analysisMissing = async function () {
+    if (missingList.length) {
+        missingList = missingList.map(item => {
+            item.taskId = task.taskId
+            item.vehicleNo = task.vehicleNo
+            return item
+        })
+        log.warn(`Missing List => `, JSON.stringify(missingList, null, 4))   
+        await sequelizeObj.transaction(async transaction => {
+            let track = await Track.findOne({ where: { deviceId: target.deviceId, violationType: CONTENT.ViolationType.Missing } })
+            let result = await commonStoreEventHistoryForMissing(missingList, 'obd');
+            log.info(JSON.stringify(result, null, 4))
+
+            // flagCount is not correct here, need think about if exist same data(from result above)
+            let flagCount = track ? track.count : 0
+            await commonStoreEventForMissing(missingList, { flagCount, dataFrom: 'obd' });
+        })
+    } else {
+        log.info(`updateOBDMissing => DeviceId: ${ target.deviceId }(VehicleNo: ${ vehicle.vehicleNo }) has no missing record on taskId: ${ task.taskId }.(mobileStartTime: ${ task.mobileStartTime }, mobileEndTime: ${ task.mobileEndTime })`)
     }
 }
 
@@ -252,43 +255,46 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
                 } 
             }
 
-            // Checkout Missing Type => No Signal(GPS Time is same)
-            if (list[index + 1].gpsTime == data.gpsTime) {
-                if (noSignalStartIndex == -1) {
-                    // TODO: find out start record
-                    noSignalStartIndex = index
-                } else {
-                    // TODO: go on find out end record
-                }
-            } else {
-                if (noSignalStartIndex == -1) {
-                    // TODO: find out start record
-                } else {
-                    // TODO: find out end record
-                    // Check time
-                    let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));
-                    if (timezone > conf.judgeMissingTime) {
-                        idleList.push({ 
-                            deviceId: id, 
-                            violationType: CONTENT.ViolationType.Missing, 
-                            startTime: list[noSignalStartIndex].createdAt, 
-                            missingType: list[noSignalStartIndex + 1].gpsService == 1 ? 'No GPS Signal' : 'No GPS Service',
-                            endTime: data.createdAt, 
-                            speed: list[noSignalStartIndex].speed, 
-                            vin: list[noSignalStartIndex].vin, 
-                            lat: list[noSignalStartIndex].lat, 
-                            lng: list[noSignalStartIndex].lng, 
-                            occTime: list[noSignalStartIndex].createdAt, 
-                            stayTime: Math.floor((moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt))) / 1000) 
-                        })
+            const generateData = function () {
+                // Checkout Missing Type => No Signal(GPS Time is same)
+                if (list[index + 1].gpsTime == data.gpsTime) {
+                    if (noSignalStartIndex == -1) {
+                        // TODO: find out start record
+                        noSignalStartIndex = index
                     } else {
-                        // TODO: leave this record, find next start node
+                        // TODO: go on find out end record
                     }
+                } else {
+                    if (noSignalStartIndex == -1) {
+                        // TODO: find out start record
+                    } else {
+                        // TODO: find out end record
+                        // Check time
+                        let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));
+                        if (timezone > conf.judgeMissingTime) {
+                            idleList.push({ 
+                                deviceId: id, 
+                                violationType: CONTENT.ViolationType.Missing, 
+                                startTime: list[noSignalStartIndex].createdAt, 
+                                missingType: list[noSignalStartIndex + 1].gpsService == 1 ? 'No GPS Signal' : 'No GPS Service',
+                                endTime: data.createdAt, 
+                                speed: list[noSignalStartIndex].speed, 
+                                vin: list[noSignalStartIndex].vin, 
+                                lat: list[noSignalStartIndex].lat, 
+                                lng: list[noSignalStartIndex].lng, 
+                                occTime: list[noSignalStartIndex].createdAt, 
+                                stayTime: Math.floor((moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt))) / 1000) 
+                            })
+                        } else {
+                            // TODO: leave this record, find next start node
+                        }
 
-                    // TODO: reload flag
-                    noSignalStartIndex = -1;
+                        // TODO: reload flag
+                        noSignalStartIndex = -1;
+                    }
                 }
             }
+            generateData()
         }    
     }
     return idleList;
@@ -380,33 +386,24 @@ const checkMissingByTimeZone = async function (timezone, driverId, vehicleNo) {
     let toOperation = await TO_Operation.findAll({ where: { driverId, startTime: { [Op.startsWith]: moment(timezone[0]).format('YYYY-MM-DD') } }})
     for (let operation of toOperation) {
         // 1. Missing Type => Pause 
-        if (operation.type == 1 && operation.description.toLowerCase().indexOf('pause') > -1) {
-            if (operation.endTime) {
-                if (moment(timezone[0]).isSameOrAfter(moment(operation.startTime).subtract(5, 's')) 
-                && moment(timezone[1]).isSameOrBefore(moment(operation.endTime).add(5, 's'))) {
-                    return { result: false, reason: 'Pause' }
-                }
-            } else {
-                // if (moment(timezone[0]).isSameOrAfter(moment(operation.startTime).subtract(5, 's'))) {
-                //     return { result: false, reason: 'Pause' }
-                // }
-            }
+        if (operation.type == 1 
+            && operation.description.toLowerCase().indexOf('pause') > -1 
+            && operation.endTime
+            && moment(timezone[0]).isSameOrAfter(moment(operation.startTime).subtract(5, 's')) 
+            && moment(timezone[1]).isSameOrBefore(moment(operation.endTime).add(5, 's'))
+        ) {
+            return { result: false, reason: 'Pause' }
         }
 
         // 2. Missing Type => No GPS Permission 
-        if (operation.type == 0 && operation.description.toLowerCase().indexOf('permission') > -1) {
-            if (operation.endTime) {
-                // TODO: mobile will upload position every 5 seconds, sometime seconds is not correct
-                if (moment(timezone[0]).isSameOrAfter(moment(operation.startTime).subtract(5, 's')) 
-                && moment(timezone[1]).isSameOrBefore(moment(operation.endTime).add(5, 's'))) {
-                    return { result: true, reason: 'No GPS Permission' }
-                }
-            } else {
-                // TODO: mobile will upload position every 5 seconds, sometime seconds is not correct
-                // if (moment(timezone[0]).isSameOrAfter(moment(operation.startTime).subtract(5, 's'))) {
-                //     return { result: true, reason: 'No GPS Permission' }
-                // }
-            }
+        if (operation.type == 0 
+            && operation.description.toLowerCase().indexOf('permission') > -1 
+            && operation.endTime
+            && moment(timezone[0]).isSameOrAfter(moment(operation.startTime).subtract(5, 's'))
+            && moment(timezone[1]).isSameOrBefore(moment(operation.endTime).add(5, 's'))
+        ) {
+            // TODO: mobile will upload position every 5 seconds, sometime seconds is not correct
+            return { result: true, reason: 'No GPS Permission' }
         }
     }
 
