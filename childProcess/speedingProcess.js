@@ -229,6 +229,7 @@ const commonGenerateContinuousSpeeding = function (list, id) {
             startNode = data;
             continue;
         } 
+        
         // Next record
         // Check if continuous rowNo record
         if (data.rowNo - 1 === list[index - 1].rowNo) {

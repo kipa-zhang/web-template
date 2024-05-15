@@ -219,34 +219,19 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
     for (let data of list) {
         index++;
 
+        // last one record
         if (index == list.length - 1) continue
-        if (index !== list.length - 1) {
-            let timezone = moment(list[index + 1].createdAt).diff(moment(data.createdAt));
-
-            if (timezone <= conf.judgeMissingTime) continue
-            if (vehicleNo) {
-                // Mobile
-                let checkResult = await checkMissingByTimeZone([data.createdAt, list[index + 1].createdAt], id, vehicleNo)
-                if (checkResult.result) {
-                    idleList.push({ 
-                        deviceId: id, 
-                        violationType: CONTENT.ViolationType.Missing, 
-                        missingType: checkResult.reason,
-                        startTime: data.createdAt, 
-                        endTime: list[index + 1].createdAt, 
-                        speed: data.speed, 
-                        vin: data.vin, 
-                        lat: data.lat, 
-                        lng: data.lng, 
-                        occTime: data.createdAt, 
-                        stayTime: Math.floor(timezone / 1000) 
-                    })
-                }
-            } else {
-                // OBD
+        // not last one record
+        let timezone = moment(list[index + 1].createdAt).diff(moment(data.createdAt));
+        if (timezone <= conf.judgeMissingTime) continue
+        if (vehicleNo) {
+            // Mobile
+            let checkResult = await checkMissingByTimeZone([data.createdAt, list[index + 1].createdAt], id, vehicleNo)
+            if (checkResult.result) {
                 idleList.push({ 
                     deviceId: id, 
                     violationType: CONTENT.ViolationType.Missing, 
+                    missingType: checkResult.reason,
                     startTime: data.createdAt, 
                     endTime: list[index + 1].createdAt, 
                     speed: data.speed, 
@@ -256,44 +241,55 @@ const commonGenerateMissing = async function (list, id, vehicleNo) {
                     occTime: data.createdAt, 
                     stayTime: Math.floor(timezone / 1000) 
                 })
-            } 
-
-            const generateData = function () {
-                // Checkout Missing Type => No Signal(GPS Time is same)
-                if (list[index + 1].gpsTime == data.gpsTime) {
-                    if (noSignalStartIndex == -1) {
-                        // TODO: find out start record
-                        noSignalStartIndex = index
-                    }
-                } else {
-                    if (noSignalStartIndex !== -1) {
-                        // TODO: find out end record
-                        // Check time
-                        let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));
-                        if (timezone > conf.judgeMissingTime) {
-                            idleList.push({ 
-                                deviceId: id, 
-                                violationType: CONTENT.ViolationType.Missing, 
-                                startTime: list[noSignalStartIndex].createdAt, 
-                                missingType: list[noSignalStartIndex + 1].gpsService == 1 ? 'No GPS Signal' : 'No GPS Service',
-                                endTime: data.createdAt, 
-                                speed: list[noSignalStartIndex].speed, 
-                                vin: list[noSignalStartIndex].vin, 
-                                lat: list[noSignalStartIndex].lat, 
-                                lng: list[noSignalStartIndex].lng, 
-                                occTime: list[noSignalStartIndex].createdAt, 
-                                stayTime: Math.floor((moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt))) / 1000) 
-                            })
-                        } else {
-                            // TODO: leave this record, find next start node
-                        }
-
-                        // TODO: reload flag
-                        noSignalStartIndex = -1;
-                    }
-                }
             }
-            generateData()
+        } else {
+            // OBD
+            idleList.push({ 
+                deviceId: id, 
+                violationType: CONTENT.ViolationType.Missing, 
+                startTime: data.createdAt, 
+                endTime: list[index + 1].createdAt, 
+                speed: data.speed, 
+                vin: data.vin, 
+                lat: data.lat, 
+                lng: data.lng, 
+                occTime: data.createdAt, 
+                stayTime: Math.floor(timezone / 1000) 
+            })
+        } 
+
+        // Checkout Missing Type => No Signal(GPS Time is same)
+        if (list[index + 1].gpsTime == data.gpsTime) {
+            if (noSignalStartIndex == -1) {
+                // TODO: find out start record
+                noSignalStartIndex = index
+            }
+        } else {
+            if (noSignalStartIndex !== -1) {
+                // TODO: find out end record
+                // Check time
+                let timezone = moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt));
+                if (timezone > conf.judgeMissingTime) {
+                    idleList.push({ 
+                        deviceId: id, 
+                        violationType: CONTENT.ViolationType.Missing, 
+                        startTime: list[noSignalStartIndex].createdAt, 
+                        missingType: list[noSignalStartIndex + 1].gpsService == 1 ? 'No GPS Signal' : 'No GPS Service',
+                        endTime: data.createdAt, 
+                        speed: list[noSignalStartIndex].speed, 
+                        vin: list[noSignalStartIndex].vin, 
+                        lat: list[noSignalStartIndex].lat, 
+                        lng: list[noSignalStartIndex].lng, 
+                        occTime: list[noSignalStartIndex].createdAt, 
+                        stayTime: Math.floor((moment(data.createdAt).diff(moment(list[noSignalStartIndex].createdAt))) / 1000) 
+                    })
+                } else {
+                    // TODO: leave this record, find next start node
+                }
+
+                // TODO: reload flag
+                noSignalStartIndex = -1;
+            }
         }    
     }
     return idleList;
