@@ -1,19 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const utils = require('../util/utils');
 
-const log = require('../log/winston').logger('URL Interceptor');
-const gpsLog = require('../log/winston').GPSLogger('Position Service');
+const log = require('../winston/logger').logger('URL Interceptor');
 
-router.use(async (req, res, next) => {
-    if (req.url.indexOf('updatePositionByFile') > -1 || req.url.indexOf('getStateRecord') > -1) {
-        gpsLog.info('HTTP Request URL: ' + req.url);
-        gpsLog.info('HTTP Request Body: ' + JSON.stringify(req.body));
+router.use((req, res, next) => {
+    log.info('HTTP Request URL : ', req.url);
+    log.info('HTTP Request Body: ', JSON.stringify(req.body, null, 4));
+
+    if (![ '/publicFirebaseNotification', '/publicFirebaseNotificationBySystem' ].includes(req.url)) {
+        log.warn('This request url do not exist here!');
+        return res.json(utils.response(0, 'This request do not exist here!'));
     } else {
-        log.info('HTTP Request URL: ' + req.url);
-        log.info('HTTP Request Body: ' + JSON.stringify(req.body));
+        next();
+        // If coding here, still will run the code!!!
     }
-    next();
-
-});
-
+})
 module.exports = router;
