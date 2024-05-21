@@ -28,9 +28,9 @@ module.exports = {
                         ud.status as driverStatus,
                         ud.status as vehicleStatus
                     FROM urgent_duty ud
-                    WHERE ud.dutyId = '${taskId}'
+                    WHERE ud.dutyId = ?
                 `, { 
-                    type: QueryTypes.SELECT, replacements: []
+                    type: QueryTypes.SELECT, replacements: [taskId]
                 });
                 if (taskList.length) {
                     task = taskList[0];
@@ -43,7 +43,7 @@ module.exports = {
                 return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
             }
 
-            let { driverId, vehicleNumber, vehicleStatus } = task
+            let { vehicleNumber } = task
             let vehicle = await Vehicle.findByPk(vehicleNumber)
             let { unitId, vehicleType, totalMileage, dimensions  } = vehicle
 

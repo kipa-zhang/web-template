@@ -717,7 +717,7 @@ module.exports.getPlatformConfList = async function (req, res) {
 
 module.exports.updateDriverEmail = async function (req, res) {
 	try {
-		let { driverId, email, driverContactNumber, remarks } = req.body; 
+		let { driverId, email, driverContactNumber } = req.body; 
 		if (driverId) {
 			await sequelizeObj.transaction(async (t1) => {
 				let driverInfo = await Driver.findByPk(driverId)
@@ -725,8 +725,6 @@ module.exports.updateDriverEmail = async function (req, res) {
 					if (email && driverContactNumber) {
 						await Driver.update({email: email, contactNumber: driverContactNumber }, {where: {driverId: driverId}});
 						await DriverLicenseExchangeApply.update({emailConfirm: email}, {where: {driverId: driverId, status: 'Submitted' }});
-					} else {
-						//await DriverLicenseExchangeApply.update({emailConfirm: 'empty'}, {where: {driverId: driverId, status: 'approved' }});
 					}
 				} else {
 					log.warn(`UpdateDriverEmail Driver:${driverId} not exist!`);

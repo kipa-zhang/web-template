@@ -81,63 +81,69 @@ let latestReturnResult = {
 
 module.exports = {
 	getTaskSummary: async function (req, res) {
-		let { taskId } = req.body
-		let task = null;
-		let indentId = null;
-		if (taskId.startsWith('DUTY')) {
-			let idArray = taskId.split('-');
-			if (idArray.length < 2) {
-				log.warn(`TaskId ${taskId} format error.`)
-				return res.json(utils.response(0, `TaskId ${taskId} format error.`));
-			}
-			taskId = `DUTY-${idArray[1]}`;
-			if (idArray.length == 3) {
-				indentId = idArray[2];
-				let taskList = await sequelizeObj.query(`
-					SELECT
-						ud.dutyId as taskId,
-						ui.startTime as indentStartTime,
-						ui.endTime as indentEndTime,
-						uc.purpose,
-						ui.vehicleNo as vehicleNumber,
-						ui.driverId,
-						ui.indentId,
-						ui.status as driverStatus
-					FROM urgent_indent ui
-					LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
-					LEFT JOIN urgent_config uc ON ud.configId = uc.id
-					WHERE ui.id = '${indentId}'
-				`, { 
-					type: QueryTypes.SELECT, replacements: []
-				});
-				if (taskList.length) {
-					task = taskList[0];
+		const getTask = async function (taskId) {
+			let indentId = null;
+			let task = null;
+			if (taskId.startsWith('DUTY')) {
+				let idArray = taskId.split('-');
+				if (idArray.length < 2) {
+					log.warn(`TaskId ${taskId} format error.`)
+					return res.json(utils.response(0, `TaskId ${taskId} format error.`));
+				}
+				taskId = `DUTY-${idArray[1]}`;
+				if (idArray.length == 3) {
+					indentId = idArray[2];
+					let taskList = await sequelizeObj.query(`
+						SELECT
+							ud.dutyId as taskId,
+							ui.startTime as indentStartTime,
+							ui.endTime as indentEndTime,
+							uc.purpose,
+							ui.vehicleNo as vehicleNumber,
+							ui.driverId,
+							ui.indentId,
+							ui.status as driverStatus
+						FROM urgent_indent ui
+						LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
+						LEFT JOIN urgent_config uc ON ud.configId = uc.id
+						WHERE ui.id = '${indentId}'
+					`, { 
+						type: QueryTypes.SELECT, replacements: []
+					});
+					if (taskList.length) {
+						task = taskList[0];
+					}
+				} else {
+					let taskList = await sequelizeObj.query(` 
+						SELECT
+							ud.dutyId as taskId,
+							ud.indentStartDate as indentStartTime,
+							ud.indentEndDate as indentEndTime,
+							uc.purpose,
+							uc.vehicleNo as vehicleNumber,
+							uc.driverId,
+							'' as indentId,
+							ud.status as driverStatus
+						FROM urgent_duty ud
+						LEFT JOIN urgent_config uc ON ud.configId = uc.id
+						LEFT JOIN urgent_indent ui on ui.dutyId = ud.id
+						WHERE ud.dutyId = '${taskId}'
+					`, { 
+						type: QueryTypes.SELECT, replacements: []
+					});
+					if (taskList.length) {
+						task = taskList[0];
+					}
 				}
 			} else {
-				let taskList = await sequelizeObj.query(` 
-					SELECT
-						ud.dutyId as taskId,
-						ud.indentStartDate as indentStartTime,
-						ud.indentEndDate as indentEndTime,
-						uc.purpose,
-						uc.vehicleNo as vehicleNumber,
-						uc.driverId,
-						'' as indentId,
-						ud.status as driverStatus
-					FROM urgent_duty ud
-					LEFT JOIN urgent_config uc ON ud.configId = uc.id
-					LEFT JOIN urgent_indent ui on ui.dutyId = ud.id
-					WHERE ud.dutyId = '${taskId}'
-				`, { 
-					type: QueryTypes.SELECT, replacements: []
-				});
-				if (taskList.length) {
-					task = taskList[0];
-				}
+				task = await Task.findOne({ where: { taskId } })
 			}
-		} else {
-			task = await Task.findOne({ where: { taskId } })
+
+			return task;
 		}
+		let { taskId } = req.body
+		let task = await getTask(taskId);
+		
 
 		if (!task) {
 			log.warn(`TaskId ${taskId} do not exist.`)
@@ -344,10 +350,12 @@ module.exports = {
 			FROM driver_permittype_detail dm
 			where dm.driverId=? AND dm.approveStatus='Approved' ORDER BY dm.permitType asc
 		`, { type: QueryTypes.SELECT, replacements: [ user.driverId ] });
-		for (let permitTypeMileage of driverMileageStatList) {
+
+		driverMileageStatList.forEach(permitTypeMileage => {
 			permitTypes.add(permitTypeMileage.permitType);
-		}
-		for (let permitType of permitTypes) {
+		})
+
+		permitTypes.forEach(async permitType => {
 			let newPermitType = permitType
 			let driverPermitTypeTaskMileage = driverPermitTaskMileageList.find(item => item.permitType == permitType);
 			let driverPermitTypeBaseMileage = driverMileageStatList.find(item => item.permitType == permitType);
@@ -366,24 +374,24 @@ module.exports = {
 				let parentMileageObj = statResult.find(item => item.permitType == parentPermitType);
 				if (parentMileageObj) {
 					parentMileageObj.totalMileage += totalMileage;
-					continue;
+					return;
 				} else {
 					newPermitType = parentPermitType;
 					permitTypeConf = await PermitType.findOne({ where: { permitType: newPermitType} });
 				}
 			} else {
-				continue;
+				return;
 			}
 
 			let eligibilityMileage = permitTypeConf?.eligibilityMileage ? permitTypeConf.eligibilityMileage : 4000;
 			statResult.push({permitType: newPermitType, totalMileage, eligibilityMileage});
-		}
+		})
 
-		for (let temp of statResult) {
+		statResult.forEach(temp => {
 			let moreMileage = temp.totalMileage < temp.eligibilityMileage ? temp.eligibilityMileage - temp.totalMileage : 0;
 			temp.moreMileage = moreMileage;
 			driverTotalMileage += temp.totalMileage;
-		}
+		})
 
 		result.totalMileage = driverTotalMileage ? driverTotalMileage.toFixed(2) : 0;
 		result.permitData = statResult
@@ -393,89 +401,87 @@ module.exports = {
 		return res.json(utils.response(1, result));
 	},
 	getTOIndents: async function (req, res) {
+		const generateTaskData = async function (task) {
+			log.info(`Start  find ODD data by taskId => ${ task.taskId }`)
+			let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
+			task.odd = odd ? odd.content : '';
+			log.info(`Finish find ODD data by taskId => ${ task.taskId }`)
+
+			log.info(`Start  find MT RAC data by taskId => ${ task.taskId }`)
+			// let assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
+			let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
+			task.commanderContact = (mtRAC?.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: task.hub, node: task.node } : null;
+			log.info(`Finish find MT RAC data by taskId => ${ task.taskId }`)
+
+			log.info(`Start  find Mileage data by taskId => ${ task.taskId }`)
+			let mileage = await Mileage.findByPk(task.taskId)
+			if (mileage) {
+				task.startMileage = mileage.startMileage;
+				task.endMileage = mileage.endMileage;
+			} else {
+				let vehicle = await Vehicle.findByPk(task.vehicleNumber)
+				task.startMileage = (vehicle?.totalMileage) ? vehicle.totalMileage : 0;
+				task.endMileage = 0;
+			}
+			log.info(`Finish find Mileage data by taskId => ${ task.taskId }`)
+
+			log.info(`Start  find CheckList data by taskId => ${ task.taskId }`)
+			let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
+			let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
+			let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
+			let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
+			let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
+
+			task.taskReady = false;
+
+			const updateStatus = async function () {
+				if (checkList1 && checkList2 && checkList4) {
+					if (task.purposeType && task.purposeType.toLowerCase() == 'wpt') {
+						task.taskReady = true;
+
+						await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
+					} else if (checkList5) {
+						task.taskReady = true;
+
+						if (task.taskId.startsWith('DUTY')) {
+							await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: task.taskId.split('-')[1], status: 'waitcheck' } })
+							await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + task.taskId.split('-')[1], status: 'waitcheck' } })
+						} else {
+							await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
+						}
+					} 
+				}
+			}
+			await updateStatus()
+			
+			log.info(`Finish find CheckList data by taskId => ${ task.taskId }`)
+
+			// need unique taskId while urgent task(one duty may has 0-3 indents, if > 0, generate new taskId with indentId, mobile need unique taskId)
+			if (task.dataFrom == 'Urgent' && task.indentId) {
+				task.taskId += '-' + task.indentId 
+			}
+		}
 		let userId = req.body.userId;
 		let user = await User.findByPk(userId);
 		if (!user) {
 			throw new Error(`UserId ${userId} do not exist.`)
 		}
 
-		// log.info(`getTOIndents API => ${ conf.URL_Of_3rd_List.GetTOIndents }`)
-		// let result = await axios.post(conf.URL_Of_3rd_List.GetTOIndents, {
-		// 	driverId: user.driverId
-		// }).then(result => result.data);
 		let result = await mobileTOService.GETDriverTaskList(user.driverId)
 		log.info(`getTOIndents API Data => ${ JSON.stringify(result) }`)
 
-		if (result.code === 1) {
-			for (let indent of result.data.indents) {
-				log.info(`********************************************`)
-				log.info(`Find Data by indent type => ${ indent.name }`)
-				for (let task of indent.dataList) {
-					log.info(`Start  find ODD data by taskId => ${ task.taskId }`)
-					let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
-					task.odd = odd ? odd.content : '';
-					log.info(`Finish find ODD data by taskId => ${ task.taskId }`)
-
-					log.info(`Start  find MT RAC data by taskId => ${ task.taskId }`)
-					// let assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
-					let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
-					task.commanderContact = (mtRAC?.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: task.hub, node: task.node } : null;
-					log.info(`Finish find MT RAC data by taskId => ${ task.taskId }`)
-
-					log.info(`Start  find Mileage data by taskId => ${ task.taskId }`)
-					let mileage = await Mileage.findByPk(task.taskId)
-					if (mileage) {
-						task.startMileage = mileage.startMileage;
-						task.endMileage = mileage.endMileage;
-					} else {
-						let vehicle = await Vehicle.findByPk(task.vehicleNumber)
-						task.startMileage = (vehicle?.totalMileage) ? vehicle.totalMileage : 0;
-						task.endMileage = 0;
-					}
-					log.info(`Finish find Mileage data by taskId => ${ task.taskId }`)
-
-					log.info(`Start  find CheckList data by taskId => ${ task.taskId }`)
-					let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
-					let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
-					let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
-					let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
-					let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
-
-					task.taskReady = false;
-
-					const updateStatus = async function () {
-						if (checkList1 && checkList2 && checkList4) {
-							if (task.purposeType && task.purposeType.toLowerCase() == 'wpt') {
-								task.taskReady = true;
-
-								await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
-							} else if (checkList5) {
-								task.taskReady = true;
-
-								if (task.taskId.startsWith('DUTY')) {
-									await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: task.taskId.split('-')[1], status: 'waitcheck' } })
-									await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + task.taskId.split('-')[1], status: 'waitcheck' } })
-								} else {
-									await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
-								}
-							} 
-						}
-					}
-					await updateStatus()
-					
-					log.info(`Finish find CheckList data by taskId => ${ task.taskId }`)
-
-					// need unique taskId while urgent task(one duty may has 0-3 indents, if > 0, generate new taskId with indentId, mobile need unique taskId)
-					if (task.dataFrom == 'Urgent' && task.indentId) {
-						task.taskId += '-' + task.indentId 
-					}
-				}
-			}
-			log.info(`result.data => `, JSON.stringify(result.data))
-			return res.json(utils.response(1, result.data));
-		} else {
+		if (result.code !== 1) {
 			return res.json(utils.response(0, result.msg));
 		}
+		for (let indent of result.data.indents) {
+			log.info(`********************************************`)
+			log.info(`Find Data by indent type => ${ indent.name }`)
+			for (let task of indent.dataList) {
+				await generateTaskData(task)
+			}
+		}
+		log.info(`result.data => `, JSON.stringify(result.data))
+		return res.json(utils.response(1, result.data));
 	},
 	getTOIndentByTaskId: async function (req, res) {
 		let taskId = req.body.taskId;

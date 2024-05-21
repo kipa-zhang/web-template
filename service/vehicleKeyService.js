@@ -54,42 +54,45 @@ const getCurrentTaskById = async function(taskId) {
     let task = null;
     let indentId = null;
     if (taskId.startsWith('DUTY')) {
-        let idArray = taskId.split('-');
-        if (idArray.length < 2) {
-            log.warn(`getCurrentTaskById error: TaskId ${taskId} format error.`)
-            return null;
-        }
-        taskId = `DUTY-${idArray[1]}`;
-        if (idArray.length == 3) {
-            indentId = idArray[2];
-            let taskList = await sequelizeObj.query(` 
-                SELECT
-                    ui.vehicleNo as vehicleNumber,
-                    ui.driverId,
-                    ui.status as driverStatus
-                FROM urgent_indent ui
-                WHERE ui.id = '${indentId}'
-            `, { 
-                type: QueryTypes.SELECT, replacements: []
-            });
-            if (taskList.length) {
-                task = taskList[0];
+        async function initDutyTask() {
+            let idArray = taskId.split('-');
+            if (idArray.length < 2) {
+                log.warn(`getCurrentTaskById error: TaskId ${taskId} format error.`)
+                return null;
             }
-        } else {
-            let taskList = await sequelizeObj.query(` 
-                SELECT
-                    ud.vehicleNo as vehicleNumber,
-                    ud.driverId,
-                    ud.status as driverStatus
-                FROM urgent_duty ud
-                WHERE ud.dutyId = '${taskId}'
-            `, { 
-                type: QueryTypes.SELECT, replacements: []
-            });
-            if (taskList.length) {
-                task = taskList[0];
+            taskId = `DUTY-${idArray[1]}`;
+            if (idArray.length == 3) {
+                indentId = idArray[2];
+                let taskList = await sequelizeObj.query(` 
+                    SELECT
+                        ui.vehicleNo as vehicleNumber,
+                        ui.driverId,
+                        ui.status as driverStatus
+                    FROM urgent_indent ui
+                    WHERE ui.id = ?
+                `, { 
+                    type: QueryTypes.SELECT, replacements: [indentId]
+                });
+                if (taskList.length) {
+                    task = taskList[0];
+                }
+            } else {
+                let taskList = await sequelizeObj.query(` 
+                    SELECT
+                        ud.vehicleNo as vehicleNumber,
+                        ud.driverId,
+                        ud.status as driverStatus
+                    FROM urgent_duty ud
+                    WHERE ud.dutyId = ?
+                `, { 
+                    type: QueryTypes.SELECT, replacements: [taskId]
+                });
+                if (taskList.length) {
+                    task = taskList[0];
+                }
             }
         }
+        await initDutyTask();
     } else {
         task = await Task.findOne({ where: { taskId } })
     }
@@ -133,19 +136,26 @@ module.exports = {
             }
             let siteName = "";
             let vehicleKeyTagId = '';
-            if (currentTask.vehicleNumber) {
-                keyOptRecord.vehicleNo = currentTask.vehicleNumber
-                let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
-                if (vehicle) {
-                    vehicleKeyTagId = vehicle.keyTagId;
-                    keyOptRecord.keyTagId = vehicleKeyTagId;
+            async function checkTaskVehicleKeyConfig() {
+                if (currentTask.vehicleNumber) {
+                    keyOptRecord.vehicleNo = currentTask.vehicleNumber
+                    let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
+                    if (vehicle) {
+                        vehicleKeyTagId = vehicle.keyTagId;
+                        keyOptRecord.keyTagId = vehicleKeyTagId;
+                    }
+                    if (!vehicleKeyTagId) {
+                        return 'Task vehicle key tag id not config!';
+                    }
+                } else {
+                    return 'Task don\'t need vehicle!';
                 }
-                if (!vehicleKeyTagId) {
-                    return res.json(utils.response(0, 'Task vehicle key tag id not config!'));
-                }
-            } else {
-                return res.json(utils.response(0, `Task don't need vehicle!`));
             }
+            let errorMsg = await checkTaskVehicleKeyConfig();
+            if (errorMsg) {
+                return res.json(utils.response(0, errorMsg));
+            }
+
             let slotId = null;
             let keyDetailInfo = await KeypressBoxDetailInfo.findOne({where: {keyTagId: vehicleKeyTagId}});
             if (keyDetailInfo) {
@@ -179,29 +189,37 @@ module.exports = {
             }
             let params = { SiteID: siteId, qrdatajson: JSON.stringify(qrdatajson)}
             let httpResult = await AxiosHandler('api/UGGenAccessQRCode', params)
-            if (!httpResult) {
-                keyOptRecord.remarks = 'Fail: Generate Withdraw QRCode failed: result is null.';
-                await VehicleKeyOptRecord.create(keyOptRecord);
-                return res.json(utils.response(0, 'Generate Withdraw QRCode failed, please try again later.'));
-            }
-            if (httpResult.code == 0) {
-                log.info(httpResult.message)
-                if (httpResult.data && httpResult.data.codeResult == 0) {
-                    keyOptRecord.remarks = "Success: " + httpResult.message;
+            async function parseResult() {
+                if (!httpResult) {
+                    keyOptRecord.remarks = 'Fail: Generate Withdraw QRCode failed: result is null.';
                     await VehicleKeyOptRecord.create(keyOptRecord);
-                    return res.json(utils.response(1, { codeBase64: httpResult.data.codeBase64, codeString: httpResult.data.codeString, siteId, boxName: siteName }));
-                } else {
-                    keyOptRecord.remarks = "Fail: " + httpResult.codeString;
-                    await VehicleKeyOptRecord.create(keyOptRecord);
-                    return res.json(utils.response(0, `Generate Withdraw QRCode failed:${httpResult.codeString}`));
+                    return {code: 0, errorMsg: 'Generate Withdraw QRCode failed, please try again later.'};
                 }
-            } else {
-                keyOptRecord.remarks = "Fail: " + httpResult.message;
-                // Failed
-                log.warn(httpResult.message)
-                await VehicleKeyOptRecord.create(keyOptRecord);
-                return res.json(utils.response(0, `Generate Withdraw QRCode failed:${httpResult.message}`));
+                if (httpResult.code == 0) {
+                    log.info(httpResult.message)
+                    if (httpResult.data && httpResult.data.codeResult == 0) {
+                        keyOptRecord.remarks = "Success: " + httpResult.message;
+                        await VehicleKeyOptRecord.create(keyOptRecord);
+                        return {code: 1, data: { codeBase64: httpResult.data.codeBase64, codeString: httpResult.data.codeString, siteId, boxName: siteName }};
+                    } else {
+                        keyOptRecord.remarks = "Fail: " + httpResult.codeString;
+                        await VehicleKeyOptRecord.create(keyOptRecord);
+                        return {code: 0, errorMsg: `Generate Withdraw QRCode failed:${httpResult.codeString}`};
+                    }
+                } else {
+                    keyOptRecord.remarks = "Fail: " + httpResult.message;
+                    // Failed
+                    log.warn(httpResult.message)
+                    await VehicleKeyOptRecord.create(keyOptRecord);
+                    return {code: 0, errorMsg: `Generate Withdraw QRCode failed:${httpResult.message}`};
+                }
             }
+
+            let result = await parseResult();
+            if (result.code == 0) {
+                return res.json(utils.response(0, result.errorMsg));
+            }
+            return res.json(utils.response(1, result.data));
         } catch (error) {
             log.error('(generateWithdrawQRCode)', error)
             return res.json(utils.response(0, `Generate Withdraw QRCode failed:${error.message ? error.message : 'System error'}, please try again later.`));
@@ -233,18 +251,24 @@ module.exports = {
             }
 
             let vehicleKeyTagId = '';
-            if (currentTask.vehicleNumber) {
-                keyOptRecord.vehicleNo = currentTask.vehicleNumber
-                let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
-                if (vehicle) {
-                    vehicleKeyTagId = vehicle.keyTagId;
-                    keyOptRecord.keyTagId = vehicleKeyTagId;
+            async function checkTaskVehicleKeyConfig() {
+                if (currentTask.vehicleNumber) {
+                    keyOptRecord.vehicleNo = currentTask.vehicleNumber
+                    let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
+                    if (vehicle) {
+                        vehicleKeyTagId = vehicle.keyTagId;
+                        keyOptRecord.keyTagId = vehicleKeyTagId;
+                    }
+                    if (!vehicleKeyTagId) {
+                        return 'Task vehicle key tag id not config!';
+                    }
+                } else {
+                    return `Task don't need vehicle!`;
                 }
-                if (!vehicleKeyTagId) {
-                    return res.json(utils.response(0, 'Task vehicle key tag id not config!'));
-                }
-            } else {
-                return res.json(utils.response(0, `Task don't need vehicle!`));
+            }
+            let errorMsg = await checkTaskVehicleKeyConfig();
+            if (errorMsg) {
+                return res.json(utils.response(0, errorMsg));
             }
 
             let siteInfo = await KeypressSiteinfo.findOne({ where: {siteId: siteId, status: 1}});
@@ -307,16 +331,22 @@ module.exports = {
             }
             let vehicleKeyTagId = '';
             
-            if (currentTask.vehicleNumber) {
-                let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
-                if (vehicle) {
-                    vehicleKeyTagId = vehicle.keyTagId;
+            async function checkTaskVehicleKeyConfig() {
+                if (currentTask.vehicleNumber) {
+                    let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
+                    if (vehicle) {
+                        vehicleKeyTagId = vehicle.keyTagId;
+                    }
+                    if (!vehicleKeyTagId) {
+                       return 'Task vehicle key tag id not config!';
+                    }
+                } else {
+                    return `Task don't need vehicle!`;
                 }
-                if (!vehicleKeyTagId) {
-                    return res.json(utils.response(0, 'Task vehicle key tag id not config!'));
-                }
-            } else {
-                return res.json(utils.response(0, `Task don't need vehicle!`));
+            }
+            let errorMsg = await checkTaskVehicleKeyConfig();
+            if (errorMsg) {
+                return res.json(utils.response(0, errorMsg));
             }
 
             let qrdatajson = {
@@ -338,14 +368,12 @@ module.exports = {
                 log.info(httpResult.message)
                 if (httpResult.data && httpResult.data.codeResult == 0) {
                     return res.json(utils.response(1, { codeBase64: httpResult.data.codeBase64, codeString: httpResult.data.codeString }));
-                } else {
-                    return res.json(utils.response(0, `Generate Return QRCode failed:${httpResult.codeString}`));
                 }
-            } else {
-                // Failed
-                log.warn(httpResult.message)
-                return res.json(utils.response(0, `Generate Return QRCode failed:${httpResult.message}`));
+                return res.json(utils.response(0, `Generate Return QRCode failed:${httpResult.codeString}`));
             }
+            // Failed
+            log.warn(httpResult.message)
+            return res.json(utils.response(0, `Generate Return QRCode failed:${httpResult.message}`));
         } catch (error) {
             log.error('(generateKeypressTransactionQRCode)', error)
             return res.json(utils.response(0, `Generate Return QRCode failed: ${error.message ? error.message : 'System error'}, please try again later.`));
@@ -379,75 +407,92 @@ module.exports = {
             keyOptRecord.vehicleNo = currentTask.vehicleNumber
 
             let needConfirmKeyTagId = null;
-            let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
-            if (vehicle) {
-                needConfirmKeyTagId = vehicle.keyTagId;
-            }
-            if (!siteId) {
-                let keyDetailInfo = await KeypressBoxDetailInfo.findOne({where: {keyTagId: needConfirmKeyTagId}});
-                if (keyDetailInfo) {
-                    siteId = keyDetailInfo.siteId;
+            async function initBaseInfo() {
+                let vehicle = await Vehicle.findByPk(currentTask.vehicleNumber);
+                if (vehicle) {
+                    needConfirmKeyTagId = vehicle.keyTagId;
+                }
+                if (!siteId) {
+                    let keyDetailInfo = await KeypressBoxDetailInfo.findOne({where: {keyTagId: needConfirmKeyTagId}});
+                    if (keyDetailInfo) {
+                        siteId = keyDetailInfo.siteId;
+                    }
                 }
             }
+            await initBaseInfo();
 
             let params = { SiteID: siteId, encryptedData }
             let httpResult = await AxiosHandler('api/UGExtractQRRawData', params)
             if (!httpResult) return res.json(utils.response(0, 'Scan Qrcode For Withdraw failed, please try again.'));
-            if (httpResult.code == 0) {
-                keyOptRecord.remarks = httpResult.message;
-                log.info(httpResult.message)
-                if (httpResult.data && httpResult.data.codeResult == 0) {
-                    let resultJson = JSON.parse(httpResult.data.codeString);
-
-                    let transactDateTime = resultJson.TransactDateTime;
-                    keyOptRecord.siteId = resultJson.SiteID;
-                    keyOptRecord.optTime = transactDateTime;
-                    let keyWdTrans = resultJson.KeyWdTrans;
-                    let keyTagId = null;
-                    let slotId = '-';
-                    if (keyWdTrans && resultJson.SiteID && transactDateTime) {
-                        let temp = keyWdTrans.split(":");
-                        if (temp && temp.length == 2) {
-                            keyTagId = temp[1];
-                            slotId = temp[0];
-                            keyOptRecord.slotId = slotId;
-                            keyOptRecord.keyTagId = keyTagId;
+            async function parseAndProcessResult() {
+                if (httpResult.code == 0) {
+                    keyOptRecord.remarks = httpResult.message;
+                    log.info(httpResult.message)
+                    if (httpResult.data ?.codeResult == 0) {
+                        let resultJson = JSON.parse(httpResult.data.codeString);
+    
+                        let transactDateTime = resultJson.TransactDateTime;
+                        keyOptRecord.siteId = resultJson.SiteID;
+                        keyOptRecord.optTime = transactDateTime;
+                        let keyWdTrans = resultJson.KeyWdTrans;
+                        let keyTagId = null;
+                        let slotId = '-';
+                        function parseData() {
+                            if (keyWdTrans && resultJson.SiteID && transactDateTime) {
+                                let temp = keyWdTrans.split(":");
+                                if (temp && temp.length == 2) {
+                                    keyTagId = temp[1];
+                                    slotId = temp[0];
+                                    keyOptRecord.slotId = slotId;
+                                    keyOptRecord.keyTagId = keyTagId;
+                                }
+                            } else {
+                                log.error(`ScanQrcodeForWithdraw fail:wrong qrcode, parseResult:${httpResult.data.codeString}`);
+                                return 'Wrong QRCode!';
+                            }
                         }
-                    } else {
-                        log.error(`ScanQrcodeForWithdraw fail:wrong qrcode, parseResult:${httpResult.data.codeString}`);
-                        return res.json(utils.response(0, `Wrong QRCode!`));
-                    }
-
-                    //update key detail info
-                    if (keyTagId) {
-                        await KeypressBoxDetailInfo.update({keyTagId: null, status: 'out', updatedAt: transactDateTime}, {where: {keyTagId: keyTagId}});
-                    }
-                    await VehicleKeyOptRecord.create(keyOptRecord);
-                    
-                    if (needConfirmKeyTagId && keyTagId && needConfirmKeyTagId == keyTagId) {
-                        resultJson.vehicleNo = currentTask.vehicleNumber
-                        resultJson.slotId = slotId
-
-                        let siteInfo = await KeypressSiteinfo.findOne({where: { siteId: resultJson.SiteID, status: 1 }});
-                        if (siteInfo) {
-                            resultJson.boxName = siteInfo.boxName
-                            resultJson.locationName = siteInfo.boxName
-                        } else {
-                            resultJson.boxName = '-'
-                            resultJson.locationName = '-'
+                        let errorMsg = parseData();
+                        if (errorMsg) {
+                            return {code: 0, errorMsg: `Wrong QRCode!`};
                         }
-
-                        return res.json(utils.response(1, resultJson));
-                    } else {
-                        return res.json(utils.response(0, "Wrong QRCode: Not the currently withdraw key!"));
+    
+                        //update key detail info
+                        async function processData() {
+                            if (keyTagId) {
+                                await KeypressBoxDetailInfo.update({keyTagId: null, status: 'out', updatedAt: transactDateTime}, {where: {keyTagId: keyTagId}});
+                            }
+                            await VehicleKeyOptRecord.create(keyOptRecord);
+                            
+                            if (needConfirmKeyTagId && keyTagId && needConfirmKeyTagId == keyTagId) {
+                                resultJson.vehicleNo = currentTask.vehicleNumber
+                                resultJson.slotId = slotId
+        
+                                let siteInfo = await KeypressSiteinfo.findOne({where: { siteId: resultJson.SiteID, status: 1 }});
+                                if (siteInfo) {
+                                    resultJson.boxName = siteInfo.boxName
+                                    resultJson.locationName = siteInfo.boxName
+                                } else {
+                                    resultJson.boxName = '-'
+                                    resultJson.locationName = '-'
+                                }
+        
+                                return {code: 1, data: resultJson};
+                            }
+                            return {code: 0, errorMsg: "Wrong QRCode: Not the currently withdraw key!"};
+                        }
+                        return await processData();
                     }
-                } else {
-                    return res.json(utils.response(0, `Scan Qrcode For Withdraw failed:${httpResult.codeString}`));
+                    return {code: 0, errorMsg: `Scan Qrcode For Withdraw failed:${httpResult.codeString}`};
                 }
-            } else {
                 // Failed
-                return res.json(utils.response(0, `Scan Qrcode For Withdraw failed:${httpResult.message}`));
+                return {code: 0, errorMsg: `Scan Qrcode For Withdraw failed:${httpResult.message}`};
             }
+
+            let result = await parseAndProcessResult();
+            if (result.code == 0) {
+                return res.json(utils.response(0, result.errorMsg));
+            }
+            return res.json(utils.response(1, result.data));
         } catch (error) {
             log.error('(scanQrcodeForWithdraw)', error)
             return res.json(utils.response(0, `Scan Qrcode For Withdraw failed: ${error.message ? error.message : 'System error'}`));
@@ -489,75 +534,87 @@ module.exports = {
             let params = { SiteID: siteId, encryptedData }
             let httpResult = await AxiosHandler('api/UGExtractQRRawData', params)
             if (!httpResult) return res.json(utils.response(0, 'Scan Qrcode For Return failed, please try again.'));
-            if (httpResult.code == 0) {
-                keyOptRecord.remarks = httpResult.message;
-                log.info(httpResult.message)
-                if (httpResult.data && httpResult.data.codeResult == 0) {
-                    let resultJson = JSON.parse(httpResult.data.codeString);
-
-                    let siteId = resultJson.SiteID;
-                    let transactDateTime = resultJson.TransactDateTime;
-                    keyOptRecord.siteId = resultJson.SiteID;
-                    keyOptRecord.optTime = transactDateTime;
-                    let slotId = null;
-                    let keyTagId = null;
-                    let keyRetTrans = resultJson.KeyRetTrans;
-                    if (keyRetTrans && resultJson.SiteID && transactDateTime) {
-                        let temp = keyRetTrans.split(":");
-                        if (temp && temp.length == 2) {
-                            slotId = temp[0];
-                            keyTagId = temp[1];
-                            keyOptRecord.slotId = slotId;
-                            keyOptRecord.keyTagId = keyTagId;
+            async function parseAndProcessResult() {
+                if (httpResult.code == 0) {
+                    keyOptRecord.remarks = httpResult.message;
+                    log.info(httpResult.message)
+                    if (httpResult.data && httpResult.data.codeResult == 0) {
+                        let resultJson = JSON.parse(httpResult.data.codeString);
+    
+                        let siteId = resultJson.SiteID;
+                        let transactDateTime = resultJson.TransactDateTime;
+                        keyOptRecord.siteId = resultJson.SiteID;
+                        keyOptRecord.optTime = transactDateTime;
+                        let slotId = null;
+                        let keyTagId = null;
+                        let keyRetTrans = resultJson.KeyRetTrans;
+                        function parseData() {
+                            if (keyRetTrans && resultJson.SiteID && transactDateTime) {
+                                let temp = keyRetTrans.split(":");
+                                if (temp && temp.length == 2) {
+                                    slotId = temp[0];
+                                    keyTagId = temp[1];
+                                    keyOptRecord.slotId = slotId;
+                                    keyOptRecord.keyTagId = keyTagId;
+                                }
+                            } else {
+                                log.error(`ScanQrcodeForReturn fail:wrong qrcode, parseResult:${httpResult.data.codeString}`);
+                                return 'Wrong QRCode!';
+                            }
                         }
-                    } else {
-                        log.error(`ScanQrcodeForReturn fail:wrong qrcode, parseResult:${httpResult.data.codeString}`);
-                        return res.json(utils.response(0, `Wrong QRCode!`));
+                        let errorMsg = parseData();
+                        if (errorMsg) {
+                            return {code: 0, errorMsg: errorMsg};
+                        }
+    
+                        //update or save key detail info
+                        if (keyTagId) {
+                            let boxDetailInfo = {
+                                siteId: siteId,
+                                slotId: slotId,
+                                keyTagId: keyTagId,
+                                updatedAt: transactDateTime,
+                                status: 'in'
+                            }
+                            await KeypressBoxDetailInfo.update({keyTagId: null, status: 'out', updatedAt: transactDateTime}, {where: {keyTagId: keyTagId}});
+                            let boxDetailInfoOld = await KeypressBoxDetailInfo.findOne({where : {siteId, slotId}});
+                            if (boxDetailInfoOld) {
+                                await KeypressBoxDetailInfo.update({keyTagId, status: 'in', updatedAt: transactDateTime}, {where : {siteId, slotId}});
+                            } else {
+                                await KeypressBoxDetailInfo.create(boxDetailInfo);
+                            }
+                        }
+                        await VehicleKeyOptRecord.create(keyOptRecord);
+    
+                        async function processData() {
+                            if (needConfirmKeyTagId && keyTagId && needConfirmKeyTagId == keyTagId) {
+                                resultJson.vehicleNo = currentTask.vehicleNumber
+                                resultJson.slotId = slotId
+        
+                                let siteInfo = await KeypressSiteinfo.findOne({where: { siteId: resultJson.SiteID, status: 1 }});
+                                if (siteInfo) {
+                                    resultJson.boxName = siteInfo.boxName
+                                    resultJson.locationName = siteInfo.boxName
+                                } else {
+                                    resultJson.boxName = '-'
+                                    resultJson.locationName = '-'
+                                }
+        
+                                return {code: 1, data: resultJson};
+                            }
+                            return {code: 0, errorMsg: "Wrong QRCode: Not the currently return key!"};
+                        }
+                        return await processData();
                     }
-
-                    //update or save key detail info
-                    if (keyTagId) {
-                        let boxDetailInfo = {
-                            siteId: siteId,
-                            slotId: slotId,
-                            keyTagId: keyTagId,
-                            updatedAt: transactDateTime,
-                            status: 'in'
-                        }
-                        await KeypressBoxDetailInfo.update({keyTagId: null, status: 'out', updatedAt: transactDateTime}, {where: {keyTagId: keyTagId}});
-                        let boxDetailInfoOld = await KeypressBoxDetailInfo.findOne({where : {siteId, slotId}});
-                        if (boxDetailInfoOld) {
-                            await KeypressBoxDetailInfo.update({keyTagId, status: 'in', updatedAt: transactDateTime}, {where : {siteId, slotId}});
-                        } else {
-                            await KeypressBoxDetailInfo.create(boxDetailInfo);
-                        }
-                    }
-                    await VehicleKeyOptRecord.create(keyOptRecord);
-
-                    if (needConfirmKeyTagId && keyTagId && needConfirmKeyTagId == keyTagId) {
-                        resultJson.vehicleNo = currentTask.vehicleNumber
-                        resultJson.slotId = slotId
-
-                        let siteInfo = await KeypressSiteinfo.findOne({where: { siteId: resultJson.SiteID, status: 1 }});
-                        if (siteInfo) {
-                            resultJson.boxName = siteInfo.boxName
-                            resultJson.locationName = siteInfo.boxName
-                        } else {
-                            resultJson.boxName = '-'
-                            resultJson.locationName = '-'
-                        }
-
-                        return res.json(utils.response(1, resultJson));
-                    } else {
-                        return res.json(utils.response(0, "Wrong QRCode: Not the currently return key!"));
-                    }
-                } else {
-                    return res.json(utils.response(0, `Scan Qrcode For Return failed:${httpResult.codeString}`));
+                    return {code: 0, errorMsg: `Scan Qrcode For Return failed:${httpResult.codeString}`};
                 }
-            } else {
-                // Failed
-                return res.json(utils.response(0, `Scan Qrcode For Return failed:${httpResult.message}`));
+                return {code: 0, errorMsg: `Scan Qrcode For Return failed:${httpResult.message}`};
             }
+            let result = await parseAndProcessResult();
+            if (result.code == 0) {
+                return res.json(utils.response(0, result.errorMsg));
+            }
+            return res.json(utils.response(1, result.data));
         } catch (error) {
             log.error('(scanQrcodeForReturn)', error)
             return res.json(utils.response(0, `Scan Qrcode For Return failed: ${error.message ? error.message : 'System error'}`));
@@ -580,14 +637,17 @@ module.exports = {
             }
 
             let keyStatus = 'in';
-            if (vehicleKeyTagId) {
-                let keyDetailInfo = await KeypressBoxDetailInfo.findOne({where : {keyTagId : vehicleKeyTagId}});
-                if (!keyDetailInfo) {
-                    keyStatus = 'out';
-                } 
-            } else {
-                keyStatus = 'noKey';
+            async function initKeyStatus() {
+                if (vehicleKeyTagId) {
+                    let keyDetailInfo = await KeypressBoxDetailInfo.findOne({where : {keyTagId : vehicleKeyTagId}});
+                    if (!keyDetailInfo) {
+                        keyStatus = 'out';
+                    } 
+                } else {
+                    keyStatus = 'noKey';
+                }
             }
+            await initKeyStatus();
 
             if (keyStatus == 'out') {
                 let taskKeyOptRecordList = await sequelizeObj.query(` 
@@ -595,10 +655,10 @@ module.exports = {
                         id, taskId, driverId, vehicleNo, 
                     optType, optTime, createdAt 
                     from key_opt_record 
-                    where taskId = '${taskId}' and optType in('withdrawConfirm', 'returnConfirm') 
+                    where taskId = ? and optType in('withdrawConfirm', 'returnConfirm') 
                     ORDER BY optTime, createdAt DESC;
                 `, { 
-                    type: QueryTypes.SELECT, replacements: []
+                    type: QueryTypes.SELECT, replacements: [taskId]
                 });
 
                 if (taskKeyOptRecordList.length) {

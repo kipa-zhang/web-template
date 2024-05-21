@@ -35,66 +35,6 @@ const CHECKLIST = {
 }
 
 module.exports = {
-    getTripIndents: async function (req, res) {
-        try {
-            let { userId } = req.body;
-            let user = await UserUtils.getUserDetailInfo2(userId)
-            if (!user) {
-                throw new Error(`UserID => ${ userId } do not exist!`)
-            }
-            if (!['dv', 'loa'].includes(user.role.toLowerCase())) {
-                throw new Error(`UserID => ${ userId } role is not in ['DV', 'LOA'] !`)
-            }
-
-            let result = await mobileTOService.GETDriverTaskList(user.driverId)
-			log.info(`getTripIndents API Data => ${ JSON.stringify(result) }`)
-
-			if (result.code === 1) {
-				for (let indent of result.data.indents) {
-					for (let task of indent.dataList) {
-						let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
-						task.odd = odd ? odd.content : '';
-
-						// let assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
-						let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
-						task.commanderContact = (mtRAC && mtRAC.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: task.hub, node: task.node } : null;
-
-						let mileage = await Mileage.findByPk(task.taskId)
-						if (mileage) {
-							task.startMileage = mileage.startMileage;
-							task.endMileage = mileage.endMileage;
-						} else {
-							let vehicle = await Vehicle.findByPk(task.vehicleNumber)
-							task.startMileage = vehicle ? vehicle.totalMileage : 0;
-							task.endMileage = 0;
-						}
-
-						let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
-						let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
-						let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
-						let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
-						let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
-
-                        task.taskReady = false;
-                        if (checkList1 && checkList2 && checkList4) {
-                            if (task.purpose && task.purpose.toLowerCase() == 'wpt') {
-                                task.taskReady = true;
-                            } else if (checkList5) {
-                                task.taskReady = true;
-                            }
-                        } 
-					}
-				}
-				log.info(`result.data => `, JSON.stringify(result.data))
-				return res.json(utils.response(1, result.data));
-			} else {
-				return res.json(utils.response(0, result.msg));
-			}
-        } catch (error) {
-            log.error(error)
-            return res.json(utils.response(0, error));
-        }
-    },
     cancelTripById: async function (req, res) {
         try {
             let { taskId } = req.body;
@@ -147,22 +87,34 @@ module.exports = {
             }
 
             let user = await User.findByPk(userId);
+            let driver = null;
 
-            if (!user) {
-                let msg = `User id ${userId} not exist!`
-                log.warn(msg)
-                return res.json(utils.response(0, msg));
+            async function checkData() {
+                if (!user) {
+                    let msg = `User id ${userId} not exist!`
+                    log.warn(msg)
+                    return msg;
+                }
+                driver = await Driver.findByPk(user.driverId);
+                if (!driver) {
+                    let msg = `Driver id ${user.driverId} not exist!`
+                    log.warn(msg)
+                    return msg;
+                }
+    
+                let loanOutDriver = await sequelizeObj.query(`
+                    select l.driverId, l.groupId from loan l where l.driverId = ${user.driverId} and now() >= l.startDate
+                `, { type: QueryTypes.SELECT });
+    
+                if (user.role != 'DV' && user.role != 'LOA' && loanOutDriver.length == 0) {
+                    let msg = `User ${user.username} role is not DV,LOA or loan out driver!`
+                    log.warn(msg)
+                    return msg;
+                }
             }
-            let driver = await Driver.findByPk(user.driverId);
-
-            let loanOutDriver = await sequelizeObj.query(`
-                select l.driverId, l.groupId from loan l where l.driverId = ${user.driverId} and now() >= l.startDate
-            `, { type: QueryTypes.SELECT });
-
-            if (user.role != 'DV' && user.role != 'LOA' && loanOutDriver.length == 0) {
-                let msg = `User ${user.username} role is not DV,LOA or loan out driver!`
-                log.warn(msg)
-                return res.json(utils.response(0, msg));
+            let errorMsg = await checkData();
+            if (errorMsg) {
+                return res.json(utils.response(0, errorMsg));
             }
 
             // driver support vehicle type
@@ -170,7 +122,7 @@ module.exports = {
                 SELECT GROUP_CONCAT(vehicleType) as vehicleTypes FROM driver_platform_conf where driverId=${user.driverId} and approveStatus='Approved'
             `, { type: QueryTypes.SELECT });
             let driverSupportVehicleTypeStr = '';
-            if (driverSupportVehicleTypes && driverSupportVehicleTypes.length > 0) {
+            if (driverSupportVehicleTypes.length > 0) {
                 driverSupportVehicleTypeStr =  driverSupportVehicleTypes[0].vehicleTypes;
             }
 
@@ -188,7 +140,7 @@ module.exports = {
                 vehicleList = await getUsableVehicleByUnit(unitId, startDate, endDate, driverSupportVehicleTypeStr);
             }
             let result = []
-            if (vehicleList && vehicleList.length > 0) {
+            if (vehicleList?.length > 0) {
                 let vehicleNumberList = [...new Set(vehicleList.map(a => a.vehicleNo))]
                 for (let vehicleNumber of vehicleNumberList) {
                     result.push({

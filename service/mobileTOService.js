@@ -127,7 +127,7 @@ const buildDriverTask = async function(dataItem, systemTask) {
         dataItem.indentEndTime = dataItem.indentEndTime ? moment(dataItem.indentEndTime).format('YYYY-MM-DD HH:mm:ss') : '';
     }
 
-    checkDataItem()
+    checkDataItem(dataItem)
 }
 
 module.exports = {

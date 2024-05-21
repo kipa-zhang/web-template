@@ -158,10 +158,6 @@ const mobileLoginCommon = async function(username, md5Password, vehicleNo, mobil
             let driverResult = await Driver.findByPk(mobileUser.driverId);
             response.userId = mobileUser.userId;
             response.role = mobileUser.role
-            //fixme: when dv,loa user group add.
-            // if (mobileUser.role == 'DV' || mobileUser.role == 'LOA') {
-            //     response.role = mobileUser.role + '1';
-            // }
             response.userIcon = mobileUser.userIcon;
             response.username = driverResult.driverName;
             response.driverId = mobileUser.driverId;
@@ -228,9 +224,6 @@ module.exports.mobileLogout = async function (req, res) {
     try {
         let userId = req.body.userId;
         let vehicleNo = req.body.vehicleNo;
-        let token = req.body.token;
-        // let appoint = req.body.appoint;
-        let taskId = req.body.taskId;
         let startOdometer = req.body.startOdometer;
         let endOdometer = req.body.endOdometer;
         log.info('(mobileLogout) userId : ', userId);
@@ -283,7 +276,6 @@ module.exports.driver3rdLogin = async function (req, res) {
             uploadPositionFrequency: 10, uploadIncidentFrequency: 10, uploadPeerUnitUpdate: 10, 
             lastEndMileage: 0 
         };
-        let loginName = req.body.loginName;
         let vehicleNo = req.body.vehicleNo;
 
         await sequelizeObj.transaction(async transaction => { 

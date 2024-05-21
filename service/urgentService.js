@@ -119,18 +119,7 @@ const getCompletedDutyList = async function (driverId) {
         `, { type: QueryTypes.SELECT, replacements: [ driverId ] })
 
         for (let duty of dutyList) {
-        
-            // let dutyIdList = dutyList.map(item => item.id)
-            // let indentList = await getIndentList(dutyIdList, availableDuty.indentDate)
-
             let tag = ''
-            // let tag = moment(duty.indentDate, 'YYYY-MM-DD').format('MM/DD')
-            // let today = moment().format("YYYY-MM-DD")
-            // if (today == duty.indentDate) {
-            //     tag = "TODAY"
-            // } else if (moment(duty.indentDate, 'YYYY-MM-DD').diff(today, 'd') == 1) {
-            //     tag = "TOMORROW"
-            // }
 
             let taskStatus = 'Completed'
 
