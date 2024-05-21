@@ -42,37 +42,39 @@ const buildDriverTask = async function(dataItem, systemTask) {
     // Change 2023-04-19
     dataItem.endTime = dataItem.indentEndTime ? moment(dataItem.indentEndTime).format('DD MMM,HH:mm') : '';
 
-    if (dataItem.indentStartTime) {
-        dataItem.executionDate = moment(dataItem.indentStartTime).format("DD MMM")
-        dataItem.executionDateTime = moment(dataItem.indentStartTime).format("YYYY-MM-DD HH:mm")
-        
-        let today = moment().format("YYYY-MM-DD")
-        if (today == moment(dataItem.indentStartTime).format("YYYY-MM-DD")) {
-            dataItem.tag = "TODAY"
-        } else if (moment(dataItem.indentStartTime).diff(today, 'd') == 1) {
-            dataItem.tag = "TOMORROW"
-        } else {
-           dataItem.tag = moment(dataItem.indentStartTime).format("MM/DD")
+    const generateDataTag = function () {
+        if (dataItem.indentStartTime) {
+            dataItem.executionDate = moment(dataItem.indentStartTime).format("DD MMM")
+            dataItem.executionDateTime = moment(dataItem.indentStartTime).format("YYYY-MM-DD HH:mm")
+            
+            let today = moment().format("YYYY-MM-DD")
+            if (today == moment(dataItem.indentStartTime).format("YYYY-MM-DD")) {
+                dataItem.tag = "TODAY"
+            } else if (moment(dataItem.indentStartTime).diff(today, 'd') == 1) {
+                dataItem.tag = "TOMORROW"
+            } else {
+               dataItem.tag = moment(dataItem.indentStartTime).format("MM/DD")
+            }
         }
     }
-    if (dataItem.dataFrom == 'SYSTEM') {
-        if (systemTask) {
-            dataItem.pickupDestinationLat = systemTask.pickupDestinationLat
-            dataItem.pickupDestinationLng = systemTask.pickupDestinationLng
-            dataItem.dropoffDestinationLat = systemTask.dropoffDestinationLat
-            dataItem.dropoffDestinationLng = systemTask.dropoffDestinationLng
-            dataItem.poc = systemTask.poc
-            dataItem.pocNumber = systemTask.pocNumber
-            dataItem.serviceModeName = systemTask.serviceModeName
-            dataItem.serviceModeValue = systemTask.serviceModeValue
-            dataItem.taskStatus = systemTask.taskStatus
-            dataItem.additionalRemarks = systemTask.additionalRemarks
-            dataItem.completedTime = systemTask.completedTime
-            dataItem.arrivalTime = systemTask.arrivalTime
-            dataItem.departTime = systemTask.departTime
-            dataItem.additionalRemarks = systemTask.additionalRemarks
-        }
-    } else {
+    generateDataTag()
+
+    if (dataItem.dataFrom == 'SYSTEM' && systemTask) {
+        dataItem.pickupDestinationLat = systemTask.pickupDestinationLat
+        dataItem.pickupDestinationLng = systemTask.pickupDestinationLng
+        dataItem.dropoffDestinationLat = systemTask.dropoffDestinationLat
+        dataItem.dropoffDestinationLng = systemTask.dropoffDestinationLng
+        dataItem.poc = systemTask.poc
+        dataItem.pocNumber = systemTask.pocNumber
+        dataItem.serviceModeName = systemTask.serviceModeName
+        dataItem.serviceModeValue = systemTask.serviceModeValue
+        dataItem.taskStatus = systemTask.taskStatus
+        dataItem.additionalRemarks = systemTask.additionalRemarks
+        dataItem.completedTime = systemTask.completedTime
+        dataItem.arrivalTime = systemTask.arrivalTime
+        dataItem.departTime = systemTask.departTime
+        dataItem.additionalRemarks = systemTask.additionalRemarks
+    } else if (dataItem.dataFrom !== 'SYSTEM') {
         if (dataItem?.serviceModeName.toLowerCase() == '1-way') {
             dataItem.serviceModeValue = 'delivery'
         } else if (dataItem?.serviceModeName.toLowerCase() == 'disposal') {
@@ -592,17 +594,7 @@ module.exports = {
     getCheckList: async function (req, res) {
         let today = moment().format("YYYY-MM-DD")
 
-        const GetData = async function (task, type, checkListName, checkListItem) {
-            let executionDate = task.indentStartTime
-            // already complete
-            if (checkListItem) {
-                return {
-                    "name": checkListName,
-                    "due": "Complete",
-                    "disabled": 1,
-                }
-            }
-
+        const checkMTRacSigned = async function (checkListName, task) {
             if (checkListName === CHECKLIST[5]) {
                 let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ], limit: 1 })
                 // wpt task don`t need mt_rac
@@ -638,6 +630,24 @@ module.exports = {
                 }
             }
 
+            return null
+        }
+        const GetData = async function (task, type, checkListName, checkListItem) {
+            let executionDate = task.indentStartTime
+            // already complete
+            if (checkListItem) {
+                return {
+                    "name": checkListName,
+                    "due": "Complete",
+                    "disabled": 1,
+                }
+            }
+
+            let result = await checkMTRacSigned(checkListName, task)
+            if (result) {
+                return result
+            }
+
             // overdue
             let duetime = ""
             if (type == 1) {
@@ -646,8 +656,7 @@ module.exports = {
                 duetime = moment(executionDate).add(1, 'd').format("YYYY-MM-DD 00:00")
             }
             let dayDiff = moment(duetime).diff(moment(), 's')
-            let beforeDisabled = dayDiff > 0 ? 0 : 1
-            if (beforeDisabled) {
+            if (dayDiff > 0 ? 0 : 1) {
                 return {
                     "name": checkListName,
                     "due": "OVERDUE",
@@ -672,132 +681,127 @@ module.exports = {
 
             return {
                 "name": checkListName,
-                "due": isTomorrow ? "Due TOMOROW" : `Due in ${due.join(' ')}`,
+                "due": isTomorrow ? "Due TOMORROW" : `Due in ${due.join(' ')}`,
                 "disabled": disabled,
             }
 
         }
-        try {
-            let { taskId } = req.body
-            let task = null;
-            let indentId = null;
-            if (taskId.startsWith('DUTY')) {
-                let idArray = taskId.split('-');
-				if (idArray.length < 2) {
-					log.warn(`TaskId ${taskId} format error.`)
-					return res.json(utils.response(0, `TaskId ${taskId} format error.`));
-				}
-				taskId = `DUTY-${idArray[1]}`;
-                if (idArray.length == 3) {
-                    indentId = idArray[2];
-                    let taskList = await sequelizeObj.query(`
-                        SELECT
-                            ud.dutyId as taskId,
-                            ui.startTime as indentStartTime,
-                            ui.endTime as indentEndTime,
-                            uc.purpose,
-                            ui.vehicleNo as vehicleNumber,
-                            ui.driverId,
-                            ui.indentId,
-                            ui.status as driverStatus
-                        FROM urgent_indent ui
-                        LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
-                        LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                        WHERE ui.id = '${indentId}'
-                    `, { 
-                        type: QueryTypes.SELECT, replacements: []
-                    });
-                    if (taskList && taskList.length > 0) {
-                        task = taskList[0];
-                    }
-                } else {
-                    let taskList = await sequelizeObj.query(` 
-                        SELECT
-                            ud.dutyId as taskId,
-                            ud.indentStartDate as indentStartTime,
-                            ud.indentEndDate as indentEndTime,
-                            uc.purpose,
-                            uc.vehicleNo as vehicleNumber,
-                            uc.driverId,
-                            '' as indentId,
-                            ud.status as driverStatus
-                        FROM urgent_duty ud
-                        LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                        WHERE ud.dutyId = '${taskId}'
-                    `, { 
-                        type: QueryTypes.SELECT, replacements: []
-                    });
-                    if (taskList.length) {
-                        task = taskList[0];
-                    }
+        let { taskId } = req.body
+        let task = null;
+        let indentId = null;
+        if (taskId.startsWith('DUTY')) {
+            let idArray = taskId.split('-');
+            if (idArray.length < 2) {
+                log.warn(`TaskId ${taskId} format error.`)
+                return res.json(utils.response(0, `TaskId ${taskId} format error.`));
+            }
+            taskId = `DUTY-${idArray[1]}`;
+            if (idArray.length == 3) {
+                indentId = idArray[2];
+                let taskList = await sequelizeObj.query(`
+                    SELECT
+                        ud.dutyId as taskId,
+                        ui.startTime as indentStartTime,
+                        ui.endTime as indentEndTime,
+                        uc.purpose,
+                        ui.vehicleNo as vehicleNumber,
+                        ui.driverId,
+                        ui.indentId,
+                        ui.status as driverStatus
+                    FROM urgent_indent ui
+                    LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
+                    LEFT JOIN urgent_config uc ON ud.configId = uc.id
+                    WHERE ui.id = '${indentId}'
+                `, { 
+                    type: QueryTypes.SELECT, replacements: []
+                });
+                if (taskList && taskList.length > 0) {
+                    task = taskList[0];
                 }
             } else {
-                task = await Task.findOne({ where: { taskId } })
-            }
-            if (!task) {
-                log.warn(`TaskId ${taskId} do not exist.`)
-                return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
-            }
-            task = task.dataValues ? task.dataValues : task;
-            let result = {
-                "beforeExecutionDay": {
-                    "time": "TAKES 2 HRS",
-                    "data": []
-                },
-                "executionDay": {
-                    "time": "TAKES 45 MINS",
-                    "data": []
+                let taskList = await sequelizeObj.query(` 
+                    SELECT
+                        ud.dutyId as taskId,
+                        ud.indentStartDate as indentStartTime,
+                        ud.indentEndDate as indentEndTime,
+                        uc.purpose,
+                        uc.vehicleNo as vehicleNumber,
+                        uc.driverId,
+                        '' as indentId,
+                        ud.status as driverStatus
+                    FROM urgent_duty ud
+                    LEFT JOIN urgent_config uc ON ud.configId = uc.id
+                    WHERE ud.dutyId = '${taskId}'
+                `, { 
+                    type: QueryTypes.SELECT, replacements: []
+                });
+                if (taskList.length) {
+                    task = taskList[0];
                 }
             }
-            await sequelizeObj.transaction(async (t1) => {
-                // Update Training info in checkList
-                let trainingCheckList = await CheckList.findOne({ where: { taskId: taskId, checkListName: CHECKLIST[4] } })
-                if (!trainingCheckList) {
-                    let vehicle = await Vehicle.findByPk(task.vehicleNumber)
-                    let taskHistory = await sequelizeObj.query(`
-                        SELECT * FROM task t
-                        LEFT JOIN vehicle v ON v.vehicleNo = t.vehicleNumber
-                        WHERE t.driverId = ? AND v.vehicleType = ?
-                        AND t.mobileEndTime IS NOT NULL
-                        ORDER BY t.mobileStartTime DESC LIMIT 1
-                    `, { type: QueryTypes.SELECT, replacements: [ task.driverId, vehicle.vehicleType ] })
-                    if (taskHistory && taskHistory.length > 0) {
-                        // Exist vehicleType record
-                        if (moment(task.indentStartTime).diff(moment(taskHistory[0].mobileStartTime), 'days') < conf.Training_LimitDays) {
-                            // Check days
-                            await CheckList.create({
-                                taskId: taskId,
-                                indentId: task.indentId,
-                                driverId: task.driverId,
-                                vehicleNo: vehicle.vehicleNo,
-                                checkListName: CHECKLIST[4],
-                            })
-                        }
+        } else {
+            task = await Task.findOne({ where: { taskId } })
+        }
+        if (!task) {
+            log.warn(`TaskId ${taskId} do not exist.`)
+            return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
+        }
+        task = task.dataValues ? task.dataValues : task;
+        let result = {
+            "beforeExecutionDay": {
+                "time": "TAKES 2 HRS",
+                "data": []
+            },
+            "executionDay": {
+                "time": "TAKES 45 MINS",
+                "data": []
+            }
+        }
+        await sequelizeObj.transaction(async (t1) => {
+            // Update Training info in checkList
+            let trainingCheckList = await CheckList.findOne({ where: { taskId: taskId, checkListName: CHECKLIST[4] } })
+            if (!trainingCheckList) {
+                let vehicle = await Vehicle.findByPk(task.vehicleNumber)
+                let taskHistory = await sequelizeObj.query(`
+                    SELECT * FROM task t
+                    LEFT JOIN vehicle v ON v.vehicleNo = t.vehicleNumber
+                    WHERE t.driverId = ? AND v.vehicleType = ?
+                    AND t.mobileEndTime IS NOT NULL
+                    ORDER BY t.mobileStartTime DESC LIMIT 1
+                `, { type: QueryTypes.SELECT, replacements: [ task.driverId, vehicle.vehicleType ] })
+                if (taskHistory && taskHistory.length > 0) {
+                    // Exist vehicleType record
+                    if (moment(task.indentStartTime).diff(moment(taskHistory[0].mobileStartTime), 'days') < conf.Training_LimitDays) {
+                        // Check days
+                        await CheckList.create({
+                            taskId: taskId,
+                            indentId: task.indentId,
+                            driverId: task.driverId,
+                            vehicleNo: vehicle.vehicleNo,
+                            checkListName: CHECKLIST[4],
+                        })
                     }
                 }
+            }
 
-                let datas = await CheckList.findAll({ where: { taskId: taskId } })
-                let checkList1 = datas.find(item => item.checkListName == CHECKLIST[1])
-                let checkList2 = datas.find(item => item.checkListName == CHECKLIST[2])
-                let checkList3 = datas.find(item => item.checkListName == CHECKLIST[3])
-                let checkList4 = datas.find(item => item.checkListName == CHECKLIST[4])
-                let checkList5 = datas.find(item => item.checkListName == CHECKLIST[5])
-                
-                result.beforeExecutionDay.data.push(await GetData(task, 1, CHECKLIST[1], checkList1))
-                result.beforeExecutionDay.data.push(await GetData(task, 1, CHECKLIST[2], checkList2))
-
-                //result.executionDay.data.push(await GetData(sysTask, 2, CHECKLIST[3], checkList3))
-                result.executionDay.data.push(await GetData(task, 2, CHECKLIST[4], checkList4))
-                result.executionDay.data.push(await GetData(task, 2, CHECKLIST[5], checkList5))
-            }).catch(error => {
-                throw error
-            })
+            let datas = await CheckList.findAll({ where: { taskId: taskId } })
+            let checkList1 = datas.find(item => item.checkListName == CHECKLIST[1])
+            let checkList2 = datas.find(item => item.checkListName == CHECKLIST[2])
+            let checkList3 = datas.find(item => item.checkListName == CHECKLIST[3])
+            let checkList4 = datas.find(item => item.checkListName == CHECKLIST[4])
+            let checkList5 = datas.find(item => item.checkListName == CHECKLIST[5])
             
-            return res.json(utils.response(1, result));
-        } catch (ex) {
-            log.error(ex)
-            return res.json(utils.response(0, "Failed"));
-        }
+            result.beforeExecutionDay.data.push(await GetData(task, 1, CHECKLIST[1], checkList1))
+            result.beforeExecutionDay.data.push(await GetData(task, 1, CHECKLIST[2], checkList2))
+
+            //result.executionDay.data.push(await GetData(sysTask, 2, CHECKLIST[3], checkList3))
+            result.executionDay.data.push(await GetData(task, 2, CHECKLIST[4], checkList4))
+            result.executionDay.data.push(await GetData(task, 2, CHECKLIST[5], checkList5))
+        }).catch(error => {
+            throw error
+        })
+        
+        return res.json(utils.response(1, result));
     },
     updateCheckList: async function (req, res) {
         try {
@@ -846,89 +850,87 @@ module.exports = {
         }
     },
     completePretaskCheckItem: async function(req, res) {
-        try {
-            let { taskId, checkListName } = req.body
-            let task = null;
-            let indentId = null;
-            if (taskId.startsWith('DUTY')) {
-                let idArray = taskId.split('-');
-                if (idArray.length < 2) {
-                    log.warn(`TaskId ${taskId} format error.`)
-                    return res.json(utils.response(0, `TaskId ${taskId} format error.`));
-                }
-                taskId = `DUTY-${idArray[1]}`;
-                if (idArray.length == 3) {
-                    indentId = idArray[2];
-                    let taskList = await sequelizeObj.query(`
-                        SELECT
-                            ud.dutyId as taskId,
-                            ui.startTime as indentStartTime,
-                            ui.endTime as indentEndTime,
-                            uc.purpose,
-                            ui.vehicleNo as vehicleNumber,
-                            ui.driverId,
-                            ui.indentId,
-                            ui.status as driverStatus
-                        FROM urgent_indent ui
-                        LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
-                        LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                        WHERE ui.id = '${indentId}'
-                    `, { 
-                        type: QueryTypes.SELECT, replacements: []
-                    });
-                    if (taskList && taskList.length > 0) {
-                        task = taskList[0];
-                    }
-                } else {
-                    let taskList = await sequelizeObj.query(` 
-                        SELECT
-                            ud.dutyId as taskId,
-                            ud.indentStartDate as indentStartTime,
-                            ud.indentEndDate as indentEndTime,
-                            uc.purpose,
-                            uc.vehicleNo as vehicleNumber,
-                            uc.driverId,
-                            '' as indentId,
-                            ud.status as driverStatus
-                        FROM urgent_duty ud
-                        LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                        WHERE ud.dutyId = '${taskId}'
-                    `, { 
-                        type: QueryTypes.SELECT, replacements: []
-                    });
-                    if (taskList && taskList.length > 0) {
-                        task = taskList[0];
-                    }
-                }
-			} else {
-				task = await Task.findOne({ where: { taskId } })
-			}
-            if (!task) {
-                log.warn(`TaskId ${taskId} do not exist.`)
-                return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
+        let { taskId, checkListName } = req.body
+        let task = null;
+        let indentId = null;
+        if (taskId.startsWith('DUTY')) {
+            let idArray = taskId.split('-');
+            if (idArray.length < 2) {
+                log.warn(`TaskId ${taskId} format error.`)
+                return res.json(utils.response(0, `TaskId ${taskId} format error.`));
             }
-            task = task.dataValues ? task.dataValues : task;
-            await CheckList.create({
-                taskId: taskId,
-                indentId: task.indentId,
-                driverId: task.driverId,
-                vehicleNo: task.vehicleNumber,
-                checkListName: checkListName,
-            })
+            taskId = `DUTY-${idArray[1]}`;
+            if (idArray.length == 3) {
+                indentId = idArray[2];
+                let taskList = await sequelizeObj.query(`
+                    SELECT
+                        ud.dutyId as taskId,
+                        ui.startTime as indentStartTime,
+                        ui.endTime as indentEndTime,
+                        uc.purpose,
+                        ui.vehicleNo as vehicleNumber,
+                        ui.driverId,
+                        ui.indentId,
+                        ui.status as driverStatus
+                    FROM urgent_indent ui
+                    LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
+                    LEFT JOIN urgent_config uc ON ud.configId = uc.id
+                    WHERE ui.id = '${indentId}'
+                `, { 
+                    type: QueryTypes.SELECT, replacements: []
+                });
+                if (taskList && taskList.length > 0) {
+                    task = taskList[0];
+                }
+            } else {
+                let taskList = await sequelizeObj.query(` 
+                    SELECT
+                        ud.dutyId as taskId,
+                        ud.indentStartDate as indentStartTime,
+                        ud.indentEndDate as indentEndTime,
+                        uc.purpose,
+                        uc.vehicleNo as vehicleNumber,
+                        uc.driverId,
+                        '' as indentId,
+                        ud.status as driverStatus
+                    FROM urgent_duty ud
+                    LEFT JOIN urgent_config uc ON ud.configId = uc.id
+                    WHERE ud.dutyId = '${taskId}'
+                `, { 
+                    type: QueryTypes.SELECT, replacements: []
+                });
+                if (taskList && taskList.length > 0) {
+                    task = taskList[0];
+                }
+            }
+        } else {
+            task = await Task.findOne({ where: { taskId } })
+        }
+        if (!task) {
+            log.warn(`TaskId ${taskId} do not exist.`)
+            return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
+        }
+        task = task.dataValues ? task.dataValues : task;
+        await CheckList.create({
+            taskId: taskId,
+            indentId: task.indentId,
+            driverId: task.driverId,
+            vehicleNo: task.vehicleNumber,
+            checkListName: checkListName,
+        })
 
-            let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
-            let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
-            let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
-            let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
-            let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
+        let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
+        let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
+        let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
+        let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
+        let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
 
+        const updateTaskStatus = async function () {
             let newStatus = '';
             if (task.driverStatus == 'waitcheck' && checkList1 && checkList2 && checkList4) {
-                if (task.purpose && task.purpose.toLowerCase() == 'wpt') {
+                if (task.purpose?.toLowerCase() == 'wpt' || checkList5) {
                     newStatus = "ready";
-                } else if (checkList5) {
-                    newStatus = "ready";
-                }
+                } 
                 if (newStatus == 'ready') {
                     if (taskId.startsWith('DUTY')) {
                         await UrgentDuty.update({status: "ready" }, {where: {dutyId: taskId, status: 'waitcheck' }});
@@ -938,11 +940,10 @@ module.exports = {
                     }
                 }
             } 
-            return res.json(utils.response(1, "Success."));
-        } catch (ex) {
-            log.error(ex)
-            return res.json(utils.response(0, "Failed"));
         }
+        await updateTaskStatus()
+
+        return res.json(utils.response(1, "Success."));
     },
     updateTaskOptTime: async function (body) {
         const DriverComplete = function (driver, trip, task, operationTime, executeTime) {
@@ -996,13 +997,11 @@ module.exports = {
                 let driver = await _SystemDriver.Driver.findByPk(taskId);
                 serviceModeValue = serviceModeValue.toLowerCase();
                 operationType = operationType.toLowerCase();
-                if (serviceModeValue === 'ferry service') {
-                    if (operationType === 'arrive') {
-                        // driver.status = 'Completed';
-                        // task.taskStatus = 'Completed'
-                        DriverComplete(driver, trip, task, operationTime, task.startDate)
-                        task.arrivalTime = operationTime;
-                    }
+                if (serviceModeValue === 'ferry service' && operationType === 'arrive') {
+                    // driver.status = 'Completed';
+                    // task.taskStatus = 'Completed'
+                    DriverComplete(driver, trip, task, operationTime, task.startDate)
+                    task.arrivalTime = operationTime;
                 } else if (serviceModeValue === 'delivery') {
                     if (operationType === 'arrive') {
                         driver.status = DRIVER_STATUS.ARRIVED;

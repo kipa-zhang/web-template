@@ -29,6 +29,7 @@ const { unitService } = require('../service/unitService')
 const { groupService } = require('../service/groupService')
 
 const { fork } = require('child_process');
+const fileUtils = require('../util/fileUtils.js');
 
 const alertProcess = fork('./childProcess/alertProcess.js')
 const speedingProcess = fork('./childProcess/speedingProcess.js')
@@ -351,11 +352,7 @@ module.exports.updatePositionByFile = function (req, res) {
 				operationPositionData(JSON.parse(data), res);
 
 				// Delete file
-				fs.access(files.file.path, async function (err) {
-					if (!err) { 
-						fs.unlink(files.file.path,function () {}); 
-					}
-				});
+				fileUtils.commonDeleteFiles([files.file.path])
 			})
 
 			readStream.on('close', function (error) {
