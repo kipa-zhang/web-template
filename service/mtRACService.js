@@ -115,13 +115,11 @@ module.exports = {
 
 				// Check first mt_rac record time! 
 				let mtRac = await MT_RAC.findOne({ where: { taskId } })
-				if (!mtRac) {
-					// should be same/after date with indent start time
-					// should be same/before time with indent end time
-					if (!( moment().isSameOrAfter(moment(duty.indentStartTime), 'd') && moment().isSameOrBefore(moment(duty.indentEndTime)) )) {
-						log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ duty.driverId }`);
-						return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
-					}
+				// should be same/after date with indent start time
+				// should be same/before time with indent end time
+				if (!mtRac && !( moment().isSameOrAfter(moment(duty.indentStartTime), 'd') && moment().isSameOrBefore(moment(duty.indentEndTime)) )) {
+					log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ duty.driverId }`);
+					return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
 				}
 			} else {
 				let task = await Task.findByPk(taskId);
@@ -133,13 +131,11 @@ module.exports = {
 	
 				// Check first mt_rac record time! 
 				let mtRac = await MT_RAC.findOne({ where: { taskId } })
-				if (!mtRac) {
-					// should be same/after date with indent start time
-					// should be same/before time with indent end time
-					if (!( moment().isSameOrAfter(moment(task.indentStartTime), 'd') && moment().isSameOrBefore(moment(task.indentEndTime)) )) {
-						log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ task.driverId }`);
-						return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
-					}
+				// should be same/after date with indent start time
+				// should be same/before time with indent end time
+				if (!mtRac && !( moment().isSameOrAfter(moment(task.indentStartTime), 'd') && moment().isSameOrBefore(moment(task.indentEndTime)) )) {
+					log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ task.driverId }`);
+					return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
 				}
 			}
 			
@@ -215,16 +211,14 @@ module.exports = {
 
 				if (taskId.startsWith('DUTY')) {
 					let duty = await urgentService.getDutyById(taskId)
-					if (mtRAC.officerSignature) {
-						if ((mtRAC.needCommander && mtRAC.commanderSignature) || !mtRAC.needCommander ) {
-							await CheckList.create({
-								taskId: taskId,
-								indentId: duty.indentIdList?.join(','),
-								driverId: duty.driverId,
-								vehicleNo: duty.vehicleNumber,
-								checkListName: CHECKLIST[5],
-							})
-						}
+					if (mtRAC.officerSignature && ((mtRAC.needCommander && mtRAC.commanderSignature) || !mtRAC.needCommander)) {
+						await CheckList.create({
+							taskId: taskId,
+							indentId: duty.indentIdList?.join(','),
+							driverId: duty.driverId,
+							vehicleNo: duty.vehicleNumber,
+							checkListName: CHECKLIST[5],
+						})
 					}
 					
 					// Check and Update driverStatus to 'ready'
@@ -232,16 +226,14 @@ module.exports = {
 				} else {
 					// Check all two signatureFrom and update checklist
 					let task = await taskService.checkTask(taskId);
-					if (mtRAC.officerSignature) {
-						if ((mtRAC.needCommander && mtRAC.commanderSignature) || !mtRAC.needCommander ) {
-							await CheckList.create({
-								taskId: taskId,
-								indentId: task.indentId,
-								driverId: task.driverId,
-								vehicleNo: task.vehicleNumber,
-								checkListName: CHECKLIST[5],
-							})
-						}
+					if (mtRAC.officerSignature && ((mtRAC.needCommander && mtRAC.commanderSignature) || !mtRAC.needCommander)) {
+						await CheckList.create({
+							taskId: taskId,
+							indentId: task.indentId,
+							driverId: task.driverId,
+							vehicleNo: task.vehicleNumber,
+							checkListName: CHECKLIST[5],
+						})
 					}				
 
 					// Check and Update driverStatus to 'ready'

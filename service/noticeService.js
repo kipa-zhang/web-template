@@ -130,30 +130,30 @@ let NoticeUtils = {
         return !(startTime1 >= endTime2 || startTime2 >= endTime1)
     },
     generateNoticeList: async function (user, option) {
-        try {
-            let system = []
-            // find out all task not completed
-            let taskList = await sequelizeObj.query(`
-                SELECT t.taskId, t.dataFrom, t.driverId, t.driverStatus, v.vehicleNo, v.vehicleType AS platform, t.hub, t.node, t.groupId, 
-                t.indentStartTime, t.indentEndTime, t.mobileStartTime, t.mobileEndTime, u.role
-                FROM task t
-                LEFT JOIN vehicle v ON v.vehicleNo = t.vehicleNumber
-                LEFT JOIN user u on u.driverId = t.driverId
-                WHERE t.driverId = ${ user.driverId }
-                AND (
-                    (t.driverStatus = 'waitcheck' AND t.indentEndTime > NOW())
-                    OR t.driverStatus = 'ready'
-                    OR t.driverStatus = 'started'
-                )
-                AND t.vehicleNumber IS NOT NULL 
-            `, { type: QueryTypes.SELECT })
-            let noticeList = await NoticeUtils.getNoticeList(user, option)
+        let system = []
+        // find out all task not completed
+        let taskList = await sequelizeObj.query(`
+            SELECT t.taskId, t.dataFrom, t.driverId, t.driverStatus, v.vehicleNo, v.vehicleType AS platform, t.hub, t.node, t.groupId, 
+            t.indentStartTime, t.indentEndTime, t.mobileStartTime, t.mobileEndTime, u.role
+            FROM task t
+            LEFT JOIN vehicle v ON v.vehicleNo = t.vehicleNumber
+            LEFT JOIN user u on u.driverId = t.driverId
+            WHERE t.driverId = ?
+            AND (
+                (t.driverStatus = 'waitcheck' AND t.indentEndTime > NOW())
+                OR t.driverStatus = 'ready'
+                OR t.driverStatus = 'started'
+            )
+            AND t.vehicleNumber IS NOT NULL 
+        `, { type: QueryTypes.SELECT, replacements: [ user.driverId ] })
+        let noticeList = await NoticeUtils.getNoticeList(user, option)
 
-            let resultList = []
+        let resultList = []
 
-            if (taskList.length) {
+        if (taskList.length) {
+            const generateResultList = function () {
                 // has task, check every task on platform/toCategory/toType
-                for (let notice of noticeList) {
+                noticeList.forEach(async notice => {
                     for (let task of taskList) {
                         // check platform
                         if (notice.platform && notice.platform != task.platform) {
@@ -163,7 +163,7 @@ let NoticeUtils = {
                         // check toCategory
                         if (notice.toCategory) {
                             let driverCategory = await DriverAssessmentRecord.findAll({ where: { driverId: task.driverId, assessmentType: { [Op.substring]: ` ${ notice.toCategory } ` }, status: 'Pass' } })
-                            if (driverCategory.length == 0) {
+                            if (!driverCategory.length) {
                                 log.info(`(getNoticeList) TaskID ${ task.taskId } driverId ${ task.driverId } toCategory has not pass ${ notice.toCategory } `)
                                 continue;
                             }
@@ -177,63 +177,57 @@ let NoticeUtils = {
                         resultList.push(notice);
                         break;
                     }
-                }
-            } else {
-                // no task, send all notification, no need care about platform/toCategory/toType
-                resultList = noticeList
-            }
-
-            for (let notice of resultList) {
-                if (notice.coverImage && !fs.existsSync(`./public/${ notice.coverImage }`)) {
-                    fs.writeFileSync(`./public/${ notice.coverImage }`, Buffer.from(notice.coverImageBase64, 'base64'))
-                }
-                if (notice.mainImage && !fs.existsSync(`./public/${ notice.mainImage }`)) {
-                    fs.writeFileSync(`./public/${ notice.mainImage }`, Buffer.from(notice.mainImageBase64, 'base64'))
-                }
-
-                system.push({
-                    id: notice.id,
-                    title: notice.title,
-                    description: notice.description ? notice.description : '',
-                    link: notice.link ? notice.link : '',
-                    type: notice.type,
-                    coverImage: notice.coverImage ? notice.coverImage : '',
-                    mainImage: notice.mainImage ? notice.mainImage : '',
-                    creator: notice.creator,
-                    createdAt: moment(notice.startDateTime).format('YYYY-MM-DD HH:mm:ss'),
                 })
             }
-            return system;
-        } catch (error) {
-            log.error(error)
-            throw error
+            generateResultList()
+        } else {
+            // no task, send all notification, no need care about platform/toCategory/toType
+            resultList = noticeList
         }
+
+        for (let notice of resultList) {
+            if (notice.coverImage && !fs.existsSync(`./public/${ notice.coverImage }`)) {
+                fs.writeFileSync(`./public/${ notice.coverImage }`, Buffer.from(notice.coverImageBase64, 'base64'))
+            }
+            if (notice.mainImage && !fs.existsSync(`./public/${ notice.mainImage }`)) {
+                fs.writeFileSync(`./public/${ notice.mainImage }`, Buffer.from(notice.mainImageBase64, 'base64'))
+            }
+
+            system.push({
+                id: notice.id,
+                title: notice.title,
+                description: notice.description ? notice.description : '',
+                link: notice.link ? notice.link : '',
+                type: notice.type,
+                coverImage: notice.coverImage ? notice.coverImage : '',
+                mainImage: notice.mainImage ? notice.mainImage : '',
+                creator: notice.creator,
+                createdAt: moment(notice.startDateTime).format('YYYY-MM-DD HH:mm:ss'),
+            })
+        }
+        return system;
     },
     getPopupNoticeList: async function (user) {
-        try {
-            let result = []
-            //License Conversion
-            let driverLicenseConversion = await DriverLicenseExchangeApply.findOne({where: {driverId: user.driverId, status: 'Submitted', emailConfirm: { [Op.is]: null } }});
-            if (driverLicenseConversion) {
-                let driver = await Driver.findByPk(user.driverId);
-                result.push({
-                    id: 0,
-                    title: 'License Conversion',
-                    type: 'licenseConversion',
-                    description: `You're eligible for license conversion, please update your email address and mobile number.`,
-                    creator: driverLicenseConversion.creator,
-                    coverImage: '',
-                    mainImage: '',
-                    driverContactNumber: driver && driver.contactNumber ? driver.contactNumber : '',
-                    createdAt: moment(driverLicenseConversion.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
-                })
-            }
-
-            result = result.concat(await NoticeUtils.generateNoticeList(user, { type: 'Alert', read: 0, group: user.groupId ? user.groupId : null }))
-            return result;
-        } catch (error) {
-            throw error
+        let result = []
+        //License Conversion
+        let driverLicenseConversion = await DriverLicenseExchangeApply.findOne({where: {driverId: user.driverId, status: 'Submitted', emailConfirm: { [Op.is]: null } }});
+        if (driverLicenseConversion) {
+            let driver = await Driver.findByPk(user.driverId);
+            result.push({
+                id: 0,
+                title: 'License Conversion',
+                type: 'licenseConversion',
+                description: `You're eligible for license conversion, please update your email address and mobile number.`,
+                creator: driverLicenseConversion.creator,
+                coverImage: '',
+                mainImage: '',
+                driverContactNumber: driver?.contactNumber ? driver.contactNumber : '',
+                createdAt: moment(driverLicenseConversion.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+            })
         }
+
+        result = result.concat(await NoticeUtils.generateNoticeList(user, { type: 'Alert', read: 0, group: user.groupId ? user.groupId : null }))
+        return result;
     }
 }
 

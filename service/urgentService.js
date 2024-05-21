@@ -205,65 +205,61 @@ const getCompletedDutyList = async function (driverId) {
 }
 
 const getDutyList = async function (driverId) {
-    try {
-        let resultList = []
+    let resultList = []
 
-        // Find out all future available duty every date.
-        let availableDutyList = await sequelizeObj.query(`
-            SELECT DATE(ud.indentStartDate) AS indentDate, ud.vehicleNo, ud.driverId, v.vehicleType 
+    // Find out all future available duty every date.
+    let availableDutyList = await sequelizeObj.query(`
+        SELECT DATE(ud.indentStartDate) AS indentDate, ud.vehicleNo, ud.driverId, v.vehicleType 
+        FROM urgent_duty ud
+        LEFT JOIN vehicle v on v.vehicleNo = ud.vehicleNo
+        WHERE ud.driverId = ?
+        AND DATE(ud.indentStartDate) >= DATE(NOW())
+        AND ud.status not in ('cancelled', 'completed')
+        GROUP BY ud.driverId, ud.vehicleNo, DATE(ud.indentStartDate)
+    `, { type: QueryTypes.SELECT, replacements: [ driverId ] })
+
+    // Find out duty every date
+    for (let availableDuty of availableDutyList) {
+        // Find out duty current date(Every driver/vehicle at one day's config is same)   
+        // Should be only one duty result
+        let dutyList = await sequelizeObj.query(`
+            SELECT ud.dutyId, ud.id, DATE(ud.indentStartDate) AS indentDate, ud.indentStartDate, 
+            DATE_FORMAT(ud.mobileStartTime, '%Y-%m-%d %H:%i:%s') as mobileStartTime, 
+            DATE_FORMAT(ud.mobileEndTime, '%Y-%m-%d %H:%i:%s') as mobileEndTime,
+            ud.vehicleNo, v.vehicleType, uc.startTime, uc.endTime, ud.status, uc.hub, uc.node,
+            d.state, d.driverName, v.limitSpeed, ud.lateStartRemarks as startLateReason
             FROM urgent_duty ud
+            LEFT JOIN urgent_config uc ON ud.configId = uc.id
+            LEFT JOIN driver d on d.driverId = ud.driverId
             LEFT JOIN vehicle v on v.vehicleNo = ud.vehicleNo
-            WHERE ud.driverId = ?
-            AND DATE(ud.indentStartDate) >= DATE(NOW())
+            WHERE ud.driverId = ? AND ud.vehicleNo = ?
+            AND DATE(ud.indentStartDate) = ?
             AND ud.status not in ('cancelled', 'completed')
-            GROUP BY ud.driverId, ud.vehicleNo, DATE(ud.indentStartDate)
-        `, { type: QueryTypes.SELECT, replacements: [ driverId ] })
+            limit 1
+        `, { type: QueryTypes.SELECT, replacements: [ driverId, availableDuty.vehicleNo, availableDuty.indentDate ] })
 
-        // Find out duty every date
-        for (let availableDuty of availableDutyList) {
-            // Find out duty current date(Every driver/vehicle at one day's config is same)   
-            // Should be only one duty result
-            let dutyList = await sequelizeObj.query(`
-                SELECT ud.dutyId, ud.id, DATE(ud.indentStartDate) AS indentDate, ud.indentStartDate, 
-                DATE_FORMAT(ud.mobileStartTime, '%Y-%m-%d %H:%i:%s') as mobileStartTime, 
-                DATE_FORMAT(ud.mobileEndTime, '%Y-%m-%d %H:%i:%s') as mobileEndTime,
-                ud.vehicleNo, v.vehicleType, uc.startTime, uc.endTime, ud.status, uc.hub, uc.node,
-                d.state, d.driverName, v.limitSpeed, ud.lateStartRemarks as startLateReason
-                FROM urgent_duty ud
-                LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                LEFT JOIN driver d on d.driverId = ud.driverId
-                LEFT JOIN vehicle v on v.vehicleNo = ud.vehicleNo
-                WHERE ud.driverId = ? AND ud.vehicleNo = ?
-                AND DATE(ud.indentStartDate) = ?
-                AND ud.status not in ('cancelled', 'completed')
-                limit 1
-            `, { type: QueryTypes.SELECT, replacements: [ driverId, availableDuty.vehicleNo, availableDuty.indentDate ] })
+        let dutyIdList = dutyList.map(item => item.id)
+        let indentList = await getIndentList(dutyIdList, availableDuty.indentDate)
 
-            let dutyIdList = dutyList.map(item => item.id)
-            let indentList = await getIndentList(dutyIdList, availableDuty.indentDate)
+        let tag = moment(availableDuty.indentDate, 'YYYY-MM-DD').format('MM/DD')
+        let today = moment().format("YYYY-MM-DD")
+        if (today == availableDuty.indentDate) {
+            tag = "TODAY"
+        } else if (moment(availableDuty.indentDate, 'YYYY-MM-DD').diff(today, 'd') == 1) {
+            tag = "TOMORROW"
+        }
 
-            let tag = moment(availableDuty.indentDate, 'YYYY-MM-DD').format('MM/DD')
-            let today = moment().format("YYYY-MM-DD")
-            if (today == availableDuty.indentDate) {
-                tag = "TODAY"
-            } else if (moment(availableDuty.indentDate, 'YYYY-MM-DD').diff(today, 'd') == 1) {
-                tag = "TOMORROW"
-            }
+        let taskStatus = ''
+        if (dutyList[0].status == 'waitcheck') {
+            taskStatus = 'Pending PRE-TASK'
+        }
 
-            let taskStatus = ''
-            if (dutyList[0].status == 'waitcheck') {
-                taskStatus = 'Pending PRE-TASK'
-            }
-
-            for (let indent of indentList) {
-                if (indent.status.toLowerCase() == 'completed') {
-                    log.warn(`Indent Id => ${ indent.id } has completed, will not send to mobile`)
-                    continue
-                } else if (moment().isAfter(indent.endTime) && indent.status.toLowerCase() != 'started') {
-                    log.warn(`Indent ${ indent.id } is over time and not started, will not send to mobile`)
-                    continue
-                }
-
+        indentList.forEach(indent => {
+            if (indent.status.toLowerCase() == 'completed') {
+                log.warn(`Indent Id => ${ indent.id } has completed, will not send to mobile`)             
+            } else if (moment().isAfter(indent.endTime) && indent.status.toLowerCase() != 'started') {
+                log.warn(`Indent ${ indent.id } is over time and not started, will not send to mobile`)
+            } else {
                 // Generate duty info
                 let result = {
                     indentList: [ indent ],
@@ -314,69 +310,66 @@ const getDutyList = async function (driverId) {
                 }
                 resultList.push(result)
             }
-            if (indentList.length == 0) {
-                // Generate duty info
-                let result = {
-                    indentList,
-                    taskId: dutyList[0].dutyId,
-                    dataFrom: `Urgent`,
-                    driverId: driverId,
-                    vehicleNumber: availableDuty.vehicleNo,
-                    hub: dutyList[0].hub,
-                    node: dutyList[0].node ?? '-',
-                    driverStatus: dutyList[0].status,
-                    indentStartTime: `${ availableDuty.indentDate } ${ dutyList[0].startTime }`,
-                    indentEndTime: `${ availableDuty.indentDate } ${ dutyList[0].endTime }`,
-                    purposeType: "Urgent Duty",
-                    "pickupDestination": "",
-                    "dropoffDestination": "",
-                    "mobileStartTime": dutyList[0].mobileStartTime ?? '',
-                    "mobileEndTime": dutyList[0].mobileEndTime ?? '',
-                    "startLateReason": dutyList[0].startLateReason,
-                    indentId: "",
-                    vehicleType: dutyList[0].vehicleType,
-                    limitSpeed: dutyList[0].limitSpeed,
-                    driverName: dutyList[0].driverName,
-                    state: dutyList[0].state,
-                    "additionalRemarks": null,
-                    "pickupDestinationLat": "1.3773129",
-                    "pickupDestinationLng": "103.9284515",
-                    "dropoffDestinationLat": "1.4437309",
-                    "dropoffDestinationLng": "103.7767858",
-                    "serviceModeName": null,
-                    "serviceModeValue": null,
-                    "poc": null,
-                    "pocNumber": null,
-                    "arrivalTime": "",
-                    "departTime": "",
-                    "latestStartTime": "2023-10-18 17:45:00",
-                    startTime: moment(dutyList[0].startTime, 'HH:mm:ss').format('HH:mm'),
-                    endTime: moment(dutyList[0].endTime, 'HH:mm:ss').format('HH:mm'),
-                    executionDate: moment(availableDuty.indentDate, 'YYYY-MM-DD').format('DD MMM'), 
-                    executionDateTime: dutyList[0].indentStartDate,
-                    tag,
-                    taskStatus,
-                    "completedTime": "",
-                    "odd": "",
-                    "commanderContact": null,
-                    "startMileage": 2,
-                    "endMileage": 0,
-                    "taskReady": true
-                }
-                resultList.push(result)
+        })
+        if (indentList.length == 0) {
+            // Generate duty info
+            let result = {
+                indentList,
+                taskId: dutyList[0].dutyId,
+                dataFrom: `Urgent`,
+                driverId: driverId,
+                vehicleNumber: availableDuty.vehicleNo,
+                hub: dutyList[0].hub,
+                node: dutyList[0].node ?? '-',
+                driverStatus: dutyList[0].status,
+                indentStartTime: `${ availableDuty.indentDate } ${ dutyList[0].startTime }`,
+                indentEndTime: `${ availableDuty.indentDate } ${ dutyList[0].endTime }`,
+                purposeType: "Urgent Duty",
+                "pickupDestination": "",
+                "dropoffDestination": "",
+                "mobileStartTime": dutyList[0].mobileStartTime ?? '',
+                "mobileEndTime": dutyList[0].mobileEndTime ?? '',
+                "startLateReason": dutyList[0].startLateReason,
+                indentId: "",
+                vehicleType: dutyList[0].vehicleType,
+                limitSpeed: dutyList[0].limitSpeed,
+                driverName: dutyList[0].driverName,
+                state: dutyList[0].state,
+                "additionalRemarks": null,
+                "pickupDestinationLat": "1.3773129",
+                "pickupDestinationLng": "103.9284515",
+                "dropoffDestinationLat": "1.4437309",
+                "dropoffDestinationLng": "103.7767858",
+                "serviceModeName": null,
+                "serviceModeValue": null,
+                "poc": null,
+                "pocNumber": null,
+                "arrivalTime": "",
+                "departTime": "",
+                "latestStartTime": "2023-10-18 17:45:00",
+                startTime: moment(dutyList[0].startTime, 'HH:mm:ss').format('HH:mm'),
+                endTime: moment(dutyList[0].endTime, 'HH:mm:ss').format('HH:mm'),
+                executionDate: moment(availableDuty.indentDate, 'YYYY-MM-DD').format('DD MMM'), 
+                executionDateTime: dutyList[0].indentStartDate,
+                tag,
+                taskStatus,
+                "completedTime": "",
+                "odd": "",
+                "commanderContact": null,
+                "startMileage": 2,
+                "endMileage": 0,
+                "taskReady": true
             }
+            resultList.push(result)
         }
-
-        resultList = _.sortBy(resultList, function(o) { 
-            // Mobile can not change, so update here
-            return o.executionDateTime;
-        }).reverse()
-
-        return resultList
-    } catch (error) {
-        log.error(error)
-        return []
     }
+
+    resultList = _.sortBy(resultList, function(o) { 
+        // Mobile can not change, so update here
+        return o.executionDateTime;
+    }).reverse()
+
+    return resultList
 }
 
 const getDutyDetailById = async function (dutyId, indentId) {

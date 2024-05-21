@@ -24,149 +24,132 @@ const { NoticeUtils } = require('../service/noticeService');
 const { UserUtils } = require('../service/userService');
 
 module.exports.getStateRecord = async function (req, res) {
+    let { userId, token, gpsPermission, gpsService, taskId } = req.body;
+
+    if(typeof gpsPermission == 'undefined') gpsPermission = 1;
+    if(typeof gpsService == 'undefined') gpsService = 1;
+
+    const checkToken = async function(userId, token) {
+        let loginRecord = await LoginRecord.findOne({ where: {
+            userId, token
+        } })
+        if (!loginRecord) {
+            gpsLog.warn(`User account has been login at other device !!!!!!!!`)
+            throw new Error(`Your account has been login at other place. Please login again.`)
+        }
+
+        if (moment().diff(loginRecord.updatedAt) > 36 * 60 * 60 * 1000) {
+            gpsLog.warn(`Mobile need to re-login now !!!!!!!!!!!!!!`)
+            throw new Error(`Your authentication has expired. Please login again.`)
+        }
+    }
+
+    const checkDriver = async function(userId) {
+        let user = await UserUtils.getUserDetailInfo2(userId);
+        if (!user) {
+            gpsLog.warn(`User account do not exist !!!!!!!!`)
+            throw new Error(`User account do not exist. Please login again.`)
+        }
+        return user;
+    }
+
+    const checkNewAlertNotice = async function (user) {
+        let result = await NoticeUtils.getPopupNoticeList(user)
+        if (result.length) {
+            return 1
+        } else {
+            return 0
+        }
+    }  
+    
+    const checkRealtimeAlert = async function (user) {
+        let result = await StateRecord.findAll({
+            where: {
+                userId: user.userId,
+                state: 'Alert'
+            }
+        })
+        let returnResult = {
+            alert: false,
+            voice: false
+        }
+        if (result.length) {
+            returnResult.alert = true
+
+            let idList = result.map(item => item.id)
+            await StateRecord.destroy({ where: { id: idList } })
+
+            // check if voice
+            let zone = await NogoZone.findByPk(result.at(-1).content)
+            if (zone.enableVoice == 1) {
+                returnResult.voice = true
+            }
+
+            return returnResult;
+        }
+        return returnResult
+    }
+
     try {
-        let { userId, token, gpsPermission, gpsService, taskId } = req.body;
+        await sequelizeObj.transaction(async (t1) => {
+            await checkToken(userId, token);
+            let user = await checkDriver(userId)
 
-        if(typeof gpsPermission == 'undefined') gpsPermission = 1;
-        if(typeof gpsService == 'undefined') gpsService = 1;
+            let hasNewAlert = await checkNewAlertNotice(user)
 
-        const checkToken = async function(userId, token) {
-            let loginRecord = await LoginRecord.findOne({ where: {
-                userId, token
-            } })
-            if (!loginRecord) {
-                gpsLog.warn(`User account has been login at other device !!!!!!!!`)
-                throw new Error(`Your account has been login at other place. Please login again.`)
+            let systemNoticeCount = await NoticeUtils.generateNoticeList(user, { group: (user.groupId && user.groupId > 0) ? user.groupId : null })
+            systemNoticeCount = systemNoticeCount.length
+
+            let permitStatus = 'valid';
+            let driverInfo = await Driver.findByPk(user.driverId)
+            if (driverInfo) {
+                permitStatus = driverInfo.permitStatus
             }
 
-            if (moment().diff(loginRecord.updatedAt) > 36 * 60 * 60 * 1000) {
-                gpsLog.warn(`Mobile need to re-login now !!!!!!!!!!!!!!`)
-                throw new Error(`Your authentication has expired. Please login again.`)
-            }
-        }
+            // get latest driver record by driverId
+            let driverPosition = await DriverPosition.findOne({ where: { driverId: user.driverId }, order: [ [ 'updatedAt', 'desc' ] ] })
 
-        const checkDriver = async function(userId) {
-            let user = await UserUtils.getUserDetailInfo2(userId);
-            if (!user) {
-                gpsLog.warn(`User account do not exist !!!!!!!!`)
-                throw new Error(`User account do not exist. Please login again.`)
-            }
-            return user;
-        }
-
-        const checkNewAlertNotice = async function (user) {
-            try {
-                let result = await NoticeUtils.getPopupNoticeList(user)
-                if (result && result.length) {
-                    return 1
-                } else {
-                    return 0
-                }
-            } catch (error) {
-                throw error
-            }
-        }  
-        
-        const checkRealtimeAlert = async function (user) {
-            try {
-                let result = await StateRecord.findAll({
-                    where: {
-                        userId: user.userId,
-                        state: 'Alert'
-                    }
-                })
-                let returnResult = {
-                    alert: false,
-                    voice: false
-                }
-                if (result.length) {
-                    returnResult.alert = true
-
-                    let idList = result.map(item => item.id)
-                    await StateRecord.destroy({ where: { id: idList } })
-
-                    // check if voice
-                    let zone = await NogoZone.findByPk(result.at(-1).content)
-                    if (zone.enableVoice == 1) {
-                        returnResult.voice = true
-                    }
-
-                    return returnResult;
-                }
-                return returnResult
-            } catch (error) {
-                throw error
-            }
-        }
-
-        try {
-            await sequelizeObj.transaction(async (t1) => {
-                await checkToken(userId, token);
-                let user = await checkDriver(userId)
-
-                let hasNewAlert = await checkNewAlertNotice(user)
-
-                let systemNoticeCount = await NoticeUtils.generateNoticeList(user, { group: (user.groupId && user.groupId > 0) ? user.groupId : null })
-                systemNoticeCount = systemNoticeCount.length
-
-                let permitStatus = 'valid';
-                let driverInfo = await Driver.findByPk(user.driverId)
-                if (driverInfo) {
-                    permitStatus = driverInfo.permitStatus
-                }
-
-                // get latest driver record by driverId
-                let driverPosition = await DriverPosition.findOne({ where: { driverId: user.driverId }, order: [ [ 'updatedAt', 'desc' ] ] })
-
-                // while TO user close GPS permission, will not run API 'updatePositionByFile'
-                //       only here can receive this operation.
-                if (driverPosition) {
-                    if (driverPosition.gpsPermission != gpsPermission) {
-
-                        let result = await TO_Operation.findOne({ where: { driverId: user.driverId, type: 0, description: { [Op.substring]: 'permission' } }, order: [ [ 'id', 'desc' ] ] }) 
-                        if (gpsPermission == 1) {
-                            // Finish Record close timezone
-                            if (result && result.gpsPermission == 0 && result.description.indexOf('permission') > -1) {
-                                await result.update({
-                                    endTime: moment().format('YYYY-MM-DD HH:mm:ss')
-                                })
-                            }
-
-                        } else if (gpsPermission == 0) {
-                            // Start Record close timezone
-                            if (!result || result.endTime) {
-                                await TO_Operation.create({
-                                    driverId: user.driverId,
-                                    description: gpsPermission == 1 ? 'TO user open GPS permission.' : 'TO user close GPS permission.',
-                                    gpsPermission,
-                                    startTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                                    gpsService,
-                                    network: 1, // Only 1 mobile can upload permission record
-                                })
-                            } else {
-                                // no open permission now
-                            }
-                            
-                            driverPosition.missingType = 'No GPS Permission'
+            // while TO user close GPS permission, will not run API 'updatePositionByFile'
+            //       only here can receive this operation.
+            
+            if (driverPosition?.gpsPermission != gpsPermission) {
+                const checkGPSPermission = async function () {
+                    let result = await TO_Operation.findOne({ where: { driverId: user.driverId, type: 0, description: { [Op.substring]: 'permission' } }, order: [ [ 'id', 'desc' ] ] }) 
+                    if (gpsPermission == 1 && result && result.gpsPermission == 0 && result.description.indexOf('permission') > -1) {
+                        // Finish Record close timezone
+                        await result.update({
+                            endTime: moment().format('YYYY-MM-DD HH:mm:ss')
+                        })
+                    } else if (gpsPermission == 0) {
+                        // Start Record close timezone
+                        if (!result || result.endTime) {
+                            await TO_Operation.create({
+                                driverId: user.driverId,
+                                description: gpsPermission == 1 ? 'TO user open GPS permission.' : 'TO user close GPS permission.',
+                                gpsPermission,
+                                startTime: moment().format('YYYY-MM-DD HH:mm:ss'),
+                                gpsService,
+                                network: 1, // Only 1 mobile can upload permission record
+                            })
                         }
+                        
+                        driverPosition.missingType = 'No GPS Permission'
                     }
-                    
-                    driverPosition.gpsPermission = gpsPermission;
-                    await driverPosition.save();
                 }
+                await checkGPSPermission()
+            }
+            
+            driverPosition.gpsPermission = gpsPermission;
+            await driverPosition.save();
 
-                let alert = await checkRealtimeAlert(user);
-                return res.json(utils.response(1, { permitStatus: permitStatus, hasNewAlert, systemNoticeCount, alert })); 
-            }).catch((error) => {
-                throw error
-            }) 
-        } catch (error) {
-            gpsLog.error(error);
-            return res.json(utils.response(-100, error));  
-        }
+            let alert = await checkRealtimeAlert(user);
+            return res.json(utils.response(1, { permitStatus: permitStatus, hasNewAlert, systemNoticeCount, alert })); 
+        }).catch((error) => {
+            throw error
+        }) 
     } catch (error) {
-        gpsLog.error(error)
-        return res.json(utils.response(0, error)); 
+        gpsLog.error(error);
+        return res.json(utils.response(-100, error));  
     }
 }
 
