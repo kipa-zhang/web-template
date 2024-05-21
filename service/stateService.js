@@ -90,6 +90,30 @@ module.exports.getStateRecord = async function (req, res) {
         return returnResult
     }
 
+    const checkGPSPermission = async function (driverPosition, gpsPermission, user) {
+        let result = await TO_Operation.findOne({ where: { driverId: user.driverId, type: 0, description: { [Op.substring]: 'permission' } }, order: [ [ 'id', 'desc' ] ] }) 
+        if (gpsPermission == 1 && result && result.gpsPermission == 0 && result.description.indexOf('permission') > -1) {
+            // Finish Record close timezone
+            await result.update({
+                endTime: moment().format('YYYY-MM-DD HH:mm:ss')
+            })
+        } else if (gpsPermission == 0) {
+            // Start Record close timezone
+            if (!result || result.endTime) {
+                await TO_Operation.create({
+                    driverId: user.driverId,
+                    description: gpsPermission == 1 ? 'TO user open GPS permission.' : 'TO user close GPS permission.',
+                    gpsPermission,
+                    startTime: moment().format('YYYY-MM-DD HH:mm:ss'),
+                    gpsService,
+                    network: 1, // Only 1 mobile can upload permission record
+                })
+            }
+            
+            driverPosition.missingType = 'No GPS Permission'
+        }
+    }
+
     try {
         await sequelizeObj.transaction(async (t1) => {
             await checkToken(userId, token);
@@ -112,35 +136,13 @@ module.exports.getStateRecord = async function (req, res) {
             // while TO user close GPS permission, will not run API 'updatePositionByFile'
             //       only here can receive this operation.
             
-            if (driverPosition?.gpsPermission != gpsPermission) {
-                const checkGPSPermission = async function () {
-                    let result = await TO_Operation.findOne({ where: { driverId: user.driverId, type: 0, description: { [Op.substring]: 'permission' } }, order: [ [ 'id', 'desc' ] ] }) 
-                    if (gpsPermission == 1 && result && result.gpsPermission == 0 && result.description.indexOf('permission') > -1) {
-                        // Finish Record close timezone
-                        await result.update({
-                            endTime: moment().format('YYYY-MM-DD HH:mm:ss')
-                        })
-                    } else if (gpsPermission == 0) {
-                        // Start Record close timezone
-                        if (!result || result.endTime) {
-                            await TO_Operation.create({
-                                driverId: user.driverId,
-                                description: gpsPermission == 1 ? 'TO user open GPS permission.' : 'TO user close GPS permission.',
-                                gpsPermission,
-                                startTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-                                gpsService,
-                                network: 1, // Only 1 mobile can upload permission record
-                            })
-                        }
-                        
-                        driverPosition.missingType = 'No GPS Permission'
-                    }
+            if (driverPosition) {
+                if (driverPosition.gpsPermission != gpsPermission) {
+                    await checkGPSPermission(driverPosition, gpsPermission, user)
                 }
-                await checkGPSPermission()
+                driverPosition.gpsPermission = gpsPermission;
+                await driverPosition.save();
             }
-            
-            driverPosition.gpsPermission = gpsPermission;
-            await driverPosition.save();
 
             let alert = await checkRealtimeAlert(user);
             return res.json(utils.response(1, { permitStatus: permitStatus, hasNewAlert, systemNoticeCount, alert })); 

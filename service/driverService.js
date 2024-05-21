@@ -624,7 +624,7 @@ module.exports.reCalcDriverLicensingStatus = async function(driverId) {
 										`, { replacements: [ driverId ], type: QueryTypes.SELECT })
 										
 										let incidentScore = 0;
-										for (let temp of driverIncidentRecords) {
+										driverIncidentRecords.forEach(temp => {
 											if (temp.violationType == 'Hard Braking') {
 												incidentScore += incidentConf.HARD_BRAKING;
 											} else if (temp.violationType == 'Rapid Acc') {
@@ -632,7 +632,7 @@ module.exports.reCalcDriverLicensingStatus = async function(driverId) {
 											} else if (temp.violationType == 'Speeding') {
 												incidentScore += incidentConf.SPEEDING;
 											}
-										}
+										})
 										if (incidentScore < 7) {
 											await Driver.update({ licensingStatus: 'Ready' }, {where: {driverId: driverId}});
 										} else {

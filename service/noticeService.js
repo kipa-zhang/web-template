@@ -130,6 +130,36 @@ let NoticeUtils = {
         return !(startTime1 >= endTime2 || startTime2 >= endTime1)
     },
     generateNoticeList: async function (user, option) {
+        const generateResultList = async function (noticeList, taskList) {
+            let resultList = []
+            // has task, check every task on platform/toCategory/toType
+            for (let notice of noticeList) {
+                for (let task of taskList) {
+                    // check platform
+                    if (notice.platform && notice.platform != task.platform) {
+                        log.info(`(getNoticeList) TaskID ${ task.taskId } platform => ${ task.platform } != ${ notice.platform }`)
+                        continue;
+                    }
+                    // check toCategory
+                    if (notice.toCategory) {
+                        let driverCategory = await DriverAssessmentRecord.findAll({ where: { driverId: task.driverId, assessmentType: { [Op.substring]: ` ${ notice.toCategory } ` }, status: 'Pass' } })
+                        if (!driverCategory.length) {
+                            log.info(`(getNoticeList) TaskID ${ task.taskId } driverId ${ task.driverId } toCategory has not pass ${ notice.toCategory } `)
+                            continue;
+                        }
+                    }
+                    // check toType
+                    if (notice.toType && notice.toType != task.role) {
+                        log.info(`(getNoticeList) TaskID ${ task.taskId } toType => ${ task.role } != ${ notice.toType }`)
+                        continue;
+                    }
+                    // check time
+                    resultList.push(notice);
+                    break;
+                }
+            }
+            return resultList
+        }
         let system = []
         // find out all task not completed
         let taskList = await sequelizeObj.query(`
@@ -151,35 +181,7 @@ let NoticeUtils = {
         let resultList = []
 
         if (taskList.length) {
-            const generateResultList = function () {
-                // has task, check every task on platform/toCategory/toType
-                noticeList.forEach(async notice => {
-                    for (let task of taskList) {
-                        // check platform
-                        if (notice.platform && notice.platform != task.platform) {
-                            log.info(`(getNoticeList) TaskID ${ task.taskId } platform => ${ task.platform } != ${ notice.platform }`)
-                            continue;
-                        }
-                        // check toCategory
-                        if (notice.toCategory) {
-                            let driverCategory = await DriverAssessmentRecord.findAll({ where: { driverId: task.driverId, assessmentType: { [Op.substring]: ` ${ notice.toCategory } ` }, status: 'Pass' } })
-                            if (!driverCategory.length) {
-                                log.info(`(getNoticeList) TaskID ${ task.taskId } driverId ${ task.driverId } toCategory has not pass ${ notice.toCategory } `)
-                                continue;
-                            }
-                        }
-                        // check toType
-                        if (notice.toType && notice.toType != task.role) {
-                            log.info(`(getNoticeList) TaskID ${ task.taskId } toType => ${ task.role } != ${ notice.toType }`)
-                            continue;
-                        }
-                        // check time
-                        resultList.push(notice);
-                        break;
-                    }
-                })
-            }
-            generateResultList()
+            resultList = await generateResultList(noticeList, taskList)
         } else {
             // no task, send all notification, no need care about platform/toCategory/toType
             resultList = noticeList

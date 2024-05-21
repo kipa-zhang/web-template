@@ -97,88 +97,82 @@ module.exports = {
 		}
 	},
 	createMT_RAC: async function (req, res) {
-		try {
-			let { taskId, riskAssessment, driverDeclaration, submittedBy, submittedDateTime } = req.body;
+		let { taskId, riskAssessment, driverDeclaration, submittedBy, submittedDateTime } = req.body;
 
-			if (taskId.startsWith('DUTY')) {
+		if (taskId.startsWith('DUTY')) {
 
-				let temp = taskId.split('-')
-				taskId = `DUTY-${ temp[1] }` 
-				req.body.taskId = taskId
+			let temp = taskId.split('-')
+			taskId = `DUTY-${ temp[1] }` 
+			req.body.taskId = taskId
 
-				let duty = await UrgentDuty.findOne({ where: { dutyId: taskId } })
-				if (duty.mobileEndTime) {
-					log.warn(`DutyID => ${ taskId }: has completed already.`)
-					let mtRAC = await getMT_RAC(taskId);
-					return res.json(utils.response(1, mtRAC));
-				}
-
-				// Check first mt_rac record time! 
-				let mtRac = await MT_RAC.findOne({ where: { taskId } })
-				// should be same/after date with indent start time
-				// should be same/before time with indent end time
-				if (!mtRac && !( moment().isSameOrAfter(moment(duty.indentStartTime), 'd') && moment().isSameOrBefore(moment(duty.indentEndTime)) )) {
-					log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ duty.driverId }`);
-					return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
-				}
-			} else {
-				let task = await Task.findByPk(taskId);
-				if (task.mobileEndTime) {
-					log.warn(`TaskID => ${ taskId }: has completed already.`)
-					let mtRAC = await getMT_RAC(taskId);
-					return res.json(utils.response(1, mtRAC));
-				}
-	
-				// Check first mt_rac record time! 
-				let mtRac = await MT_RAC.findOne({ where: { taskId } })
-				// should be same/after date with indent start time
-				// should be same/before time with indent end time
-				if (!mtRac && !( moment().isSameOrAfter(moment(task.indentStartTime), 'd') && moment().isSameOrBefore(moment(task.indentEndTime)) )) {
-					log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ task.driverId }`);
-					return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
-				}
-			}
-			
-
-			await sequelizeObj.transaction(async transaction => {
-
-				// check if exist un-signed record, if exist, return -1
-				let mtRACList = await sequelizeObj.query(`
-					SELECT * FROM  mt_rac
-					WHERE taskId = ?
-					AND (
-						(officer = '' OR officer IS NULL) OR (needCommander = 1 AND (commander = '' OR commander IS NULL))
-					)
-				`, { type: QueryTypes.SELECT, replacements: [ taskId ] })
-				if (mtRACList.length) {
-					log.info(`There exist un-signed mt-rac record`)
-					let mtRAC = await getMT_RAC(taskId);
-					return res.json(utils.response(-1, mtRAC));
-				}
-
-				// let task = await taskService.checkTask(taskId);
-				// task.driverStatus = 'un-signed';
-				// task.save();
-
-				let result = await RiskAssessment.findAll({ where: { id: riskAssessment.split(','), riskType: 'No Vehicle Commander', assessment: 'Vehicle Commander present' } });
-				if (result && result.length) {
-					log.warn(`TaskId(${ taskId }) need vehicle commander signature`)
-					req.body.needCommander = 1;
-				} else {
-					log.warn(`TaskId(${ taskId }) no need vehicle commander signature`)
-					req.body.needCommander = 0;
-				}
-				await MT_RAC.create(req.body, { returning: true });
-				
+			let duty = await UrgentDuty.findOne({ where: { dutyId: taskId } })
+			if (duty.mobileEndTime) {
+				log.warn(`DutyID => ${ taskId }: has completed already.`)
 				let mtRAC = await getMT_RAC(taskId);
 				return res.json(utils.response(1, mtRAC));
-			}).catch(error => {
-				throw error
-			})
-		} catch (error) {
-			log.error(error)
-			return res.json(utils.response(0, error));
+			}
+
+			// Check first mt_rac record time! 
+			let mtRac = await MT_RAC.findOne({ where: { taskId } })
+			// should be same/after date with indent start time
+			// should be same/before time with indent end time
+			if (!mtRac && !( moment().isSameOrAfter(moment(duty.indentStartTime), 'd') && moment().isSameOrBefore(moment(duty.indentEndTime)) )) {
+				log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ duty.driverId }`);
+				return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
+			}
+		} else {
+			let task = await Task.findByPk(taskId);
+			if (task.mobileEndTime) {
+				log.warn(`TaskID => ${ taskId }: has completed already.`)
+				let mtRAC = await getMT_RAC(taskId);
+				return res.json(utils.response(1, mtRAC));
+			}
+
+			// Check first mt_rac record time! 
+			let mtRac = await MT_RAC.findOne({ where: { taskId } })
+			// should be same/after date with indent start time
+			// should be same/before time with indent end time
+			if (!mtRac && !( moment().isSameOrAfter(moment(task.indentStartTime), 'd') && moment().isSameOrBefore(moment(task.indentEndTime)) )) {
+				log.warn(`TaskID ${ taskId } can not do MT RAC now, current driverId => ${ task.driverId }`);
+				return res.json(utils.response(0, `TaskID ${ taskId } can not do MT RAC now`));
+			}
 		}
+
+		await sequelizeObj.transaction(async transaction => {
+
+			// check if exist un-signed record, if exist, return -1
+			let mtRACList = await sequelizeObj.query(`
+				SELECT * FROM  mt_rac
+				WHERE taskId = ?
+				AND (
+					(officer = '' OR officer IS NULL) OR (needCommander = 1 AND (commander = '' OR commander IS NULL))
+				)
+			`, { type: QueryTypes.SELECT, replacements: [ taskId ] })
+			if (mtRACList.length) {
+				log.info(`There exist un-signed mt-rac record`)
+				let mtRAC = await getMT_RAC(taskId);
+				return res.json(utils.response(-1, mtRAC));
+			}
+
+			// let task = await taskService.checkTask(taskId);
+			// task.driverStatus = 'un-signed';
+			// task.save();
+
+			let result = await RiskAssessment.findAll({ where: { id: riskAssessment.split(','), riskType: 'No Vehicle Commander', assessment: 'Vehicle Commander present' } });
+			if (result && result.length) {
+				log.warn(`TaskId(${ taskId }) need vehicle commander signature`)
+				req.body.needCommander = 1;
+			} else {
+				log.warn(`TaskId(${ taskId }) no need vehicle commander signature`)
+				req.body.needCommander = 0;
+			}
+			await MT_RAC.create(req.body, { returning: true });
+			
+			let mtRAC = await getMT_RAC(taskId);
+			return res.json(utils.response(1, mtRAC));
+		}).catch(error => {
+			throw error
+		})
 	},
 	verifyMT_RAC: async function (req, res) {
 		try {
