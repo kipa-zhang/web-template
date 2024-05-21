@@ -198,112 +198,111 @@ module.exports.updatePosition = async function (req, res) {
     }
 }
 
-module.exports.updateWaypointPosition = async function (req, res) {
-	try {
-		let userId = req.body.userId;
-		let vehicleNo = req.body.vehicleNo
-        let positionList = req.body.positionList;
-        if (typeof positionList === 'string') positionList = JSON.parse(positionList);
-		sequelizeObj.transaction(async transaction => {
-			const checkUser = async function (userId) {
-				let user = await User.findByPk(userId);
-				if (!user) throw new Error(`User ${ userId } do not exist.`)
-				return user;
-			}
+// module.exports.updateWaypointPosition = async function (req, res) {
+// 	let userId = req.body.userId;
+// 	let vehicleNo = req.body.vehicleNo
+// 	let positionList = req.body.positionList;
+// 	if (typeof positionList === 'string') positionList = JSON.parse(positionList);
+// 	sequelizeObj.transaction(async transaction => {
+// 		const checkUser = async function (userId) {
+// 			let user = await User.findByPk(userId);
+// 			if (!user) throw new Error(`User ${ userId } do not exist.`)
+// 			return user;
+// 		}
 
-			let user = await checkUser(userId);
-			let vehicleRelation = await VehicleRelation.findOne({ where: { driverId: user.driverId, vehicleNo } })
-			if (!vehicleRelation) throw new Error(`There is no vehicleRelation data by { driverId: ${ user.driverId }, vehicleNo: ${ vehicleNo } }`)
-			let driverTask = await DriverTask.findOne({ vehicleRelationId: vehicleRelation.id })
-			if (!driverTask) throw new Error(`There is no driver { vehicleRelationId: ${ vehicleRelation.id } } task data.`)
-			let arrivedInfo = driverTask.arrivedInfo;
-			if (!arrivedInfo) throw new Error(`There is no Arrived Info from DriverTask { driverTaskId: ${ driverTask.id } }`)
-			arrivedInfo = JSON.parse(arrivedInfo);
-			let startTime = driverTask.startTime;
-			let endTime = driverTask.endTime;
-			for (let position of positionList) {
-				let flagUpdateConvoyWayPoint = false;
-                let flagUpdateConvoyWayPointName = null;
-				position.writeTime = Number.parseInt(position.write_time);
-                position.receiveTime = moment().format('YYYY-MM-DD HH:mm:ss');
-				if (!startTime && !endTime && position.state === 'started') {
-					log.info('******************************************************');
-                    log.info('Init start time');
-                    log.info('******************************************************');
-					await driverTask.update({ 
-						startTime: position.writeTime,
-						state: 'MOVEMENT',
-						mobileState: 'MOVEMENT',
-						stateTime: position.writeTime,
-						mobileStateTime: position.writeTime,
-					})
-					await EventRecord.create({ description: `${convoy.convoyNo} has moved off`, createdAt: position.writeTime, });
-				}
-				if (startTime && !endTime && position.state === 'ended') { 
-					// check last waypoint if arrived.
-                    //       Be careful when there are no waypoint
-                    if (arrivedInfo.length === 0 || !!arrivedInfo[arrivedInfo.length - 1].arrived_time) {
-						log.info('******************************************************');
-                        log.info('Init end time!');
-                        log.info('******************************************************');
-						await driverTask.update({ 
-							endTime: position.writeTime,
-							state: CONTENT.CONVOY_STATE.ARRIVED,
-							mobileState: CONTENT.CONVOY_STATE.ARRIVED,
-							stateTime: position.writeTime,
-							mobileStateTime: position.writeTime,
-						})
-						await EventRecord.create({ description: `${convoy.convoyNo} has arrived`, createdAt: position.writeTime, });
-					} else {
-						log.info('******************************************************');
-                        log.info('Can not init end time!');
-                        log.info('Last wayPoint has not arrived yet!');
-                        log.info('******************************************************');
-					}
+// 		const checkStartEvent = async function () {
 
-				}
-				if (startTime && !endTime && position.state === 'arrived') {
-                    log.info('Try to calculate waypoint arrived info!');
-					if (arrivedInfo[index].name === position.wayPointName) {
-						// previous waypoint should not be null
-						if ((index > 0 && !!arrivedInfo[index - 1].arrived_time) || index === 0) {
-							// only get first arrived time!
-							if (!!arrivedInfo[index].arrived_time) {
-								log.warn(`This way point named ${arrivedInfo[index].name} already arrived !`);
-							} else {
-								log.info(`Try set way point named ${arrivedInfo[index].name} arrived !`);
-								log.info('******************************************************');
-								log.info('Init waypoint name: ', arrivedInfo[index].name);
-								log.info('Init waypoint time: ', position.writeTime);
-								log.info('Current userId: ', userId);
-								log.info('******************************************************');
-								arrivedInfo[index].arrived_time = position.writeTime;
-								flagUpdateConvoyWayPoint = true;
-								flagUpdateConvoyWayPointName = position.wayPointName;
-							}
-						} else {
-							log.warn(`Can not set this one arrived! way point named ${arrivedInfo[index - 1].name} has not arrived yet!`);
-						}
-						break;
-					}
-				}
+// 		}
 
-				if (flagUpdateConvoyWayPoint) {
-					await driverTask.update({ arrivedInfo: JSON.stringify(arrivedInfo) })
-					await EventRecord.create({ description: `${convoy.convoyNo} has reached ${flagUpdateConvoyWayPointName}`, createdAt: position.writeTime, });
-                } else {
-                    log.warn(`No driverTask update !`);
-                }
-			}
-			return res.json(utils.response(1, 'success'));
-		}).catch(error => {
-			throw error
-		}); 
-	} catch (error) {
-        log.error(error);
-        return res.json(utils.response(0, error));
-    }
-}
+// 		let user = await checkUser(userId);
+// 		let vehicleRelation = await VehicleRelation.findOne({ where: { driverId: user.driverId, vehicleNo } })
+// 		if (!vehicleRelation) throw new Error(`There is no vehicleRelation data by { driverId: ${ user.driverId }, vehicleNo: ${ vehicleNo } }`)
+// 		let driverTask = await DriverTask.findOne({ vehicleRelationId: vehicleRelation.id })
+// 		if (!driverTask) throw new Error(`There is no driver { vehicleRelationId: ${ vehicleRelation.id } } task data.`)
+// 		let arrivedInfo = driverTask.arrivedInfo;
+// 		if (!arrivedInfo) throw new Error(`There is no Arrived Info from DriverTask { driverTaskId: ${ driverTask.id } }`)
+// 		arrivedInfo = JSON.parse(arrivedInfo);
+// 		let startTime = driverTask.startTime;
+// 		let endTime = driverTask.endTime;
+// 		for (let position of positionList) {
+// 			let flagUpdateConvoyWayPoint = false;
+// 			let flagUpdateConvoyWayPointName = null;
+// 			position.writeTime = Number.parseInt(position.write_time);
+// 			position.receiveTime = moment().format('YYYY-MM-DD HH:mm:ss');
+// 			if (!startTime && !endTime && position.state === 'started') {
+// 				log.info('******************************************************');
+// 				log.info('Init start time');
+// 				log.info('******************************************************');
+// 				await driverTask.update({ 
+// 					startTime: position.writeTime,
+// 					state: 'MOVEMENT',
+// 					mobileState: 'MOVEMENT',
+// 					stateTime: position.writeTime,
+// 					mobileStateTime: position.writeTime,
+// 				})
+// 				await EventRecord.create({ description: `${convoy.convoyNo} has moved off`, createdAt: position.writeTime, });
+// 			}
+// 			if (startTime && !endTime && position.state === 'ended') { 
+// 				// check last waypoint if arrived.
+// 				//       Be careful when there are no waypoint
+// 				if (arrivedInfo.length === 0 || !!arrivedInfo[arrivedInfo.length - 1].arrived_time) {
+// 					log.info('******************************************************');
+// 					log.info('Init end time!');
+// 					log.info('******************************************************');
+// 					await driverTask.update({ 
+// 						endTime: position.writeTime,
+// 						state: CONTENT.CONVOY_STATE.ARRIVED,
+// 						mobileState: CONTENT.CONVOY_STATE.ARRIVED,
+// 						stateTime: position.writeTime,
+// 						mobileStateTime: position.writeTime,
+// 					})
+// 					await EventRecord.create({ description: `${convoy.convoyNo} has arrived`, createdAt: position.writeTime, });
+// 				} else {
+// 					log.info('******************************************************');
+// 					log.info('Can not init end time!');
+// 					log.info('Last wayPoint has not arrived yet!');
+// 					log.info('******************************************************');
+// 				}
+
+// 			}
+// 			if (startTime && !endTime && position.state === 'arrived') {
+// 				log.info('Try to calculate waypoint arrived info!');
+// 				if (arrivedInfo[index].name === position.wayPointName) {
+// 					// previous waypoint should not be null
+// 					if ((index > 0 && !!arrivedInfo[index - 1].arrived_time) || index === 0) {
+// 						// only get first arrived time!
+// 						if (!!arrivedInfo[index].arrived_time) {
+// 							log.warn(`This way point named ${arrivedInfo[index].name} already arrived !`);
+// 						} else {
+// 							log.info(`Try set way point named ${arrivedInfo[index].name} arrived !`);
+// 							log.info('******************************************************');
+// 							log.info('Init waypoint name: ', arrivedInfo[index].name);
+// 							log.info('Init waypoint time: ', position.writeTime);
+// 							log.info('Current userId: ', userId);
+// 							log.info('******************************************************');
+// 							arrivedInfo[index].arrived_time = position.writeTime;
+// 							flagUpdateConvoyWayPoint = true;
+// 							flagUpdateConvoyWayPointName = position.wayPointName;
+// 						}
+// 					} else {
+// 						log.warn(`Can not set this one arrived! way point named ${arrivedInfo[index - 1].name} has not arrived yet!`);
+// 					}
+// 					break;
+// 				}
+// 			}
+
+// 			if (flagUpdateConvoyWayPoint) {
+// 				await driverTask.update({ arrivedInfo: JSON.stringify(arrivedInfo) })
+// 				await EventRecord.create({ description: `${convoy.convoyNo} has reached ${flagUpdateConvoyWayPointName}`, createdAt: position.writeTime, });
+// 			} else {
+// 				log.warn(`No driverTask update !`);
+// 			}
+// 		}
+// 		return res.json(utils.response(1, 'success'));
+// 	}).catch(error => {
+// 		throw error
+// 	}); 
+// }
 
 module.exports.updatePositionByFile = function (req, res) {
     try {

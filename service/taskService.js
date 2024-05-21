@@ -81,80 +81,75 @@ let latestReturnResult = {
 
 module.exports = {
 	getTaskSummary: async function (req, res) {
-		try {
-            let { taskId } = req.body
-			let task = null;
-			let indentId = null;
-			if (taskId.startsWith('DUTY')) {
-				let idArray = taskId.split('-');
-				if (idArray.length < 2) {
-					log.warn(`TaskId ${taskId} format error.`)
-					return res.json(utils.response(0, `TaskId ${taskId} format error.`));
+		let { taskId } = req.body
+		let task = null;
+		let indentId = null;
+		if (taskId.startsWith('DUTY')) {
+			let idArray = taskId.split('-');
+			if (idArray.length < 2) {
+				log.warn(`TaskId ${taskId} format error.`)
+				return res.json(utils.response(0, `TaskId ${taskId} format error.`));
+			}
+			taskId = `DUTY-${idArray[1]}`;
+			if (idArray.length == 3) {
+				indentId = idArray[2];
+				let taskList = await sequelizeObj.query(`
+					SELECT
+						ud.dutyId as taskId,
+						ui.startTime as indentStartTime,
+						ui.endTime as indentEndTime,
+						uc.purpose,
+						ui.vehicleNo as vehicleNumber,
+						ui.driverId,
+						ui.indentId,
+						ui.status as driverStatus
+					FROM urgent_indent ui
+					LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
+					LEFT JOIN urgent_config uc ON ud.configId = uc.id
+					WHERE ui.id = '${indentId}'
+				`, { 
+					type: QueryTypes.SELECT, replacements: []
+				});
+				if (taskList.length) {
+					task = taskList[0];
 				}
-				taskId = `DUTY-${idArray[1]}`;
-				if (idArray.length == 3) {
-                    indentId = idArray[2];
-                    let taskList = await sequelizeObj.query(`
-                        SELECT
-                            ud.dutyId as taskId,
-                            ui.startTime as indentStartTime,
-                            ui.endTime as indentEndTime,
-                            uc.purpose,
-                            ui.vehicleNo as vehicleNumber,
-                            ui.driverId,
-							ui.indentId,
-                            ui.status as driverStatus
-                        FROM urgent_indent ui
-                        LEFT JOIN urgent_duty ud on ui.dutyId = ud.id
-                        LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                        WHERE ui.id = '${indentId}'
-                    `, { 
-                        type: QueryTypes.SELECT, replacements: []
-                    });
-                    if (taskList.length) {
-                        task = taskList[0];
-                    }
-                } else {
-                    let taskList = await sequelizeObj.query(` 
-                        SELECT
-                            ud.dutyId as taskId,
-                            ud.indentStartDate as indentStartTime,
-                            ud.indentEndDate as indentEndTime,
-                            uc.purpose,
-                            uc.vehicleNo as vehicleNumber,
-                            uc.driverId,
-                            '' as indentId,
-                            ud.status as driverStatus
-                        FROM urgent_duty ud
-                        LEFT JOIN urgent_config uc ON ud.configId = uc.id
-                        LEFT JOIN urgent_indent ui on ui.dutyId = ud.id
-                        WHERE ud.dutyId = '${taskId}'
-                    `, { 
-                        type: QueryTypes.SELECT, replacements: []
-                    });
-                    if (taskList.length) {
-                        task = taskList[0];
-                    }
-                }
 			} else {
-				task = await Task.findOne({ where: { taskId } })
+				let taskList = await sequelizeObj.query(` 
+					SELECT
+						ud.dutyId as taskId,
+						ud.indentStartDate as indentStartTime,
+						ud.indentEndDate as indentEndTime,
+						uc.purpose,
+						uc.vehicleNo as vehicleNumber,
+						uc.driverId,
+						'' as indentId,
+						ud.status as driverStatus
+					FROM urgent_duty ud
+					LEFT JOIN urgent_config uc ON ud.configId = uc.id
+					LEFT JOIN urgent_indent ui on ui.dutyId = ud.id
+					WHERE ud.dutyId = '${taskId}'
+				`, { 
+					type: QueryTypes.SELECT, replacements: []
+				});
+				if (taskList.length) {
+					task = taskList[0];
+				}
 			}
+		} else {
+			task = await Task.findOne({ where: { taskId } })
+		}
 
-            if (!task) {
-                log.warn(`TaskId ${taskId} do not exist.`)
-                return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
-            }
-			task = task.dataValues ? task.dataValues : task;
-			let vehicle = await Vehicle.findByPk(task.vehicleNumber);
-			if (vehicle?.keyTagId) {
-				task.vehicleKeyTagId = vehicle.keyTagId;
-			}
+		if (!task) {
+			log.warn(`TaskId ${taskId} do not exist.`)
+			return res.json(utils.response(0, `TaskId ${taskId} do not exist.`));
+		}
+		task = task.dataValues ? task.dataValues : task;
+		let vehicle = await Vehicle.findByPk(task.vehicleNumber);
+		if (vehicle?.keyTagId) {
+			task.vehicleKeyTagId = vehicle.keyTagId;
+		}
 
-            return res.json(utils.response(1, task));
-        } catch (ex) {
-            log.error(ex)
-            return res.json(utils.response(0, "Failed"));
-        }
+		return res.json(utils.response(1, task));
 	},
 	reportTaskODD: async function(req, res) {
 		try {
@@ -308,282 +303,268 @@ module.exports = {
 		}
 	},
 	getDriverMileage: async function (req, res) {
-		try {
-			let userId = req.body.userId;
-			let user = await User.findByPk(userId);
-			if (!user) {
-				throw new Error(`UserId ${userId} do not exist.`)
-			}
-			let driver = await Driver.findByPk(user.driverId);
-			if (!driver) {
-				throw new Error(`DriverId ${user.driverId} do not exist.`)
-			}
-			//  else if (!driver.permitType) {
-			// 	log.warn(`Driver ${driver.driverName} do not has permitType.`)
-			// }
-			log.info(`DriverID ${user.driverId} has permitType => ${driver.permitType}`)
-			let result = { safetyScore: 100, totalMileage: 0, permitData: [] }
-
-			let statResult = [];
-			let permitTypes = new Set();
-			let driverTotalMileage = 0;
-			// Real-time mileage statistics
-			let driverPermitTaskMileageList = await sequelizeObj.query(` 
-				SELECT veh.permitType, sum(m.mileageTraveled) as permitMileage
-				FROM mileage m
-				LEFT JOIN (
-					select v1.vehicleNo, v1.permitType from vehicle v1
-					UNION ALL
-					select v2.vehicleNo, v2.permitType from vehicle_history v2
-				) veh ON m.vehicleNo = veh.vehicleNo
-				WHERE m.driverId = ${user.driverId} and m.endMileage IS NOT NULL 
-				GROUP BY veh.permitType
-			`, { 
-				type: QueryTypes.SELECT, replacements: []
-			});
-				
-			let driverMileageStatList = await sequelizeObj.query(`
-				SELECT
-					dm.permitType,
-					dm.passDate,
-					dm.baseMileage
-				FROM driver_permittype_detail dm
-				where dm.driverId=? AND dm.approveStatus='Approved' ORDER BY dm.permitType asc
-			`, { type: QueryTypes.SELECT, replacements: [ user.driverId ] });
-			for (let permitTypeMileage of driverMileageStatList) {
-				permitTypes.add(permitTypeMileage.permitType);
-			}
-			for (let permitType of permitTypes) {
-				let driverPermitTypeTaskMileage = driverPermitTaskMileageList.find(item => item.permitType == permitType);
-				let driverPermitTypeBaseMileage = driverMileageStatList.find(item => item.permitType == permitType);
-
-				let totalMileage = 0;
-				if (driverPermitTypeTaskMileage) {
-					totalMileage += driverPermitTypeTaskMileage.permitMileage ? driverPermitTypeTaskMileage.permitMileage : 0;
-				}
-				if (driverPermitTypeBaseMileage) {
-					totalMileage += driverPermitTypeBaseMileage.baseMileage ? driverPermitTypeBaseMileage.baseMileage : 0;
-				}
-
-				let permitTypeConf = await PermitType.findOne({ where: { permitType : permitType} });
-				if (permitTypeConf?.parent) {
-					let parentPermitType = permitTypeConf.parent;
-					let parentMileageObj = statResult.find(item => item.permitType == parentPermitType);
-					if (parentMileageObj) {
-						parentMileageObj.totalMileage += totalMileage;
-						continue;
-					} else {
-						permitType = parentPermitType;
-						permitTypeConf = await PermitType.findOne({ where: { permitType : permitType} });
-					}
-				} else {
-					continue;
-				}
-
-				let eligibilityMileage = permitTypeConf?.eligibilityMileage ? permitTypeConf.eligibilityMileage : 4000;
-				statResult.push({permitType: permitType, totalMileage, eligibilityMileage});
-			}
-
-			for (let temp of statResult) {
-				let moreMileage = temp.totalMileage < temp.eligibilityMileage ? temp.eligibilityMileage - temp.totalMileage : 0;
-				temp.moreMileage = moreMileage;
-				driverTotalMileage += temp.totalMileage;
-			}
-
-			result.totalMileage = driverTotalMileage ? driverTotalMileage.toFixed(2) : 0;
-			result.permitData = statResult
-			
-			log.info(JSON.stringify(result, null, 4))
-			
-			return res.json(utils.response(1, result));
-		} catch (error) {
-			log.error(error)
-			return res.json(utils.response(0, error));
+		let userId = req.body.userId;
+		let user = await User.findByPk(userId);
+		if (!user) {
+			throw new Error(`UserId ${userId} do not exist.`)
 		}
+		let driver = await Driver.findByPk(user.driverId);
+		if (!driver) {
+			throw new Error(`DriverId ${user.driverId} do not exist.`)
+		}
+		//  else if (!driver.permitType) {
+		// 	log.warn(`Driver ${driver.driverName} do not has permitType.`)
+		// }
+		log.info(`DriverID ${user.driverId} has permitType => ${driver.permitType}`)
+		let result = { safetyScore: 100, totalMileage: 0, permitData: [] }
+
+		let statResult = [];
+		let permitTypes = new Set();
+		let driverTotalMileage = 0;
+		// Real-time mileage statistics
+		let driverPermitTaskMileageList = await sequelizeObj.query(` 
+			SELECT veh.permitType, sum(m.mileageTraveled) as permitMileage
+			FROM mileage m
+			LEFT JOIN (
+				select v1.vehicleNo, v1.permitType from vehicle v1
+				UNION ALL
+				select v2.vehicleNo, v2.permitType from vehicle_history v2
+			) veh ON m.vehicleNo = veh.vehicleNo
+			WHERE m.driverId = ${user.driverId} and m.endMileage IS NOT NULL 
+			GROUP BY veh.permitType
+		`, { 
+			type: QueryTypes.SELECT, replacements: []
+		});
+			
+		let driverMileageStatList = await sequelizeObj.query(`
+			SELECT
+				dm.permitType,
+				dm.passDate,
+				dm.baseMileage
+			FROM driver_permittype_detail dm
+			where dm.driverId=? AND dm.approveStatus='Approved' ORDER BY dm.permitType asc
+		`, { type: QueryTypes.SELECT, replacements: [ user.driverId ] });
+		for (let permitTypeMileage of driverMileageStatList) {
+			permitTypes.add(permitTypeMileage.permitType);
+		}
+		for (let permitType of permitTypes) {
+			let newPermitType = permitType
+			let driverPermitTypeTaskMileage = driverPermitTaskMileageList.find(item => item.permitType == permitType);
+			let driverPermitTypeBaseMileage = driverMileageStatList.find(item => item.permitType == permitType);
+
+			let totalMileage = 0;
+			if (driverPermitTypeTaskMileage) {
+				totalMileage += driverPermitTypeTaskMileage.permitMileage ? driverPermitTypeTaskMileage.permitMileage : 0;
+			}
+			if (driverPermitTypeBaseMileage) {
+				totalMileage += driverPermitTypeBaseMileage.baseMileage ? driverPermitTypeBaseMileage.baseMileage : 0;
+			}
+
+			let permitTypeConf = await PermitType.findOne({ where: { permitType : newPermitType} });
+			if (permitTypeConf?.parent) {
+				let parentPermitType = permitTypeConf.parent;
+				let parentMileageObj = statResult.find(item => item.permitType == parentPermitType);
+				if (parentMileageObj) {
+					parentMileageObj.totalMileage += totalMileage;
+					continue;
+				} else {
+					newPermitType = parentPermitType;
+					permitTypeConf = await PermitType.findOne({ where: { permitType: newPermitType} });
+				}
+			} else {
+				continue;
+			}
+
+			let eligibilityMileage = permitTypeConf?.eligibilityMileage ? permitTypeConf.eligibilityMileage : 4000;
+			statResult.push({permitType: newPermitType, totalMileage, eligibilityMileage});
+		}
+
+		for (let temp of statResult) {
+			let moreMileage = temp.totalMileage < temp.eligibilityMileage ? temp.eligibilityMileage - temp.totalMileage : 0;
+			temp.moreMileage = moreMileage;
+			driverTotalMileage += temp.totalMileage;
+		}
+
+		result.totalMileage = driverTotalMileage ? driverTotalMileage.toFixed(2) : 0;
+		result.permitData = statResult
+		
+		log.info(JSON.stringify(result, null, 4))
+		
+		return res.json(utils.response(1, result));
 	},
 	getTOIndents: async function (req, res) {
-		try {
-			let userId = req.body.userId;
-			let user = await User.findByPk(userId);
-			if (!user) {
-				throw new Error(`UserId ${userId} do not exist.`)
-			}
+		let userId = req.body.userId;
+		let user = await User.findByPk(userId);
+		if (!user) {
+			throw new Error(`UserId ${userId} do not exist.`)
+		}
 
-			// log.info(`getTOIndents API => ${ conf.URL_Of_3rd_List.GetTOIndents }`)
-			// let result = await axios.post(conf.URL_Of_3rd_List.GetTOIndents, {
-			// 	driverId: user.driverId
-			// }).then(result => result.data);
-			let result = await mobileTOService.GETDriverTaskList(user.driverId)
-			log.info(`getTOIndents API Data => ${ JSON.stringify(result) }`)
+		// log.info(`getTOIndents API => ${ conf.URL_Of_3rd_List.GetTOIndents }`)
+		// let result = await axios.post(conf.URL_Of_3rd_List.GetTOIndents, {
+		// 	driverId: user.driverId
+		// }).then(result => result.data);
+		let result = await mobileTOService.GETDriverTaskList(user.driverId)
+		log.info(`getTOIndents API Data => ${ JSON.stringify(result) }`)
 
-			if (result.code === 1) {
-				for (let indent of result.data.indents) {
-					log.info(`********************************************`)
-					log.info(`Find Data by indent type => ${ indent.name }`)
-					for (let task of indent.dataList) {
-						log.info(`Start  find ODD data by taskId => ${ task.taskId }`)
-						let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
-						task.odd = odd ? odd.content : '';
-						log.info(`Finish find ODD data by taskId => ${ task.taskId }`)
+		if (result.code === 1) {
+			for (let indent of result.data.indents) {
+				log.info(`********************************************`)
+				log.info(`Find Data by indent type => ${ indent.name }`)
+				for (let task of indent.dataList) {
+					log.info(`Start  find ODD data by taskId => ${ task.taskId }`)
+					let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
+					task.odd = odd ? odd.content : '';
+					log.info(`Finish find ODD data by taskId => ${ task.taskId }`)
 
-						log.info(`Start  find MT RAC data by taskId => ${ task.taskId }`)
-						// let assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
-						let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
-						task.commanderContact = (mtRAC?.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: task.hub, node: task.node } : null;
-						log.info(`Finish find MT RAC data by taskId => ${ task.taskId }`)
+					log.info(`Start  find MT RAC data by taskId => ${ task.taskId }`)
+					// let assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
+					let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
+					task.commanderContact = (mtRAC?.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: task.hub, node: task.node } : null;
+					log.info(`Finish find MT RAC data by taskId => ${ task.taskId }`)
 
-						log.info(`Start  find Mileage data by taskId => ${ task.taskId }`)
-						let mileage = await Mileage.findByPk(task.taskId)
-						if (mileage) {
-							task.startMileage = mileage.startMileage;
-							task.endMileage = mileage.endMileage;
-						} else {
-							let vehicle = await Vehicle.findByPk(task.vehicleNumber)
-							task.startMileage = (vehicle?.totalMileage) ? vehicle.totalMileage : 0;
-							task.endMileage = 0;
-						}
-						log.info(`Finish find Mileage data by taskId => ${ task.taskId }`)
+					log.info(`Start  find Mileage data by taskId => ${ task.taskId }`)
+					let mileage = await Mileage.findByPk(task.taskId)
+					if (mileage) {
+						task.startMileage = mileage.startMileage;
+						task.endMileage = mileage.endMileage;
+					} else {
+						let vehicle = await Vehicle.findByPk(task.vehicleNumber)
+						task.startMileage = (vehicle?.totalMileage) ? vehicle.totalMileage : 0;
+						task.endMileage = 0;
+					}
+					log.info(`Finish find Mileage data by taskId => ${ task.taskId }`)
 
-						log.info(`Start  find CheckList data by taskId => ${ task.taskId }`)
-						let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
-						let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
-						let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
-						let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
-						let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
+					log.info(`Start  find CheckList data by taskId => ${ task.taskId }`)
+					let checkList = await CheckList.findAll({ where: { taskId: task.taskId } })
+					let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
+					let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
+					let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
+					let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
 
-						task.taskReady = false;
+					task.taskReady = false;
 
-						const updateStatus = async function () {
-							if (checkList1 && checkList2 && checkList4) {
-								if (task.purposeType && task.purposeType.toLowerCase() == 'wpt') {
-									task.taskReady = true;
-	
+					const updateStatus = async function () {
+						if (checkList1 && checkList2 && checkList4) {
+							if (task.purposeType && task.purposeType.toLowerCase() == 'wpt') {
+								task.taskReady = true;
+
+								await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
+							} else if (checkList5) {
+								task.taskReady = true;
+
+								if (task.taskId.startsWith('DUTY')) {
+									await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: task.taskId.split('-')[1], status: 'waitcheck' } })
+									await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + task.taskId.split('-')[1], status: 'waitcheck' } })
+								} else {
 									await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
-								} else if (checkList5) {
-									task.taskReady = true;
-	
-									if (task.taskId.startsWith('DUTY')) {
-										await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: task.taskId.split('-')[1], status: 'waitcheck' } })
-										await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + task.taskId.split('-')[1], status: 'waitcheck' } })
-									} else {
-										await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
-									}
-								} 
-							}
-						}
-						await updateStatus()
-						
-						log.info(`Finish find CheckList data by taskId => ${ task.taskId }`)
-
-						// need unique taskId while urgent task(one duty may has 0-3 indents, if > 0, generate new taskId with indentId, mobile need unique taskId)
-						if (task.dataFrom == 'Urgent' && task.indentId) {
-							task.taskId += '-' + task.indentId 
+								}
+							} 
 						}
 					}
+					await updateStatus()
+					
+					log.info(`Finish find CheckList data by taskId => ${ task.taskId }`)
+
+					// need unique taskId while urgent task(one duty may has 0-3 indents, if > 0, generate new taskId with indentId, mobile need unique taskId)
+					if (task.dataFrom == 'Urgent' && task.indentId) {
+						task.taskId += '-' + task.indentId 
+					}
 				}
-				log.info(`result.data => `, JSON.stringify(result.data))
-				return res.json(utils.response(1, result.data));
-			} else {
-				return res.json(utils.response(0, result.msg));
 			}
-		} catch (error) {
-			log.error(error)
-			return res.json(utils.response(0, error));
+			log.info(`result.data => `, JSON.stringify(result.data))
+			return res.json(utils.response(1, result.data));
+		} else {
+			return res.json(utils.response(0, result.msg));
 		}
 	},
 	getTOIndentByTaskId: async function (req, res) {
-		try {
-			let taskId = req.body.taskId;
-			let task0 = null, result = null
+		let taskId = req.body.taskId;
+		let task0 = null, result = null
+		if (taskId.startsWith('DUTY')) {
+
+			let temp = taskId.split('-')
+			taskId = `DUTY-${ temp[1] }` 
+			let indentId = temp[2]
+
+			task0 = await urgentService.getDutyById(taskId)
+			let duty = await urgentService.getDutyDetailById(taskId, indentId)
+			result = {
+				"code": 1,
+				"message": "success",
+				"data": duty,
+			}
+		} else {
+			task0 = await Task.findOne({ where: { taskId } })
+			result = await mobileTOService.GETDriverTaskByTaskId(taskId);
+		}
+
+		log.info(`GETDriverTaskByTaskId API Data => ${JSON.stringify(result)}`)
+
+		if (result.code === 1) {
+			let task = result.data;
+			//let vehicleRelation = await VehicleRelation.findOne({ where: { driverId: task.driverId, vehicleNo: task.vehicleNumber } })
+			task.limitSpeed = task.limitSpeed ? task.limitSpeed : 60
+			
+			let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
+			task.odd = odd ? odd.content : '';
+
+			let assignedTask = null
 			if (taskId.startsWith('DUTY')) {
-
-				let temp = taskId.split('-')
-				taskId = `DUTY-${ temp[1] }` 
-				let indentId = temp[2]
-
-				task0 = await urgentService.getDutyById(taskId)
-				let duty = await urgentService.getDutyDetailById(taskId, indentId)
-				result = {
-					"code": 1,
-					"message": "success",
-					"data": duty,
-				}
+				assignedTask = task0
 			} else {
-				task0 = await Task.findOne({ where: { taskId } })
-				result = await mobileTOService.GETDriverTaskByTaskId(taskId);
+				assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
+			}
+			let mtRAC = await MT_RAC.findOne({ where: { taskId: taskId }, order: [ [ 'id', 'DESC' ] ] })
+			task.commanderContact = (mtRAC?.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: assignedTask.hub, node: assignedTask.node } : null;
+
+			let mileage = await Mileage.findByPk(task.taskId)
+			if (mileage) {
+				task.startMileage = mileage.startMileage;
+				task.endMileage = mileage.endMileage;
+			} else {
+				let vehicle = await Vehicle.findByPk(task.vehicleNumber)
+				task.startMileage = vehicle ? vehicle.totalMileage : 0;
+				task.endMileage = 0;
 			}
 
-			log.info(`GETDriverTaskByTaskId API Data => ${JSON.stringify(result)}`)
+			let checkList = await CheckList.findAll({ where: { taskId: taskId } })
+			let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
+			let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
+			let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
+			let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
 
-			if (result.code === 1) {
-				let task = result.data;
-				//let vehicleRelation = await VehicleRelation.findOne({ where: { driverId: task.driverId, vehicleNo: task.vehicleNumber } })
-				task.limitSpeed = task.limitSpeed ? task.limitSpeed : 60
-				
-				let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
-				task.odd = odd ? odd.content : '';
+			task.taskReady = false;
+			const updateStatus = async function () {
+				if (checkList1 && checkList2 && checkList4) {
+					if (task.purposeType && task.purposeType.toLowerCase() == 'wpt') {
+						task.taskReady = true;
 
-				let assignedTask = null
-				if (taskId.startsWith('DUTY')) {
-					assignedTask = task0
-				} else {
-					assignedTask = await Task.findOne({ where: { taskId: task.taskId }});
-				}
-				let mtRAC = await MT_RAC.findOne({ where: { taskId: taskId }, order: [ [ 'id', 'DESC' ] ] })
-				task.commanderContact = (mtRAC?.needCommander) ? { username: mtRAC.commander, contact: mtRAC.commanderContactNumber, hub: assignedTask.hub, node: assignedTask.node } : null;
-
-				let mileage = await Mileage.findByPk(task.taskId)
-				if (mileage) {
-					task.startMileage = mileage.startMileage;
-					task.endMileage = mileage.endMileage;
-				} else {
-					let vehicle = await Vehicle.findByPk(task.vehicleNumber)
-					task.startMileage = vehicle ? vehicle.totalMileage : 0;
-					task.endMileage = 0;
-				}
-
-				let checkList = await CheckList.findAll({ where: { taskId: taskId } })
-				let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
-				let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
-				let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
-				let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
-
-				task.taskReady = false;
-				const updateStatus = async function () {
-					if (checkList1 && checkList2 && checkList4) {
-						if (task.purposeType && task.purposeType.toLowerCase() == 'wpt') {
-							task.taskReady = true;
-	
+						await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
+					} else if (checkList5) {
+						task.taskReady = true;
+						let a = '';
+						if (task.taskId.startsWith('DUTY')) {
+							await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: task.taskId.split('-')[1], status: 'waitcheck' } })
+							await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + task.taskId.split('-')[1], status: 'waitcheck' } })
+						} else {
 							await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
-						} else if (checkList5) {
-							task.taskReady = true;
-							let a = '';
-							if (task.taskId.startsWith('DUTY')) {
-								await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: task.taskId.split('-')[1], status: 'waitcheck' } })
-								await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + task.taskId.split('-')[1], status: 'waitcheck' } })
-							} else {
-								await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId: task.taskId, driverStatus: 'waitcheck' } })
-							}
-						} 
-					}
+						}
+					} 
 				}
-				await updateStatus()
-				
-				log.info(`task => `, JSON.stringify(task, null, 4))
-
-				// need unique taskId while urgent task(one duty may has 0-3 indents, if > 0, generate new taskId with indentId, mobile need unique taskId)
-				if (task.dataFrom == 'Urgent' && task.indentId) {
-					task.taskId += '-' + task.indentId 
-					task.startLateReason = 'urgent;'
-				}
-
-				return res.json(utils.response(1, task));
-			} else {
-				return res.json(utils.response(0, result.msg));
 			}
-		} catch (error) {
-			log.error(error)
-			return res.json(utils.response(0, error));
+			await updateStatus()
+			
+			log.info(`task => `, JSON.stringify(task, null, 4))
+
+			// need unique taskId while urgent task(one duty may has 0-3 indents, if > 0, generate new taskId with indentId, mobile need unique taskId)
+			if (task.dataFrom == 'Urgent' && task.indentId) {
+				task.taskId += '-' + task.indentId 
+				task.startLateReason = 'urgent;'
+			}
+
+			return res.json(utils.response(1, task));
+		} else {
+			return res.json(utils.response(0, result.msg));
 		}
 	},
 	startTask: async function (req, res) {
@@ -647,184 +628,179 @@ module.exports = {
 		}
 	},
 	startTask2: async function (req, res) {
-		try {
-			let { taskId, userId, vehicleNo, startMileage, mobileStartTime, lateStartRemarks } = req.body;
+		let { taskId, userId, vehicleNo, startMileage, mobileStartTime, lateStartRemarks } = req.body;
 
-			mobileStartTime = mobileStartTime.replace(/[^a-zA-Z0-9: ]/g,  ' ')
-			mobileStartTime = mobileStartTime.trim()
-			mobileStartTime = moment(mobileStartTime).format('YYYY-MM-DD HH:mm:ss')
+		mobileStartTime = mobileStartTime.replace(/[^a-zA-Z0-9: ]/g,  ' ')
+		mobileStartTime = mobileStartTime.trim()
+		mobileStartTime = moment(mobileStartTime).format('YYYY-MM-DD HH:mm:ss')
 
-			let user = await User.findByPk(userId);
-			if (!user) {
-				log.warn(`UserId ${userId} do not exist.`)
-				throw new Error(`UserId ${userId} do not exist.`)
-			}
-			if (!startMileage) startMileage = 0;
-
-			if (!taskId) {
-				log.warn(`TaskId ${taskId} can not be null.`)
-				throw new Error(`TaskId ${taskId} can not be null.`)
-			}
-
-			log.info(`UserId ${userId} exe startTask taskId: ${taskId}`)
-			
-			await sequelizeObj.transaction(async (t1) => {
-				
-				let checkList = await CheckList.findAll({ where: { taskId: taskId } })
-				let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
-				let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
-				let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
-				let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
-				let tempTask = null, indentId = null
-
-				if (taskId.startsWith('DUTY')) {
-					let temp = taskId.split('-')
-					taskId = `DUTY-${ temp[1] }` 
-					indentId = temp[2]
-
-					tempTask = await urgentService.getDutyById(taskId)
-
-					if (checkList1 && checkList2 && checkList4 && checkList5) {
-						await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: temp[1], status: 'waitcheck' } })
-						await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + temp[1], status: 'waitcheck' } })
-					}
-
-					tempTask = await urgentService.getDutyById(taskId) 
-				} else {
-					tempTask = await Task.findByPk(taskId);
-
-					if (checkList1 && checkList2 && checkList4) {
-						if (tempTask.purposeType && tempTask.purposeType.toLowerCase() == 'wpt') {
-							await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId, driverStatus: 'waitcheck' } })
-						} else if (checkList5) {
-							await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId, driverStatus: 'waitcheck' } })
-						} 
-					}
-
-					tempTask = await Task.findByPk(taskId);
-				}
-
-				if (!tempTask) {
-					log.warn(`TaskId ${taskId} do not exist.`)
-					throw new Error(`TaskId ${taskId} do not exist.`)
-				}
-		
-				// Task already started
-				if (tempTask.mobileStartTime) {
-					log.warn(`TaskID => ${ taskId }: has already started, ignore this request.`)
-					return res.json(utils.response(1, { mobileStartTime: tempTask.mobileStartTime }));
-				}
-				if (tempTask.driverStatus.toLowerCase() != 'ready') {
-					log.warn(`TaskID => ${ taskId }: Task status is not ready, can not started.`)
-					return res.json(utils.response(1, { mobileStartTime: null }));
-				}
-
-				if (tempTask.dataFrom == 'SYSTEM') {
-					let systemTaskId = taskId;
-					if (systemTaskId?.startsWith('AT-')) {
-						systemTaskId = systemTaskId.replace('AT-', '');
-					}
-					await sequelizeSystemObj.transaction(async (t1) => {
-						log.info(`UserId ${userId} exe startTask taskId: ${systemTaskId}, task is system, start update systemTask info.`)
-						let sysTask = await _SystemTask.Task.findByPk(systemTaskId);
-						if (!sysTask) {
-							log.warn(`SystemTask TaskId ${systemTaskId} do not exist.`)
-							throw new Error(`SystemTask TaskId ${systemTaskId} do not exist.`);
-						}
-						sysTask.taskStatus = 'Started';
-						sysTask.mobileStartTime = mobileStartTime;
-						await sysTask.save();
-			
-						// 2 update driver status
-						let driver = await _SystemDriver.Driver.findByPk(systemTaskId);
-						driver.status = 'Started';
-						await driver.save();
-
-						await _SystemJob.OperationHistory.create({
-							requestId: sysTask.requestId,
-							tripId: sysTask.tripId,
-							taskId: sysTask.id,
-							status: 'Started',
-							action: 'Started',
-							remark: driver.name
-						});
-					}).catch(error => {
-						log.info(`UserId ${userId} exe startTask taskId: ${taskId}, update systemTask fail, errorMsg: ${error && error.message ? error.message : ''}`);
-						throw error
-					})
-				}
-
-				log.info(`UserId ${userId} exe startTask taskId: ${taskId}, start update mobiusTask info.`)
-
-				let task = null
-				if (taskId.startsWith('DUTY')) {
-					task = await urgentService.getDutyById(taskId)
-					let indent = await UrgentIndent.findByPk(indentId)
-					await sequelizeObj.query(`
-						UPDATE urgent_duty SET \`status\` = ?, mobileStartTime = ? 
-						${ lateStartRemarks ? `, lateStartRemarks='${ lateStartRemarks }'` : '' } 
-						WHERE dutyId = ? and status != 'cancelled'
-					`, { type: QueryTypes.UPDATE, replacements: [ 'Started', mobileStartTime, taskId ] })
-					await sequelizeObj.query(`
-						UPDATE urgent_indent SET \`status\` = ?, mobileStartTime = ? WHERE id = ? and status not in ('cancelled', 'completed')
-					`, { type: QueryTypes.UPDATE, replacements: [ 'Started', mobileStartTime, indentId ] })
-
-					// Update system data
-					await sequelizeSystemObj.transaction(async t => {
-						await sequelizeSystemObj.query(`
-							UPDATE job SET \`status\` = ? WHERE requestId IN (?) and status != 'cancelled'
-						`, { type: QueryTypes.UPDATE, replacements: [ 'Started', [indent.requestId] ]})
-						await sequelizeSystemObj.query(`
-							UPDATE job_task SET \`taskStatus\` = ?, mobileStartTime = ?  WHERE requestId IN (?) and taskStatus != 'cancelled'
-						`, { type: QueryTypes.UPDATE, replacements: [ 'Started', mobileStartTime, [indent.requestId] ]})
-						await sequelizeSystemObj.query(`
-							UPDATE driver SET \`status\` = ?  WHERE taskId IN (?)
-						`, { type: QueryTypes.UPDATE, replacements: [ 'Started', indentId ]})
-					})
-				} else {
-					task = await Task.findByPk(taskId);
-					task.mobileStartTime = mobileStartTime;
-					task.driverStatus = "started"
-					task.vehicleStatus = "started"
-					if (lateStartRemarks) {
-						task.lateStartRemarks = lateStartRemarks
-					}
-					await task.save();
-				}
-
-				// Update Mileage
-				let mileageTaskId = taskId + (indentId ? ('-' + indentId) : "");
-				let mileage = await Mileage.findByPk(mileageTaskId);
-				if (!mileage) {
-					log.info(`UserId ${userId} exe startTask taskId: ${taskId}, start create mileageObj.`)
-					// Maybe first time, there is no record
-					await Mileage.create({
-						taskId: mileageTaskId,
-						driverId: user.driverId,
-						vehicleNo,
-						date: mobileStartTime,
-						startTime: mobileStartTime,
-						startMileage: startMileage
-					})
-				} else {
-					await Mileage.update({
-						driverId: user.driverId,
-						vehicleNo,
-						startTime: mobileStartTime,
-						startMileage: startMileage
-					}, { where: { taskId: mileageTaskId } })
-				}
-
-				log.info(`UserId ${userId} exe startTask taskId: ${taskId}, start task success.`)
-				return res.json(utils.response(1, { mobileStartTime }));
-			}).catch(error => {
-				log.info(`UserId ${userId} exe startTask taskId: ${taskId}, update mobiusTask fail, errorMsg: ${error && error.message ? error.message : ''}`);
-				throw error
-			})
-		} catch (error) {
-			log.error(error)
-			return res.json(utils.response(0, error));
+		let user = await User.findByPk(userId);
+		if (!user) {
+			log.warn(`UserId ${userId} do not exist.`)
+			throw new Error(`UserId ${userId} do not exist.`)
 		}
+		if (!startMileage) startMileage = 0;
+
+		if (!taskId) {
+			log.warn(`TaskId ${taskId} can not be null.`)
+			throw new Error(`TaskId ${taskId} can not be null.`)
+		}
+
+		log.info(`UserId ${userId} exe startTask taskId: ${taskId}`)
+		
+		await sequelizeObj.transaction(async (t1) => {
+			
+			let checkList = await CheckList.findAll({ where: { taskId: taskId } })
+			let checkList1 = checkList.find(item => item.checkListName == CHECKLIST[1])
+			let checkList2 = checkList.find(item => item.checkListName == CHECKLIST[2])
+			let checkList4 = checkList.find(item => item.checkListName == CHECKLIST[4])
+			let checkList5 = checkList.find(item => item.checkListName == CHECKLIST[5])
+			let tempTask = null, indentId = null
+
+			if (taskId.startsWith('DUTY')) {
+				let temp = taskId.split('-')
+				taskId = `DUTY-${ temp[1] }` 
+				indentId = temp[2]
+
+				tempTask = await urgentService.getDutyById(taskId)
+
+				if (checkList1 && checkList2 && checkList4 && checkList5) {
+					await UrgentIndent.update({ status: 'Ready' }, { where: { dutyId: temp[1], status: 'waitcheck' } })
+					await UrgentDuty.update({ status: 'Ready' }, { where: { dutyId: 'DUTY-' + temp[1], status: 'waitcheck' } })
+				}
+
+				tempTask = await urgentService.getDutyById(taskId) 
+			} else {
+				tempTask = await Task.findByPk(taskId);
+
+				if (checkList1 && checkList2 && checkList4) {
+					if (tempTask.purposeType && tempTask.purposeType.toLowerCase() == 'wpt') {
+						await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId, driverStatus: 'waitcheck' } })
+					} else if (checkList5) {
+						await Task.update({ driverStatus: 'Ready', vehicleStatus: 'Ready' }, { where: { taskId, driverStatus: 'waitcheck' } })
+					} 
+				}
+
+				tempTask = await Task.findByPk(taskId);
+			}
+
+			if (!tempTask) {
+				log.warn(`TaskId ${taskId} do not exist.`)
+				throw new Error(`TaskId ${taskId} do not exist.`)
+			}
+	
+			// Task already started
+			if (tempTask.mobileStartTime) {
+				log.warn(`TaskID => ${ taskId }: has already started, ignore this request.`)
+				return res.json(utils.response(1, { mobileStartTime: tempTask.mobileStartTime }));
+			}
+			if (tempTask.driverStatus.toLowerCase() != 'ready') {
+				log.warn(`TaskID => ${ taskId }: Task status is not ready, can not started.`)
+				return res.json(utils.response(1, { mobileStartTime: null }));
+			}
+
+			if (tempTask.dataFrom == 'SYSTEM') {
+				let systemTaskId = taskId;
+				if (systemTaskId?.startsWith('AT-')) {
+					systemTaskId = systemTaskId.replace('AT-', '');
+				}
+				await sequelizeSystemObj.transaction(async (t1) => {
+					log.info(`UserId ${userId} exe startTask taskId: ${systemTaskId}, task is system, start update systemTask info.`)
+					let sysTask = await _SystemTask.Task.findByPk(systemTaskId);
+					if (!sysTask) {
+						log.warn(`SystemTask TaskId ${systemTaskId} do not exist.`)
+						throw new Error(`SystemTask TaskId ${systemTaskId} do not exist.`);
+					}
+					sysTask.taskStatus = 'Started';
+					sysTask.mobileStartTime = mobileStartTime;
+					await sysTask.save();
+		
+					// 2 update driver status
+					let driver = await _SystemDriver.Driver.findByPk(systemTaskId);
+					driver.status = 'Started';
+					await driver.save();
+
+					await _SystemJob.OperationHistory.create({
+						requestId: sysTask.requestId,
+						tripId: sysTask.tripId,
+						taskId: sysTask.id,
+						status: 'Started',
+						action: 'Started',
+						remark: driver.name
+					});
+				}).catch(error => {
+					log.info(`UserId ${userId} exe startTask taskId: ${taskId}, update systemTask fail, errorMsg: ${error && error.message ? error.message : ''}`);
+					throw error
+				})
+			}
+
+			log.info(`UserId ${userId} exe startTask taskId: ${taskId}, start update mobiusTask info.`)
+
+			let task = null
+			if (taskId.startsWith('DUTY')) {
+				task = await urgentService.getDutyById(taskId)
+				let indent = await UrgentIndent.findByPk(indentId)
+				await sequelizeObj.query(`
+					UPDATE urgent_duty SET \`status\` = ?, mobileStartTime = ? 
+					${ lateStartRemarks ? `, lateStartRemarks='${ lateStartRemarks }'` : '' } 
+					WHERE dutyId = ? and status != 'cancelled'
+				`, { type: QueryTypes.UPDATE, replacements: [ 'Started', mobileStartTime, taskId ] })
+				await sequelizeObj.query(`
+					UPDATE urgent_indent SET \`status\` = ?, mobileStartTime = ? WHERE id = ? and status not in ('cancelled', 'completed')
+				`, { type: QueryTypes.UPDATE, replacements: [ 'Started', mobileStartTime, indentId ] })
+
+				// Update system data
+				await sequelizeSystemObj.transaction(async t => {
+					await sequelizeSystemObj.query(`
+						UPDATE job SET \`status\` = ? WHERE requestId IN (?) and status != 'cancelled'
+					`, { type: QueryTypes.UPDATE, replacements: [ 'Started', [indent.requestId] ]})
+					await sequelizeSystemObj.query(`
+						UPDATE job_task SET \`taskStatus\` = ?, mobileStartTime = ?  WHERE requestId IN (?) and taskStatus != 'cancelled'
+					`, { type: QueryTypes.UPDATE, replacements: [ 'Started', mobileStartTime, [indent.requestId] ]})
+					await sequelizeSystemObj.query(`
+						UPDATE driver SET \`status\` = ?  WHERE taskId IN (?)
+					`, { type: QueryTypes.UPDATE, replacements: [ 'Started', indentId ]})
+				})
+			} else {
+				task = await Task.findByPk(taskId);
+				task.mobileStartTime = mobileStartTime;
+				task.driverStatus = "started"
+				task.vehicleStatus = "started"
+				if (lateStartRemarks) {
+					task.lateStartRemarks = lateStartRemarks
+				}
+				await task.save();
+			}
+
+			// Update Mileage
+			let mileageTaskId = taskId + (indentId ? ('-' + indentId) : "");
+			let mileage = await Mileage.findByPk(mileageTaskId);
+			if (!mileage) {
+				log.info(`UserId ${userId} exe startTask taskId: ${taskId}, start create mileageObj.`)
+				// Maybe first time, there is no record
+				await Mileage.create({
+					taskId: mileageTaskId,
+					driverId: user.driverId,
+					vehicleNo,
+					date: mobileStartTime,
+					startTime: mobileStartTime,
+					startMileage: startMileage
+				})
+			} else {
+				await Mileage.update({
+					driverId: user.driverId,
+					vehicleNo,
+					startTime: mobileStartTime,
+					startMileage: startMileage
+				}, { where: { taskId: mileageTaskId } })
+			}
+
+			log.info(`UserId ${userId} exe startTask taskId: ${taskId}, start task success.`)
+			return res.json(utils.response(1, { mobileStartTime }));
+		}).catch(error => {
+			log.info(`UserId ${userId} exe startTask taskId: ${taskId}, update mobiusTask fail, errorMsg: ${error && error.message ? error.message : ''}`);
+			throw error
+		})
 	},
 	endTask: async function (req, res) {
 		try {
@@ -938,23 +914,24 @@ module.exports = {
 		}
 	},
 	updateTaskOptTime: async function (req, res) {
-		try {
-			let { userId, taskId, vehicleNo, serviceModeValue, operationTime, operationType, mileage, distance } = req.body;
+		let { userId, taskId, vehicleNo, serviceModeValue, operationTime, operationType, mileage, distance } = req.body;
+		
 
-			if (!taskId) {
-				return res.json(utils.response(1, {}));
-			}
+		if (!taskId) {
+			return res.json(utils.response(1, {}));
+		}
 
-			operationTime = moment(operationTime).format('YYYY-MM-DD HH:mm:ss')
+		operationTime = moment(operationTime).format('YYYY-MM-DD HH:mm:ss')
 
-			distance = distance / 1000; // km
-			serviceModeValue = serviceModeValue.toLowerCase();
-			operationType = operationType.toLowerCase();
-			let user = await User.findByPk(userId);
+		distance = distance / 1000; // km
+		serviceModeValue = serviceModeValue.toLowerCase();
+		operationType = operationType.toLowerCase();
+		let user = await User.findByPk(userId);
 
-			log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}`)
+		log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}`)
 
-			let task0 = null, indentId = null;
+		let task0 = null, indentId = null;
+		const getTask = async function () {
 			if (taskId.startsWith('DUTY')) {
 				let temp = taskId.split('-')
 				taskId = `DUTY-${ temp[1] }` 
@@ -963,15 +940,20 @@ module.exports = {
 			} else {
 				task0 = await Task.findByPk(taskId);
 			}
+		}
+		await getTask();
+
+		const checkTaskStatus = async function () {
+
 			if (task0 && task0.dataFrom == 'SYSTEM') {
 				log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is system, start update systemTask info.`)
-
+	
 				// Update 11-28
 				if (!task0.mobileStartTime) {
 					log.warn(`TaskID => ${ taskId }: has not started, can not ended.`)
 					return res.json(utils.response(1, `TaskID => ${ taskId }: has not started, can not ended.`));
 				}
-
+	
 				let systemTaskId = taskId;
 				if (systemTaskId?.startsWith('AT-')) {
 					systemTaskId = systemTaskId.replace('AT-', '');
@@ -984,7 +966,7 @@ module.exports = {
 					operationTime,
 					operationType,
 				})
-
+	
 				if (result.code === 0) {
 					log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is system, update systemTask fail: ${result.msg}`)
 					return res.json(utils.response(0, result.msg));
@@ -1003,7 +985,7 @@ module.exports = {
 			if (operationType == 'arrive') {
 				log.warn(`TaskID => ${ taskId }: can not start here, should use startTask API.`)
 				return res.json(utils.response(1, `TaskID => ${ taskId }: can not start here, should use startTask API.`));
-
+	
 				// if (task0.driverStatus.toLowerCase() !== 'ready') {
 				// 	log.warn(`TaskID => ${ taskId }: has not ready, can not start.`)
 				// 	return res.json(utils.response(1, `TaskID => ${ taskId }: has not ready, can not start.`));
@@ -1050,20 +1032,21 @@ module.exports = {
 					}
 				}
 			}
+		}
+		await checkTaskStatus()
 
-			await sequelizeObj.transaction(async (t1) => { 
-				let isComplete = false;
-				if (serviceModeValue === 'ferry service') {
+		await sequelizeObj.transaction(async (t1) => { 
+			let isComplete = false;
+			const checkTaskComplete = async function () {
+				if (serviceModeValue === 'ferry service' && operationType === 'arrive') {
 					// Task is completed here while serviceModeValue = 'ferry service'
-					if (operationType === 'arrive') {
-						await Task.update({ mobileStartTime: operationTime }, { where: { taskId } })
-
-						if (task0 && task0.dataFrom == 'MT-ADMIN') {
-							await MtAdmin.update({ arrivalTime: operationTime }, { where: { id: taskId.split('-')[1] } })
-						}
+					await Task.update({ mobileStartTime: operationTime }, { where: { taskId } })
 	
-						isComplete = true;
+					if (task0 && task0.dataFrom == 'MT-ADMIN') {
+						await MtAdmin.update({ arrivalTime: operationTime }, { where: { id: taskId.split('-')[1] } })
 					}
+	
+					isComplete = true;
 				} else if (serviceModeValue === 'delivery') {
 					if (operationType === 'arrive') {
 						await Task.update({ mobileStartTime: operationTime }, { where: { taskId } })
@@ -1074,7 +1057,7 @@ module.exports = {
 						if (task0 && task0.dataFrom == 'MT-ADMIN') {
 							await MtAdmin.update({ departTime: operationTime }, { where: { id: taskId.split('-')[1] } })
 						}
-
+	
 						isComplete = true;
 					}
 				} else if (serviceModeValue === 'pickup') {
@@ -1087,7 +1070,7 @@ module.exports = {
 						if (task0 && task0.dataFrom == 'MT-ADMIN') { 
 							await MtAdmin.update({ endTime: operationTime }, { where: { id: taskId.split('-')[1] } })
 						}
-
+	
 						isComplete = true;
 					}
 				} else {
@@ -1108,192 +1091,190 @@ module.exports = {
 						isComplete = true;
 					}
 				}
+			}
+			await checkTaskComplete()
 
-				if (isComplete) {
-					log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, start update mobiusTask info.`)
-					let mileageTaskId = taskId + (indentId ? ('-' + indentId) : "");
-					let mileageObj = await Mileage.findByPk(mileageTaskId);
-					let vehicle = await Vehicle.findOne({ where: { vehicleNo } })
-					if (!mileageObj) {
-						log.warn(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, mileageObj is null, recreate.`)
-						let vehicle = await Vehicle.findByPk(vehicleNo)
-						let startMileage = vehicle ? vehicle.totalMileage : mileage;
-						// Maybe start task exception
-						await Mileage.create({
-							taskId: mileageTaskId,
-							driverId: user.driverId,
-							vehicleNo,
-							date: operationTime,
-							startTime: operationTime,
-							startMileage: startMileage
-						})
-						mileageObj = await Mileage.findByPk(mileageTaskId);
-					}
-
-					mileageObj.endTime = operationTime;
-					mileageObj.endMileage = mileage;
-					mileageObj.mileageTraveled = mileage - mileageObj.startMileage;
-					mileageObj.mobileMileageTraveled = distance;
-					
-					// record for backup
-					let updateTaskOptTimeObj = req.body;
-					updateTaskOptTimeObj.startMileage = mileageObj.startMileage
-					updateTaskOptTimeObj.startTime = mileageObj.startTime
-					await stroreRecordIntoFile(updateTaskOptTimeObj);
-
-					// note for now (2023-05-18)
-					// if (mileageObj.mileageTraveled < 0) {
-					// 	log.warn(`********************************`)
-					// 	log.warn(`Wrong end mileage, please update your data.`)
-					// 	log.warn(`TaskId => ${ taskId }`)
-					// 	log.warn(`DriverId => ${ user.driverId }`)
-					// 	log.warn(`Real start mileage is => ${ mileageObj.startMileage }`)
-					// 	log.warn(`Received end mileage is => ${ mileage }`)
-					// 	log.warn(`********************************`)
-					// 	throw `Wrong end mileage, please update your data.`
-					// }
-
-					await mileageObj.save();
-					await MileageHistory.destroy({ where: { taskId: mileageTaskId } })
-					await sequelizeObj.query(` INSERT INTO mileage_history SELECT * FROM mileage WHERE taskId = ? `, { 
-						type: QueryTypes.INSERT, replacements: [ mileageObj.taskId ]
+			if (isComplete) {
+				log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, start update mobiusTask info.`)
+				let mileageTaskId = taskId + (indentId ? ('-' + indentId) : "");
+				let mileageObj = await Mileage.findByPk(mileageTaskId);
+				let vehicle = await Vehicle.findOne({ where: { vehicleNo } })
+				if (!mileageObj) {
+					log.warn(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, mileageObj is null, recreate.`)
+					let vehicle = await Vehicle.findByPk(vehicleNo)
+					let startMileage = vehicle ? vehicle.totalMileage : mileage;
+					// Maybe start task exception
+					await Mileage.create({
+						taskId: mileageTaskId,
+						driverId: user.driverId,
+						vehicleNo,
+						date: operationTime,
+						startTime: operationTime,
+						startMileage: startMileage
 					})
+					mileageObj = await Mileage.findByPk(mileageTaskId);
+				}
 
-					if (taskId.startsWith('DUTY')) {
-						// duty should be ready, maybe assign indent afternoon
-						await sequelizeObj.query(`
-							UPDATE urgent_duty SET \`status\` = ?, mobileStartTime = null 
-							WHERE dutyId = ? and status != 'cancelled' 
-						`, { type: QueryTypes.UPDATE, replacements: [ 'Ready', taskId ] })
+				mileageObj.endTime = operationTime;
+				mileageObj.endMileage = mileage;
+				mileageObj.mileageTraveled = mileage - mileageObj.startMileage;
+				mileageObj.mobileMileageTraveled = distance;
+				
+				// record for backup
+				let updateTaskOptTimeObj = req.body;
+				updateTaskOptTimeObj.startMileage = mileageObj.startMileage
+				updateTaskOptTimeObj.startTime = mileageObj.startTime
+				await stroreRecordIntoFile(updateTaskOptTimeObj);
 
-						await sequelizeObj.query(`
-							UPDATE urgent_indent SET \`status\` = ?, mobileEndTime = ? WHERE id = ? and status not in ('cancelled', 'completed')
-						`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', operationTime, indentId ] })
+				// note for now (2023-05-18)
+				// if (mileageObj.mileageTraveled < 0) {
+				// 	log.warn(`********************************`)
+				// 	log.warn(`Wrong end mileage, please update your data.`)
+				// 	log.warn(`TaskId => ${ taskId }`)
+				// 	log.warn(`DriverId => ${ user.driverId }`)
+				// 	log.warn(`Real start mileage is => ${ mileageObj.startMileage }`)
+				// 	log.warn(`Received end mileage is => ${ mileage }`)
+				// 	log.warn(`********************************`)
+				// 	throw `Wrong end mileage, please update your data.`
+				// }
 
-						await urgentService.updateDutyStatus(taskId.split('-')[1])
+				await mileageObj.save();
+				await MileageHistory.destroy({ where: { taskId: mileageTaskId } })
+				await sequelizeObj.query(` INSERT INTO mileage_history SELECT * FROM mileage WHERE taskId = ? `, { 
+					type: QueryTypes.INSERT, replacements: [ mileageObj.taskId ]
+				})
 
-						let indent = await UrgentIndent.findByPk(indentId)
+				if (taskId.startsWith('DUTY')) {
+					// duty should be ready, maybe assign indent afternoon
+					await sequelizeObj.query(`
+						UPDATE urgent_duty SET \`status\` = ?, mobileStartTime = null 
+						WHERE dutyId = ? and status != 'cancelled' 
+					`, { type: QueryTypes.UPDATE, replacements: [ 'Ready', taskId ] })
 
-						// this is indent has been re-assigned, can not update system
-						if (!indent.cancelBy) {
-							// Update system data
-							await sequelizeSystemObj.transaction(async t => {
-								await sequelizeSystemObj.query(`
-									UPDATE job SET \`status\` = ? WHERE requestId IN (?)
-								`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', [indent.requestId] ]})
-								await sequelizeSystemObj.query(`
-									UPDATE job_task SET \`taskStatus\` = ?, endTime = ?  WHERE requestId IN (?)
-								`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', operationTime, [indent.requestId] ]})
-								await sequelizeSystemObj.query(`
-									UPDATE driver SET \`status\` = ?  WHERE taskId IN (?)
-								`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', [indentId] ]})
-							})
-						}
+					await sequelizeObj.query(`
+						UPDATE urgent_indent SET \`status\` = ?, mobileEndTime = ? WHERE id = ? and status not in ('cancelled', 'completed')
+					`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', operationTime, indentId ] })
 
+					await urgentService.updateDutyStatus(taskId.split('-')[1])
+
+					let indent = await UrgentIndent.findByPk(indentId)
+
+					// this is indent has been re-assigned, can not update system
+					if (!indent.cancelBy) {
+						// Update system data
+						await sequelizeSystemObj.transaction(async t => {
+							await sequelizeSystemObj.query(`
+								UPDATE job SET \`status\` = ? WHERE requestId IN (?)
+							`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', [indent.requestId] ]})
+							await sequelizeSystemObj.query(`
+								UPDATE job_task SET \`taskStatus\` = ?, endTime = ?  WHERE requestId IN (?)
+							`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', operationTime, [indent.requestId] ]})
+							await sequelizeSystemObj.query(`
+								UPDATE driver SET \`status\` = ?  WHERE taskId IN (?)
+							`, { type: QueryTypes.UPDATE, replacements: [ 'Completed', [indentId] ]})
+						})
+					}
+
+				} else {
+					await Task.update({ mobileEndTime: operationTime, driverStatus: 'completed', vehicleStatus: 'completed' }, { where: { taskId } });
+				}
+
+				// Update vehicle total mileage
+				log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, start update driver mileage.`)
+				let driver = await Driver.findByPk(user.driverId);
+				driver.totalMileage = driver.totalMileage + mileageObj.mileageTraveled;
+				driver.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss');
+				await driver.save();
+				// await Driver.increment({ totalMileage: mileageObj.mileageTraveled, updatedAt: moment().format('YYYY-MM-DD HH:mm:ss') }, { where: { driverId: user.driverId } })
+				log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, start update vehicle mileage.`)
+				await Vehicle.update({ totalMileage: mileage}, { where: { vehicleNo } })
+				let parentPermitType = 'none';
+				if (vehicle) {
+					let permitTypeConf = await PermitType.findOne({ where: { permitType : vehicle.permitType} });
+					parentPermitType = vehicle.permitType;
+					if (permitTypeConf && permitTypeConf.parent) {
+						parentPermitType = permitTypeConf.parent;
+					}
+
+					let driverMileage = await DriverMileage.findOne({ where: { permitType: parentPermitType, driverId: user.driverId} })
+					if (driverMileage) {
+						driverMileage.mileage = driverMileage.mileage + mileageObj.mileageTraveled;
+						driverMileage.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss');
+						await driverMileage.save();
 					} else {
-						await Task.update({ mobileEndTime: operationTime, driverStatus: 'completed', vehicleStatus: 'completed' }, { where: { taskId } });
+						await DriverMileage.create({
+							driverId: user.driverId,
+							permitType: parentPermitType,
+							mileage: mileageObj.mileageTraveled
+						});
 					}
 
-					// Update vehicle total mileage
-					log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, start update driver mileage.`)
-					let driver = await Driver.findByPk(user.driverId);
-					driver.totalMileage = driver.totalMileage + mileageObj.mileageTraveled;
-					driver.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss');
-					await driver.save();
-					// await Driver.increment({ totalMileage: mileageObj.mileageTraveled, updatedAt: moment().format('YYYY-MM-DD HH:mm:ss') }, { where: { driverId: user.driverId } })
-					log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, task is completed, start update vehicle mileage.`)
-					await Vehicle.update({ totalMileage: mileage}, { where: { vehicleNo } })
-					let parentPermitType = 'none';
-					if (vehicle) {
-						let permitTypeConf = await PermitType.findOne({ where: { permitType : vehicle.permitType} });
-						parentPermitType = vehicle.permitType;
-						if (permitTypeConf && permitTypeConf.parent) {
-							parentPermitType = permitTypeConf.parent;
-						}
-
-						let driverMileage = await DriverMileage.findOne({ where: { permitType: parentPermitType, driverId: user.driverId} })
-						if (driverMileage) {
-							driverMileage.mileage = driverMileage.mileage + mileageObj.mileageTraveled;
-							driverMileage.updatedAt = moment().format('YYYY-MM-DD HH:mm:ss');
-							await driverMileage.save();
-						} else {
-							await DriverMileage.create({
-								driverId: user.driverId,
-								permitType: parentPermitType,
-								mileage: mileageObj.mileageTraveled
-							});
-						}
-
-						//update driverPlatformConf  totalMileage
-						let driverPlatformConf = await DriverPlatformConf.findOne({ where: { vehicleType: vehicle.vehicleType, driverId: user.driverId} })
-						if (driverPlatformConf) {
-							driverPlatformConf.totalMileage = (driverPlatformConf.totalMileage ? driverPlatformConf.totalMileage : 0) +  mileageObj.mileageTraveled;
-							driverPlatformConf.lastDrivenDate = moment();
-							await driverPlatformConf.save();
-						}
+					//update driverPlatformConf  totalMileage
+					let driverPlatformConf = await DriverPlatformConf.findOne({ where: { vehicleType: vehicle.vehicleType, driverId: user.driverId} })
+					if (driverPlatformConf) {
+						driverPlatformConf.totalMileage = (driverPlatformConf.totalMileage ? driverPlatformConf.totalMileage : 0) +  mileageObj.mileageTraveled;
+						driverPlatformConf.lastDrivenDate = moment();
+						await driverPlatformConf.save();
 					}
-					// await driverService.createPlatform(taskId, indentId);
-
-					// let errorMsg = await driverService.reCalcDriverLicensingStatus(user.driverId);
-					// log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, reCalcDriverLicensingStatus result: ` + (errorMsg ? errorMsg : 'success!'));
 				}
-			})
+				// await driverService.createPlatform(taskId, indentId);
 
-			//re calc vehicle pm,avi time
-			vehicleMaintenanceInfoCalcUtils.reCalcVehicleMaintenanceInfo(taskId, indentId);
-
-			let task;
-			let result = null;
-			if (taskId.startsWith('DUTY')) {
-				let duty = await urgentService.getDutyById(taskId)
-				duty.taskStatus = 'Completed';
-				result = {
-					"code": 1,
-					"message": "success",
-					"data": duty,
-				}
-			} else {
-				result = await mobileTOService.GETDriverTaskByTaskId(taskId);
+				// let errorMsg = await driverService.reCalcDriverLicensingStatus(user.driverId);
+				// log.info(`UserId ${userId} exe updateTaskOptTime taskId: ${taskId}, reCalcDriverLicensingStatus result: ` + (errorMsg ? errorMsg : 'success!'));
 			}
-			if (result.code === 0) {
-				return res.json(utils.response(0, result.msg));
+		})
+
+		//re calc vehicle pm,avi time
+		vehicleMaintenanceInfoCalcUtils.reCalcVehicleMaintenanceInfo(taskId, indentId);
+
+		let task;
+		let result = null;
+		if (taskId.startsWith('DUTY')) {
+			let duty = await urgentService.getDutyById(taskId)
+			duty.taskStatus = 'Completed';
+			result = {
+				"code": 1,
+				"message": "success",
+				"data": duty,
 			}
-			task = result.data;
-			task.limitSpeed = task.limitSpeed ? task.limitSpeed : 60
-			
-			let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
-			task.odd = odd ? odd.content : '';
-
-			let assignedTask = await Task.findOne({ where: { taskId: task.taskId } })
-			let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
-
-			if (taskId.startsWith('DUTY')) {
-				task.taskId += '-' + indentId
-				task.commanderContact = mtRAC ? { username: mtRAC.commander, hub: task.hub, node: task.node } : null;
-			} else {
-				task.commanderContact = mtRAC ? { username: mtRAC.commander, hub: assignedTask.hub, node: assignedTask.node } : null;
-			}
-			
-			let mileageObj = await Mileage.findByPk(task.taskId)
-			if (mileageObj) {
-				task.startMileage = mileageObj.startMileage;
-				task.endMileage = mileageObj.endMileage;
-			} else {
-				let vehicle = await Vehicle.findByPk(task.vehicleNumber)
-				task.startMileage = vehicle ? vehicle.totalMileage : 0;
-				task.endMileage = 0;
-			}
-
-			task.taskReady = true;
-			task.taskStatus = 'Completed';
-
-			log.info(`task => `, JSON.stringify(task, null, 4))
-
-			return res.json(utils.response(1, task));
-		} catch (error) {
-			log.error(error);
-			return res.json(utils.response(0, error));
+		} else {
+			result = await mobileTOService.GETDriverTaskByTaskId(taskId);
 		}
+		if (result.code === 0) {
+			return res.json(utils.response(0, result.msg));
+		}
+		task = result.data;
+		task.limitSpeed = task.limitSpeed ? task.limitSpeed : 60
+		
+		let odd = await ODD.findOne({ where: { taskId: task.taskId }, order: [ [ 'updatedAt', 'DESC' ] ]})
+		task.odd = odd ? odd.content : '';
+
+		let assignedTask = await Task.findOne({ where: { taskId: task.taskId } })
+		let mtRAC = await MT_RAC.findOne({ where: { taskId: task.taskId }, order: [ [ 'id', 'DESC' ] ] })
+
+		if (taskId.startsWith('DUTY')) {
+			task.taskId += '-' + indentId
+			task.commanderContact = mtRAC ? { username: mtRAC.commander, hub: task.hub, node: task.node } : null;
+		} else {
+			task.commanderContact = mtRAC ? { username: mtRAC.commander, hub: assignedTask.hub, node: assignedTask.node } : null;
+		}
+		
+		let mileageObj = await Mileage.findByPk(task.taskId)
+		if (mileageObj) {
+			task.startMileage = mileageObj.startMileage;
+			task.endMileage = mileageObj.endMileage;
+		} else {
+			let vehicle = await Vehicle.findByPk(task.vehicleNumber)
+			task.startMileage = vehicle ? vehicle.totalMileage : 0;
+			task.endMileage = 0;
+		}
+
+		task.taskReady = true;
+		task.taskStatus = 'Completed';
+
+		log.info(`task => `, JSON.stringify(task, null, 4))
+
+		return res.json(utils.response(1, task));
 	},
 	updateDriverStatus: async function (taskId) {
 		try {
@@ -1346,50 +1327,43 @@ module.exports = {
 		}
 	},
 	reportLateReason: async function (req, res) {
-		try {
-			let { taskId, userId, lateType, lateReason } = req.body;
-			let user = await User.findByPk(userId);
-			if (!user) {
-				log.warn(`UserId ${userId} do not exist.`)
-				throw new Error(`UserId ${userId} do not exist.`)
-			}
+		let { taskId, userId, lateType, lateReason } = req.body;
+		let user = await User.findByPk(userId);
+		if (!user) {
+			log.warn(`UserId ${userId} do not exist.`)
+			throw new Error(`UserId ${userId} do not exist.`)
+		}
 
-			if (taskId.startsWith('DUTY')) {
-				let idArray = taskId.split('-');
-				if (idArray.length < 2) {
-					log.warn(`TaskId ${taskId} format error.`)
-					return res.json(utils.response(0, `TaskId ${taskId} format error.`));
-				}
-				taskId = `DUTY-${idArray[1]}`;
-				let duty = await UrgentDuty.findOne({ where: { dutyId: taskId } })
-				if (duty) {
-					if (lateType == 'start') {
-						duty.lateStartRemarks = lateReason;
-						await duty.save();
-	
-						return res.json(utils.response(1, 'success.'));
-					}
-				} else {
-					return res.json(utils.response(0, 'Task do not exist.'));
+		if (taskId.startsWith('DUTY')) {
+			let idArray = taskId.split('-');
+			if (idArray.length < 2) {
+				log.warn(`TaskId ${taskId} format error.`)
+				return res.json(utils.response(0, `TaskId ${taskId} format error.`));
+			}
+			taskId = `DUTY-${idArray[1]}`;
+			let duty = await UrgentDuty.findOne({ where: { dutyId: taskId } })
+			if (duty) {
+				if (lateType == 'start') {
+					duty.lateStartRemarks = lateReason;
+					await duty.save();
+
+					return res.json(utils.response(1, 'success.'));
 				}
 			} else {
-				let task = await Task.findOne({where : {taskId: taskId}})
-				if (task) {
-					if (lateType == 'start') {
-						task.startLateReason = lateReason;
-						await task.save();
-	
-						return res.json(utils.response(1, 'success.'));
-					}
-				} else {
-					return res.json(utils.response(0, 'Task do not exist.'));
-				}
+				return res.json(utils.response(0, 'Task do not exist.'));
 			}
+		} else {
+			let task = await Task.findOne({where : {taskId: taskId}})
+			if (task) {
+				if (lateType == 'start') {
+					task.startLateReason = lateReason;
+					await task.save();
 
-			
-		} catch (error) {
-			log.error(error);
-			return res.json(utils.response(0, error));
+					return res.json(utils.response(1, 'success.'));
+				}
+			} else {
+				return res.json(utils.response(0, 'Task do not exist.'));
+			}
 		}
 	},
 }

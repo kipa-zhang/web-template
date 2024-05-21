@@ -133,7 +133,7 @@ let NoticeUtils = {
         const generateResultList = async function (noticeList, taskList) {
             let resultList = []
             // has task, check every task on platform/toCategory/toType
-            for (let notice of noticeList) {
+            noticeList.forEach(async notice => {
                 for (let task of taskList) {
                     // check platform
                     if (notice.platform && notice.platform != task.platform) {
@@ -157,9 +157,10 @@ let NoticeUtils = {
                     resultList.push(notice);
                     break;
                 }
-            }
+            })
             return resultList
         }
+
         let system = []
         // find out all task not completed
         let taskList = await sequelizeObj.query(`
@@ -187,7 +188,7 @@ let NoticeUtils = {
             resultList = noticeList
         }
 
-        for (let notice of resultList) {
+        resultList.forEach(notice => {
             if (notice.coverImage && !fs.existsSync(`./public/${ notice.coverImage }`)) {
                 fs.writeFileSync(`./public/${ notice.coverImage }`, Buffer.from(notice.coverImageBase64, 'base64'))
             }
@@ -206,7 +207,7 @@ let NoticeUtils = {
                 creator: notice.creator,
                 createdAt: moment(notice.startDateTime).format('YYYY-MM-DD HH:mm:ss'),
             })
-        }
+        })
         return system;
     },
     getPopupNoticeList: async function (user) {
