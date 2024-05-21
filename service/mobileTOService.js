@@ -91,11 +91,6 @@ const buildDriverTask = async function(dataItem, systemTask) {
         dataItem.dropoffDestinationLat = dataItem.dropoffGPS.split(',')[0].trim();
         dataItem.dropoffDestinationLng = dataItem.dropoffGPS.split(',')[1].trim();
 
-        dataItem.pickupDestinationLat = dataItem.pickupDestinationLat ? dataItem.pickupDestinationLat : 0;
-        dataItem.pickupDestinationLng = dataItem.pickupDestinationLng ? dataItem.pickupDestinationLng : 0;
-        dataItem.dropoffDestinationLat = dataItem.dropoffDestinationLat ? dataItem.dropoffDestinationLat : 0;
-        dataItem.dropoffDestinationLng = dataItem.dropoffDestinationLng ? dataItem.dropoffDestinationLng : 0;
-
         delete dataItem.pickupGPS;
         delete dataItem.dropoffGPS;
 
@@ -117,13 +112,22 @@ const buildDriverTask = async function(dataItem, systemTask) {
         checkTaskStatus()
     }
 
-    dataItem.mobileStartTime = dataItem.mobileStartTime ? moment(dataItem.mobileStartTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    dataItem.mobileEndTime = dataItem.mobileEndTime ? moment(dataItem.mobileEndTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    dataItem.arrivalTime = dataItem.arrivalTime ? moment(dataItem.arrivalTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    dataItem.departTime = dataItem.departTime ? moment(dataItem.departTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    dataItem.completedTime = dataItem.completedTime ? moment(dataItem.completedTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    dataItem.indentStartTime = dataItem.indentStartTime ? moment(dataItem.indentStartTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    dataItem.indentEndTime = dataItem.indentEndTime ? moment(dataItem.indentEndTime).format('YYYY-MM-DD HH:mm:ss') : '';
+    const checkDataItem = function (dataItem) {
+        dataItem.pickupDestinationLat = dataItem.pickupDestinationLat ? dataItem.pickupDestinationLat : 0;
+        dataItem.pickupDestinationLng = dataItem.pickupDestinationLng ? dataItem.pickupDestinationLng : 0;
+        dataItem.dropoffDestinationLat = dataItem.dropoffDestinationLat ? dataItem.dropoffDestinationLat : 0;
+        dataItem.dropoffDestinationLng = dataItem.dropoffDestinationLng ? dataItem.dropoffDestinationLng : 0;
+
+        dataItem.mobileStartTime = dataItem.mobileStartTime ? moment(dataItem.mobileStartTime).format('YYYY-MM-DD HH:mm:ss') : '';
+        dataItem.mobileEndTime = dataItem.mobileEndTime ? moment(dataItem.mobileEndTime).format('YYYY-MM-DD HH:mm:ss') : '';
+        dataItem.arrivalTime = dataItem.arrivalTime ? moment(dataItem.arrivalTime).format('YYYY-MM-DD HH:mm:ss') : '';
+        dataItem.departTime = dataItem.departTime ? moment(dataItem.departTime).format('YYYY-MM-DD HH:mm:ss') : '';
+        dataItem.completedTime = dataItem.completedTime ? moment(dataItem.completedTime).format('YYYY-MM-DD HH:mm:ss') : '';
+        dataItem.indentStartTime = dataItem.indentStartTime ? moment(dataItem.indentStartTime).format('YYYY-MM-DD HH:mm:ss') : '';
+        dataItem.indentEndTime = dataItem.indentEndTime ? moment(dataItem.indentEndTime).format('YYYY-MM-DD HH:mm:ss') : '';
+    }
+
+    checkDataItem()
 }
 
 module.exports = {
@@ -715,7 +719,7 @@ module.exports = {
                 `, { 
                     type: QueryTypes.SELECT, replacements: []
                 });
-                if (taskList && taskList.length > 0) {
+                if (taskList.length) {
                     task = taskList[0];
                 }
             } else {
@@ -879,7 +883,7 @@ module.exports = {
                 `, { 
                     type: QueryTypes.SELECT, replacements: []
                 });
-                if (taskList && taskList.length > 0) {
+                if (taskList.length) {
                     task = taskList[0];
                 }
             } else {
@@ -899,7 +903,7 @@ module.exports = {
                 `, { 
                     type: QueryTypes.SELECT, replacements: []
                 });
-                if (taskList && taskList.length > 0) {
+                if (taskList.length) {
                     task = taskList[0];
                 }
             }
