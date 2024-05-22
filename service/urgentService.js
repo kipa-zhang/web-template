@@ -87,9 +87,7 @@ const getDutyById = async function (dutyId) {
     `, { type: QueryTypes.SELECT, replacements: [ dutyId ] })
 
     let duty = null
-    if (!dutyList.length) {
-        
-    } else {
+    if (dutyList.length) {   
         duty = dutyList[0]
         duty.indentIdList = duty.indentIdList?.split(',')
         duty.sysTaskIdList = duty.sysTaskIdList?.split(',')
@@ -114,6 +112,7 @@ const getCompletedDutyList = async function (driverId) {
             LEFT JOIN vehicle v on v.vehicleNo = ud.vehicleNo
             WHERE ud.driverId = ? 
             AND ui.status = 'completed'
+            AND ud.indentStartDate > CURDATE() - INTERVAL 30 DAY
             group by ud.dutyId
             LIMIT 20
         `, { type: QueryTypes.SELECT, replacements: [ driverId ] })

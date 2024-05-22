@@ -175,6 +175,7 @@ module.exports = {
             LEFT JOIN mt_admin m ON m.id=t.indentId
             WHERE t.driverId = ?
             AND t.driverStatus = 'completed'
+            AND t.indentStartTime > CURDATE() - INTERVAL 30 DAY
             ORDER BY t.mobileEndTime DESC 
             limit 25
         `, { type: QueryTypes.SELECT, replacements: [driverId] })
@@ -266,6 +267,7 @@ module.exports = {
                 AND b.driverId = ? 
                 AND b.driverFrom = 'transport' 
                 AND a.taskStatus = 'completed'
+                AND a.startDate > CURDATE() - INTERVAL 30 DAY
             ORDER BY
                 a.endDate desc
             limit 25
